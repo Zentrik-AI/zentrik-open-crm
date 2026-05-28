@@ -27,6 +27,14 @@ npm run dev
 
 The app will start at [http://127.0.0.1:5177](http://127.0.0.1:5177).
 
+## Validate Changes
+
+```bash
+npm run typecheck
+npm run build
+npm run test:e2e
+```
+
 ## Current Version
 
 This first version is a Vite React app with local browser persistence. It

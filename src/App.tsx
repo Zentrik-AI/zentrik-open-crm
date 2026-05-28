@@ -25,7 +25,12 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
-import { loadWorkspace, resetWorkspace, saveWorkspace } from "./lib/storage";
+import {
+  loadWorkspace,
+  resetWorkspace,
+  saveWorkspace,
+  touchWorkspace,
+} from "./lib/storage";
 import { cn, formatCurrency, formatDate, makeId } from "./lib/utils";
 import type {
   Account,
@@ -76,6 +81,7 @@ function App() {
     workspace.accounts[0]?.id ?? "",
   );
   const [copiedTaskId, setCopiedTaskId] = useState<string | null>(null);
+  const [copyErrorTaskId, setCopyErrorTaskId] = useState<string | null>(null);
   const [draftSignal, setDraftSignal] = useState({
     accountId: workspace.accounts[0]?.id ?? "",
     source: "call" as SignalSource,
@@ -121,6 +127,10 @@ function App() {
     });
   }, [query, workspace.accounts]);
 
+  const visibleSelectedAccount =
+    filteredAccounts.find((account) => account.id === selectedAccount?.id) ??
+    filteredAccounts[0];
+
   const metrics = useMemo(() => {
     const pipeline = workspace.accounts.reduce((sum, account) => sum + account.arr, 0);
     const atRisk = workspace.accounts.filter((account) => account.stage === "at_risk").length;
@@ -140,7 +150,7 @@ function App() {
       return;
     }
 
-    setWorkspace((current) => ({
+    setWorkspace((current) => touchWorkspace({
       ...current,
       accounts: current.accounts.map((item) =>
         item.id === accountId
@@ -165,7 +175,7 @@ function App() {
   }
 
   function approveIdea(ideaId: string) {
-    setWorkspace((current) => ({
+    setWorkspace((current) => touchWorkspace({
       ...current,
       ideas: current.ideas.map((idea) =>
         idea.id === ideaId
@@ -209,7 +219,7 @@ function App() {
       sourceRef: "Manual local intake",
     };
 
-    setWorkspace((current) => ({
+    setWorkspace((current) => touchWorkspace({
       ...current,
       signals: [signal, ...current.signals],
       evolutionLog: [
@@ -233,7 +243,11 @@ function App() {
       : undefined;
     const prompt = [
       `Workspace: ${workspace.name}`,
-      account ? `Account: ${account.name} (${account.domain})` : null,
+      account
+        ? `Account: ${account.name} (${
+            publicMode ? "domain hidden in Buildroom mode" : account.domain
+          })`
+        : null,
       idea ? `Idea: ${idea.title}` : null,
       "",
       task.prompt,
@@ -243,9 +257,19 @@ function App() {
       .filter(Boolean)
       .join("\n");
 
-    await navigator.clipboard.writeText(prompt);
-    setCopiedTaskId(task.id);
-    window.setTimeout(() => setCopiedTaskId(null), 1600);
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard API unavailable");
+      }
+      await navigator.clipboard.writeText(prompt);
+      setCopiedTaskId(task.id);
+      setCopyErrorTaskId(null);
+      window.setTimeout(() => setCopiedTaskId(null), 1600);
+    } catch {
+      setCopiedTaskId(null);
+      setCopyErrorTaskId(task.id);
+      window.setTimeout(() => setCopyErrorTaskId(null), 2400);
+    }
   }
 
   function exportWorkspace() {
@@ -255,7 +279,9 @@ function App() {
     const link = document.createElement("a");
     link.href = url;
     link.download = "zentrik-open-crm-workspace.json";
+    document.body.appendChild(link);
     link.click();
+    link.remove();
     URL.revokeObjectURL(url);
   }
 
@@ -377,6 +403,7 @@ function App() {
               metrics={metrics}
               workspace={workspace}
               accountsById={accountsById}
+              publicMode={publicMode}
               onCompleteAction={completeNextAction}
               onSelectAccount={(accountId) => {
                 setSelectedAccountId(accountId);
@@ -387,7 +414,7 @@ function App() {
           {view === "accounts" && (
             <AccountsView
               accounts={filteredAccounts}
-              selectedAccount={selectedAccount}
+              selectedAccount={visibleSelectedAccount}
               publicMode={publicMode}
               signals={workspace.signals}
               onSelectAccount={setSelectedAccountId}
@@ -415,6 +442,7 @@ function App() {
               workspace={workspace}
               accountsById={accountsById}
               copiedTaskId={copiedTaskId}
+              copyErrorTaskId={copyErrorTaskId}
               onCopyPrompt={copyCodexPrompt}
             />
           )}
@@ -431,6 +459,7 @@ function TodayView({
   metrics,
   workspace,
   accountsById,
+  publicMode,
   onCompleteAction,
   onSelectAccount,
 }: {
@@ -442,6 +471,7 @@ function TodayView({
   };
   workspace: Workspace;
   accountsById: Map<string, Account>;
+  publicMode: boolean;
   onCompleteAction: (accountId: string) => void;
   onSelectAccount: (accountId: string) => void;
 }) {
@@ -453,7 +483,11 @@ function TodayView({
   return (
     <div className="section-grid">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Weighted pipeline" value={formatCurrency(metrics.pipeline)} icon={Database} />
+        <MetricCard
+          label="Weighted pipeline"
+          value={publicMode ? "Hidden" : formatCurrency(metrics.pipeline)}
+          icon={Database}
+        />
         <MetricCard label="Open next actions" value={metrics.openActions.toString()} icon={ClipboardCheck} />
         <MetricCard label="High-impact signals" value={metrics.highImpactSignals.toString()} icon={Activity} />
         <MetricCard label="At-risk accounts" value={metrics.atRisk.toString()} icon={ShieldCheck} tone="destructive" />
@@ -542,12 +576,38 @@ function AccountsView({
   onCompleteAction,
 }: {
   accounts: Account[];
-  selectedAccount: Account;
+  selectedAccount: Account | undefined;
   publicMode: boolean;
   signals: Signal[];
   onSelectAccount: (accountId: string) => void;
   onCompleteAction: (accountId: string) => void;
 }) {
+  if (accounts.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center">
+          <div className="text-sm font-semibold">No accounts match the current search.</div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Clear the search query or reset the demo workspace to continue.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!selectedAccount) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center">
+          <div className="text-sm font-semibold">No account selected</div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Reset the demo workspace or import accounts to continue.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const accountSignals = signals.filter(
     (signal) => signal.accountId === selectedAccount.id,
   );
@@ -576,7 +636,10 @@ function AccountsView({
             <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
               <MiniStat label="Health" value={`${account.health}%`} />
               <MiniStat label="Fit" value={`${account.fit}%`} />
-              <MiniStat label="ARR" value={formatCurrency(account.arr)} />
+              <MiniStat
+                label="ARR"
+                value={publicMode ? "Hidden" : formatCurrency(account.arr)}
+              />
             </div>
           </button>
         ))}
@@ -862,11 +925,13 @@ function CodexView({
   workspace,
   accountsById,
   copiedTaskId,
+  copyErrorTaskId,
   onCopyPrompt,
 }: {
   workspace: Workspace;
   accountsById: Map<string, Account>;
   copiedTaskId: string | null;
+  copyErrorTaskId: string | null;
   onCopyPrompt: (task: CodexTask) => void;
 }) {
   return (
@@ -897,7 +962,11 @@ function CodexView({
                   </div>
                   <Button size="sm" variant="primary" onClick={() => onCopyPrompt(task)}>
                     <Sparkles className="h-4 w-4" />
-                    {copiedTaskId === task.id ? "Copied" : "Copy prompt"}
+                    {copiedTaskId === task.id
+                      ? "Copied"
+                      : copyErrorTaskId === task.id
+                        ? "Copy failed"
+                        : "Copy prompt"}
                   </Button>
                 </div>
                 <div className="mt-3 rounded-md border bg-card p-3 text-xs leading-5 text-muted-foreground">

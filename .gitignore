@@ -19,3 +19,5 @@ tmp/
 
 .playwright-cli/
 coverage/
+playwright-report/
+test-results/

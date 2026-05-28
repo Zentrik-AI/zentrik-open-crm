@@ -17,6 +17,7 @@ Before contributing:
 ```bash
 npm run typecheck
 npm run build
+npm run test:e2e
 ```
 
 ## Data Policy

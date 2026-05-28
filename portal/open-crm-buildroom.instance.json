@@ -1,0 +1,276 @@
+{
+  "schemaVersion": "0.1",
+  "workspace": {
+    "externalId": "zentrik-open-crm",
+    "name": "Zentrik Open CRM",
+    "description": "Public product workspace for the open-source CRM that grows through real usage, feedback, votes, source-grounded agent work, human review, and outcome checks."
+  },
+  "portal": {
+    "alias": "open-crm",
+    "host": "https://open-crm.ideas.zentrik.ai",
+    "portalName": "Open CRM Buildroom",
+    "introCopy": "Shape the open-source CRM built with its users. Vote on what matters, request what is missing, and watch signals become product work, releases, and outcome checks.",
+    "status": "enabled",
+    "authMode": "magic_link",
+    "feedbackMode": "simple_vote",
+    "newSubmissionVisibility": "hidden_until_review",
+    "accentColor": "#0f766e",
+    "isDefault": true
+  },
+  "products": [
+    {
+      "externalId": "zentrik-open-crm:product:core",
+      "name": "Zentrik Open CRM",
+      "description": "The core open-source CRM product, including account work, signal capture, Codex-assisted workflows, local-first storage, hosted use, and the public feedback loop."
+    }
+  ],
+  "taxonomies": [
+    {
+      "key": "workflow_area",
+      "label": "Workflow area",
+      "appliesTo": ["IDEA"],
+      "selectionMode": "SINGLE",
+      "required": true,
+      "options": [
+        "Account memory",
+        "Signal capture",
+        "Next actions",
+        "Codex workflows",
+        "Agent transparency",
+        "Open CRM Buildroom",
+        "Self-hosting",
+        "Hosted CRM Cloud",
+        "Integrations"
+      ]
+    },
+    {
+      "key": "user_type",
+      "label": "User type",
+      "appliesTo": ["IDEA"],
+      "selectionMode": "MULTI",
+      "required": false,
+      "options": [
+        "Founder-led team",
+        "Consultant or agency",
+        "Technical operator",
+        "Open-source contributor",
+        "Product leader",
+        "Hosted-only user"
+      ]
+    },
+    {
+      "key": "deployment_path",
+      "label": "Deployment path",
+      "appliesTo": ["IDEA"],
+      "selectionMode": "MULTI",
+      "required": false,
+      "options": ["Local-first", "Self-hosted", "Hosted cloud", "Hybrid"]
+    },
+    {
+      "key": "evidence_source",
+      "label": "Evidence source",
+      "appliesTo": ["IDEA"],
+      "selectionMode": "MULTI",
+      "required": false,
+      "options": [
+        "Call",
+        "Email",
+        "Support ticket",
+        "Public review",
+        "Community thread",
+        "GitHub issue",
+        "Usage pattern",
+        "Market research"
+      ]
+    }
+  ],
+  "visibleIdeas": [
+    {
+      "externalId": "open-crm:idea:daily-board",
+      "name": "Zero-admin daily account board",
+      "status": "Approved",
+      "priority": "HIGH",
+      "productExternalId": "zentrik-open-crm:product:core",
+      "description": "Give small teams a focused daily view of accounts that need attention, why they matter, and which action is grounded in recent evidence.",
+      "publicWhy": "The first users should get value before setting up a full sales process.",
+      "userImpact": 9,
+      "effort": 4,
+      "taxonomyValues": {
+        "workflow_area": ["Next actions"],
+        "user_type": ["Founder-led team", "Technical operator"],
+        "deployment_path": ["Local-first", "Hosted cloud"],
+        "evidence_source": ["Call", "Email", "Support ticket"]
+      }
+    },
+    {
+      "externalId": "open-crm:idea:source-grounded-drafts",
+      "name": "Source-grounded Codex follow-up drafts",
+      "status": "Approved",
+      "priority": "HIGH",
+      "productExternalId": "zentrik-open-crm:product:core",
+      "description": "Before Codex drafts a follow-up, show which account signals it used and let the human approve or edit the final customer-facing message.",
+      "publicWhy": "The product should feel agentic without becoming opaque or unsafe.",
+      "userImpact": 10,
+      "effort": 5,
+      "taxonomyValues": {
+        "workflow_area": ["Codex workflows"],
+        "user_type": ["Founder-led team", "Consultant or agency", "Technical operator"],
+        "deployment_path": ["Local-first", "Self-hosted", "Hosted cloud"],
+        "evidence_source": ["Call", "Email", "Support ticket"]
+      }
+    },
+    {
+      "externalId": "open-crm:idea:agent-work-log",
+      "name": "Agent work log that shows what context was used",
+      "status": "New",
+      "priority": "HIGH",
+      "productExternalId": "zentrik-open-crm:product:core",
+      "description": "When Codex prepares a brief, follow-up, or product spec, show a compact trail of what it read, what it inferred, and what is waiting for human review.",
+      "publicWhy": "Users should feel the product thinking with them, not acting as an opaque black box.",
+      "userImpact": 9,
+      "effort": 6,
+      "taxonomyValues": {
+        "workflow_area": ["Agent transparency"],
+        "user_type": ["Founder-led team", "Technical operator", "Product leader"],
+        "deployment_path": ["Local-first", "Self-hosted", "Hosted cloud"],
+        "evidence_source": ["Call", "Email", "GitHub issue", "Usage pattern"]
+      }
+    },
+    {
+      "externalId": "open-crm:idea:local-first-workspace",
+      "name": "Local-first workspace with clean hosted upgrade path",
+      "status": "Approved",
+      "priority": "HIGH",
+      "productExternalId": "zentrik-open-crm:product:core",
+      "description": "Let users start with local browser or file-backed data, export their workspace, and move to hosted cloud only when they want convenience.",
+      "publicWhy": "Open-source users need trust, ownership, and reversibility before they will put account data into a CRM.",
+      "userImpact": 9,
+      "effort": 7,
+      "taxonomyValues": {
+        "workflow_area": ["Self-hosting"],
+        "user_type": ["Open-source contributor", "Technical operator"],
+        "deployment_path": ["Local-first", "Self-hosted", "Hosted cloud"],
+        "evidence_source": ["Public review", "Community thread"]
+      }
+    },
+    {
+      "externalId": "open-crm:idea:public-buildroom",
+      "name": "Public Open CRM Buildroom",
+      "status": "New",
+      "priority": "HIGH",
+      "productExternalId": "zentrik-open-crm:product:core",
+      "description": "Show public-safe feedback, ideas under review, shipped changes, and outcome checks so users can see how their engagement changes the product.",
+      "publicWhy": "The Buildroom is the clearest outward proof that the CRM is built with its users.",
+      "userImpact": 8,
+      "effort": 6,
+      "taxonomyValues": {
+        "workflow_area": ["Open CRM Buildroom"],
+        "user_type": ["Open-source contributor", "Product leader", "Hosted-only user"],
+        "deployment_path": ["Hosted cloud"],
+        "evidence_source": ["Community thread", "GitHub issue", "Usage pattern"]
+      }
+    },
+    {
+      "externalId": "open-crm:idea:spreadsheet-import",
+      "name": "Spreadsheet import that creates immediate account memory",
+      "status": "New",
+      "priority": "MEDIUM",
+      "productExternalId": "zentrik-open-crm:product:core",
+      "description": "Import a simple account spreadsheet, detect useful columns, create accounts, and produce a first daily board without requiring CRM administration.",
+      "publicWhy": "Many intended users start in spreadsheets and need a low-friction bridge.",
+      "userImpact": 8,
+      "effort": 5,
+      "taxonomyValues": {
+        "workflow_area": ["Account memory"],
+        "user_type": ["Founder-led team", "Consultant or agency"],
+        "deployment_path": ["Local-first", "Hosted cloud"],
+        "evidence_source": ["Public review", "Market research"]
+      }
+    },
+    {
+      "externalId": "open-crm:idea:signal-inbox",
+      "name": "Signal inbox for calls, tickets, reviews, and GitHub issues",
+      "status": "New",
+      "priority": "HIGH",
+      "productExternalId": "zentrik-open-crm:product:core",
+      "description": "Collect account and product signal from core systems, preserve source references, and help users decide what should become an account action or product idea.",
+      "publicWhy": "The CRM becomes valuable when it notices important context before the user manually organizes it.",
+      "userImpact": 9,
+      "effort": 8,
+      "taxonomyValues": {
+        "workflow_area": ["Signal capture"],
+        "user_type": ["Technical operator", "Product leader"],
+        "deployment_path": ["Self-hosted", "Hosted cloud"],
+        "evidence_source": ["Call", "Support ticket", "Public review", "GitHub issue"]
+      }
+    },
+    {
+      "externalId": "open-crm:idea:relationship-timeline",
+      "name": "Relationship timeline with source confidence",
+      "status": "New",
+      "priority": "MEDIUM",
+      "productExternalId": "zentrik-open-crm:product:core",
+      "description": "Show what changed in an account over time, how confident the CRM is in each fact, and which source should be checked before acting.",
+      "publicWhy": "Account memory is only useful when users can trust where it came from.",
+      "userImpact": 7,
+      "effort": 5,
+      "taxonomyValues": {
+        "workflow_area": ["Account memory"],
+        "user_type": ["Consultant or agency", "Technical operator"],
+        "deployment_path": ["Local-first", "Hosted cloud"],
+        "evidence_source": ["Call", "Email", "Usage pattern"]
+      }
+    },
+    {
+      "externalId": "open-crm:idea:connector-sdk",
+      "name": "Open connector pattern for community integrations",
+      "status": "New",
+      "priority": "MEDIUM",
+      "productExternalId": "zentrik-open-crm:product:core",
+      "description": "Document and support a safe connector interface so contributors can add sources like Gmail, GitHub, support desks, calendar tools, and product analytics.",
+      "publicWhy": "The open-source community should be able to expand the signal surface without compromising privacy boundaries.",
+      "userImpact": 7,
+      "effort": 9,
+      "taxonomyValues": {
+        "workflow_area": ["Integrations"],
+        "user_type": ["Open-source contributor", "Technical operator"],
+        "deployment_path": ["Self-hosted", "Hosted cloud"],
+        "evidence_source": ["GitHub issue", "Community thread"]
+      }
+    }
+  ],
+  "portalAccounts": [
+    {
+      "externalId": "open-crm-community",
+      "name": "Open CRM Community",
+      "domain": "community.open-crm.example",
+      "purpose": "Default public-feedback account for community members until a stronger account identity is available."
+    },
+    {
+      "externalId": "open-crm-founders",
+      "name": "Founder-Led Teams",
+      "domain": "founders.open-crm.example",
+      "purpose": "Segment account for founders, micro-SaaS builders, and small B2B operators."
+    },
+    {
+      "externalId": "open-crm-consultants",
+      "name": "Consultants and Agencies",
+      "domain": "consultants.open-crm.example",
+      "purpose": "Segment account for service teams managing client pipelines."
+    }
+  ],
+  "operatingRules": [
+    "Treat portal submissions as product signal, not support commitments.",
+    "Review hidden submissions before public visibility.",
+    "Link accepted requests to source-grounded ideas in the Zentrik workspace.",
+    "Use public-safe summaries only; never expose raw CRM records, emails, calls, or account notes.",
+    "Publish release updates with the evidence that caused the change and the outcome metric that will be reviewed.",
+    "Show public-safe agent work trails so users can understand how signals became work without exposing private data."
+  ],
+  "launchCopy": {
+    "headline": "The open-source CRM that gets better as you use it.",
+    "subheadline": "Run it locally, request what is missing, vote on what matters, and watch your signal become product work, releases, and outcome checks.",
+    "primaryCta": "Shape Open CRM",
+    "secondaryCta": "Run it locally"
+  }
+}

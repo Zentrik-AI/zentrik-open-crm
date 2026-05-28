@@ -1,0 +1,1129 @@
+import {
+  Activity,
+  ArrowRight,
+  Bot,
+  Check,
+  ClipboardCheck,
+  Database,
+  FileDown,
+  GitBranch,
+  Home,
+  Inbox,
+  Layers3,
+  Lock,
+  MessageSquarePlus,
+  Moon,
+  RefreshCcw,
+  Search,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  Sun,
+  Users,
+} from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Badge } from "./components/ui/badge";
+import { Button } from "./components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
+import { loadWorkspace, resetWorkspace, saveWorkspace } from "./lib/storage";
+import { cn, formatCurrency, formatDate, makeId } from "./lib/utils";
+import type {
+  Account,
+  CodexTask,
+  Idea,
+  Priority,
+  Signal,
+  SignalSource,
+  Workspace,
+} from "./types";
+
+type View = "today" | "accounts" | "signals" | "loop" | "codex" | "settings";
+
+const navItems: Array<{ id: View; label: string; icon: typeof Home }> = [
+  { id: "today", label: "Today", icon: Home },
+  { id: "accounts", label: "Accounts", icon: Users },
+  { id: "signals", label: "Signals", icon: Inbox },
+  { id: "loop", label: "Open CRM Loop", icon: GitBranch },
+  { id: "codex", label: "Codex", icon: Bot },
+  { id: "settings", label: "Settings", icon: Settings },
+];
+
+const sourceOptions: SignalSource[] = [
+  "call",
+  "email",
+  "support",
+  "community",
+  "review",
+  "github",
+  "usage",
+  "market",
+];
+
+const priorityTone: Record<Priority, "muted" | "warning" | "destructive"> = {
+  low: "muted",
+  medium: "muted",
+  high: "warning",
+  urgent: "destructive",
+};
+
+function App() {
+  const [workspace, setWorkspace] = useState<Workspace>(() => loadWorkspace());
+  const [view, setView] = useState<View>("today");
+  const [query, setQuery] = useState("");
+  const [publicMode, setPublicMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState(
+    workspace.accounts[0]?.id ?? "",
+  );
+  const [copiedTaskId, setCopiedTaskId] = useState<string | null>(null);
+  const [draftSignal, setDraftSignal] = useState({
+    accountId: workspace.accounts[0]?.id ?? "",
+    source: "call" as SignalSource,
+    title: "",
+    body: "",
+  });
+
+  useEffect(() => {
+    saveWorkspace(workspace);
+  }, [workspace]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+  }, [darkMode]);
+
+  const accountsById = useMemo(
+    () => new Map(workspace.accounts.map((account) => [account.id, account])),
+    [workspace.accounts],
+  );
+
+  const selectedAccount =
+    accountsById.get(selectedAccountId) ?? workspace.accounts[0];
+
+  const filteredAccounts = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) {
+      return workspace.accounts;
+    }
+
+    return workspace.accounts.filter((account) => {
+      const haystack = [
+        account.name,
+        account.domain,
+        account.segment,
+        account.owner,
+        ...account.tags,
+        ...account.needs,
+        ...account.risks,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(normalized);
+    });
+  }, [query, workspace.accounts]);
+
+  const metrics = useMemo(() => {
+    const pipeline = workspace.accounts.reduce((sum, account) => sum + account.arr, 0);
+    const atRisk = workspace.accounts.filter((account) => account.stage === "at_risk").length;
+    const openActions = workspace.accounts.filter(
+      (account) => account.nextAction.status === "open",
+    ).length;
+    const highImpactSignals = workspace.signals.filter(
+      (signal) => signal.impact === "high" || signal.impact === "urgent",
+    ).length;
+
+    return { pipeline, atRisk, openActions, highImpactSignals };
+  }, [workspace.accounts, workspace.signals]);
+
+  function completeNextAction(accountId: string) {
+    const account = accountsById.get(accountId);
+    if (!account) {
+      return;
+    }
+
+    setWorkspace((current) => ({
+      ...current,
+      accounts: current.accounts.map((item) =>
+        item.id === accountId
+          ? {
+              ...item,
+              nextAction: { ...item.nextAction, status: "done" },
+              lastTouch: new Date().toISOString(),
+            }
+          : item,
+      ),
+      evolutionLog: [
+        {
+          id: makeId("log"),
+          date: new Date().toISOString(),
+          title: `Completed next action for ${account.name}`,
+          summary: account.nextAction.label,
+          evidence: ["Human approved account workflow step"],
+        },
+        ...current.evolutionLog,
+      ],
+    }));
+  }
+
+  function approveIdea(ideaId: string) {
+    setWorkspace((current) => ({
+      ...current,
+      ideas: current.ideas.map((idea) =>
+        idea.id === ideaId
+          ? {
+              ...idea,
+              status: idea.status === "candidate" ? "shaping" : "queued",
+              votes: idea.votes + 1,
+              confidence: Math.min(99, idea.confidence + 3),
+            }
+          : idea,
+      ),
+      evolutionLog: [
+        {
+          id: makeId("log"),
+          date: new Date().toISOString(),
+          title: "Idea advanced from workspace review",
+          summary:
+            "A human moved an idea forward after reviewing linked signals and source confidence.",
+          evidence: [`Idea ${ideaId}`],
+        },
+        ...current.evolutionLog,
+      ],
+    }));
+  }
+
+  function addSignal(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!draftSignal.title.trim() || !draftSignal.body.trim()) {
+      return;
+    }
+
+    const signal: Signal = {
+      id: makeId("sig"),
+      accountId: draftSignal.accountId,
+      source: draftSignal.source,
+      title: draftSignal.title.trim(),
+      body: draftSignal.body.trim(),
+      sentiment: "neutral",
+      impact: "medium",
+      receivedAt: new Date().toISOString(),
+      sourceRef: "Manual local intake",
+    };
+
+    setWorkspace((current) => ({
+      ...current,
+      signals: [signal, ...current.signals],
+      evolutionLog: [
+        {
+          id: makeId("log"),
+          date: signal.receivedAt,
+          title: "New signal captured",
+          summary: signal.title,
+          evidence: [signal.sourceRef],
+        },
+        ...current.evolutionLog,
+      ],
+    }));
+    setDraftSignal((current) => ({ ...current, title: "", body: "" }));
+  }
+
+  async function copyCodexPrompt(task: CodexTask) {
+    const account = task.accountId ? accountsById.get(task.accountId) : undefined;
+    const idea = task.ideaId
+      ? workspace.ideas.find((item) => item.id === task.ideaId)
+      : undefined;
+    const prompt = [
+      `Workspace: ${workspace.name}`,
+      account ? `Account: ${account.name} (${account.domain})` : null,
+      idea ? `Idea: ${idea.title}` : null,
+      "",
+      task.prompt,
+      "",
+      `Guardrail: ${task.guardrail}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    await navigator.clipboard.writeText(prompt);
+    setCopiedTaskId(task.id);
+    window.setTimeout(() => setCopiedTaskId(null), 1600);
+  }
+
+  function exportWorkspace() {
+    const payload = JSON.stringify(workspace, null, 2);
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "zentrik-open-crm-workspace.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleReset() {
+    const reset = resetWorkspace();
+    setWorkspace(reset);
+    setSelectedAccountId(reset.accounts[0]?.id ?? "");
+    setDraftSignal((current) => ({
+      ...current,
+      accountId: reset.accounts[0]?.id ?? "",
+    }));
+  }
+
+  return (
+    <div className="app-grid bg-background">
+      <aside className="hidden border-r bg-shell px-4 py-5 lg:block">
+        <div className="mb-8 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Layers3 className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold">Zentrik Open CRM</div>
+            <div className="text-xs text-muted-foreground">Local-first workspace</div>
+          </div>
+        </div>
+
+        <nav className="space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                className={cn("nav-item", view === item.id && "nav-item-active")}
+                onClick={() => setView(item.id)}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="mt-8 rounded-lg border bg-card p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+            <ShieldCheck className="h-4 w-4 text-success" />
+            Public-safe demo
+          </div>
+          <p className="text-xs leading-5 text-muted-foreground">
+            This workspace uses synthetic records and safe domains. Do not paste
+            private customer data into public fixtures.
+          </p>
+        </div>
+      </aside>
+
+      <main className="min-w-0">
+        <header className="sticky top-0 z-10 border-b bg-background/94 px-4 py-3 backdrop-blur lg:px-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground lg:hidden">
+                <Layers3 className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-base font-semibold">{workspace.name}</h1>
+                <p className="truncate text-xs text-muted-foreground">
+                  {workspace.edition} · Updated {formatDate(workspace.updatedAt)}
+                </p>
+              </div>
+            </div>
+
+            <label className="relative hidden min-w-[260px] sm:block">
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                className="focus-input w-full pl-9"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search accounts, risks, needs"
+              />
+            </label>
+
+            <Button
+              size="sm"
+              variant={publicMode ? "primary" : "secondary"}
+              onClick={() => setPublicMode((value) => !value)}
+            >
+              <Lock className="h-4 w-4" />
+              {publicMode ? "Buildroom" : "Private"}
+            </Button>
+            <Button size="icon" variant="ghost" onClick={() => setDarkMode((value) => !value)}>
+              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+          </div>
+
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:hidden">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  className={cn(
+                    "flex h-9 shrink-0 items-center gap-2 rounded-md border px-3 text-xs font-medium",
+                    view === item.id
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground",
+                  )}
+                  onClick={() => setView(item.id)}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </header>
+
+        <div className="mx-auto max-w-7xl px-4 py-5 lg:px-6">
+          {view === "today" && (
+            <TodayView
+              metrics={metrics}
+              workspace={workspace}
+              accountsById={accountsById}
+              onCompleteAction={completeNextAction}
+              onSelectAccount={(accountId) => {
+                setSelectedAccountId(accountId);
+                setView("accounts");
+              }}
+            />
+          )}
+          {view === "accounts" && (
+            <AccountsView
+              accounts={filteredAccounts}
+              selectedAccount={selectedAccount}
+              publicMode={publicMode}
+              signals={workspace.signals}
+              onSelectAccount={setSelectedAccountId}
+              onCompleteAction={completeNextAction}
+            />
+          )}
+          {view === "signals" && (
+            <SignalsView
+              workspace={workspace}
+              accountsById={accountsById}
+              draftSignal={draftSignal}
+              setDraftSignal={setDraftSignal}
+              onSubmit={addSignal}
+            />
+          )}
+          {view === "loop" && (
+            <LoopView
+              workspace={workspace}
+              accountsById={accountsById}
+              onApproveIdea={approveIdea}
+            />
+          )}
+          {view === "codex" && (
+            <CodexView
+              workspace={workspace}
+              accountsById={accountsById}
+              copiedTaskId={copiedTaskId}
+              onCopyPrompt={copyCodexPrompt}
+            />
+          )}
+          {view === "settings" && (
+            <SettingsView onExport={exportWorkspace} onReset={handleReset} />
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function TodayView({
+  metrics,
+  workspace,
+  accountsById,
+  onCompleteAction,
+  onSelectAccount,
+}: {
+  metrics: {
+    pipeline: number;
+    atRisk: number;
+    openActions: number;
+    highImpactSignals: number;
+  };
+  workspace: Workspace;
+  accountsById: Map<string, Account>;
+  onCompleteAction: (accountId: string) => void;
+  onSelectAccount: (accountId: string) => void;
+}) {
+  const openAccounts = workspace.accounts.filter(
+    (account) => account.nextAction.status === "open",
+  );
+  const recentSignals = workspace.signals.slice(0, 3);
+
+  return (
+    <div className="section-grid">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="Weighted pipeline" value={formatCurrency(metrics.pipeline)} icon={Database} />
+        <MetricCard label="Open next actions" value={metrics.openActions.toString()} icon={ClipboardCheck} />
+        <MetricCard label="High-impact signals" value={metrics.highImpactSignals.toString()} icon={Activity} />
+        <MetricCard label="At-risk accounts" value={metrics.atRisk.toString()} icon={ShieldCheck} tone="destructive" />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Daily Account Board</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Prioritized from stage, source confidence, signal impact, and due dates.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {openAccounts.map((account) => (
+              <div
+                key={account.id}
+                className="grid gap-3 rounded-lg border bg-background p-3 md:grid-cols-[1fr_auto]"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      className="truncate text-sm font-semibold hover:underline"
+                      onClick={() => onSelectAccount(account.id)}
+                    >
+                      {account.name}
+                    </button>
+                    <Badge tone={priorityTone[account.priority]}>{account.priority}</Badge>
+                    <Badge tone="account">{account.stage.replace("_", " ")}</Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {account.nextAction.label}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <span>Due {formatDate(account.nextAction.due)}</span>
+                    <span>Owner {account.owner}</span>
+                    <span>Confidence {account.sourceConfidence}%</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 md:justify-end">
+                  <Button size="sm" variant="ghost" onClick={() => onSelectAccount(account.id)}>
+                    Open
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="primary" onClick={() => onCompleteAction(account.id)}>
+                    <Check className="h-4 w-4" />
+                    Done
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Fresh Signals</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Incoming evidence that should change account work or product direction.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {recentSignals.map((signal) => {
+              const account = accountsById.get(signal.accountId);
+              return (
+                <SignalRow
+                  key={signal.id}
+                  signal={signal}
+                  accountName={account?.name ?? "Unknown account"}
+                />
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function AccountsView({
+  accounts,
+  selectedAccount,
+  publicMode,
+  signals,
+  onSelectAccount,
+  onCompleteAction,
+}: {
+  accounts: Account[];
+  selectedAccount: Account;
+  publicMode: boolean;
+  signals: Signal[];
+  onSelectAccount: (accountId: string) => void;
+  onCompleteAction: (accountId: string) => void;
+}) {
+  const accountSignals = signals.filter(
+    (signal) => signal.accountId === selectedAccount.id,
+  );
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
+      <div className="space-y-3">
+        {accounts.map((account) => (
+          <button
+            key={account.id}
+            className={cn(
+              "w-full rounded-lg border bg-card p-4 text-left transition hover:border-primary/50",
+              selectedAccount.id === account.id && "border-primary shadow-focus",
+            )}
+            onClick={() => onSelectAccount(account.id)}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold">{account.name}</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {account.segment}
+                </div>
+              </div>
+              <Badge tone={priorityTone[account.priority]}>{account.priority}</Badge>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+              <MiniStat label="Health" value={`${account.health}%`} />
+              <MiniStat label="Fit" value={`${account.fit}%`} />
+              <MiniStat label="ARR" value={formatCurrency(account.arr)} />
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader className="border-b">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>{selectedAccount.name}</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {publicMode ? "Domain hidden in Buildroom mode" : selectedAccount.domain}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge tone="account">{selectedAccount.stage.replace("_", " ")}</Badge>
+              <Badge tone="muted">{selectedAccount.owner}</Badge>
+              <Badge tone="signal">{selectedAccount.sourceConfidence}% evidence</Badge>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div className="grid gap-4 lg:grid-cols-3">
+            <MiniStat label="Health" value={`${selectedAccount.health}%`} />
+            <MiniStat label="Fit" value={`${selectedAccount.fit}%`} />
+            <MiniStat
+              label="Annual value"
+              value={publicMode ? "Hidden" : formatCurrency(selectedAccount.arr)}
+            />
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <InfoList title="Needs" items={selectedAccount.needs} tone="success" />
+            <InfoList title="Risks" items={publicMode ? ["Private risk notes hidden"] : selectedAccount.risks} tone="warning" />
+          </div>
+
+          <div className="mt-5 rounded-lg border bg-background p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold">Next action</div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {selectedAccount.nextAction.label}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant={selectedAccount.nextAction.status === "done" ? "secondary" : "primary"}
+                disabled={selectedAccount.nextAction.status === "done"}
+                onClick={() => onCompleteAction(selectedAccount.id)}
+              >
+                <Check className="h-4 w-4" />
+                {selectedAccount.nextAction.status === "done" ? "Complete" : "Mark done"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <div className="mb-3 text-sm font-semibold">Linked signals</div>
+            <div className="space-y-3">
+              {accountSignals.map((signal) => (
+                <SignalRow
+                  key={signal.id}
+                  signal={signal}
+                  accountName={selectedAccount.name}
+                />
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function SignalsView({
+  workspace,
+  accountsById,
+  draftSignal,
+  setDraftSignal,
+  onSubmit,
+}: {
+  workspace: Workspace;
+  accountsById: Map<string, Account>;
+  draftSignal: {
+    accountId: string;
+    source: SignalSource;
+    title: string;
+    body: string;
+  };
+  setDraftSignal: React.Dispatch<
+    React.SetStateAction<{
+      accountId: string;
+      source: SignalSource;
+      title: string;
+      body: string;
+    }>
+  >;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+      <Card>
+        <CardHeader>
+          <CardTitle>Capture Signal</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Add a call note, ticket summary, public review, community post, or
+            market observation with a linked account.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={onSubmit}>
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">Account</span>
+              <select
+                className="focus-input w-full"
+                value={draftSignal.accountId}
+                onChange={(event) =>
+                  setDraftSignal((current) => ({
+                    ...current,
+                    accountId: event.target.value,
+                  }))
+                }
+              >
+                {workspace.accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">Source</span>
+              <select
+                className="focus-input w-full"
+                value={draftSignal.source}
+                onChange={(event) =>
+                  setDraftSignal((current) => ({
+                    ...current,
+                    source: event.target.value as SignalSource,
+                  }))
+                }
+              >
+                {sourceOptions.map((source) => (
+                  <option key={source} value={source}>
+                    {source}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">Title</span>
+              <input
+                className="focus-input w-full"
+                value={draftSignal.title}
+                onChange={(event) =>
+                  setDraftSignal((current) => ({ ...current, title: event.target.value }))
+                }
+                placeholder="Short source-grounded summary"
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">Body</span>
+              <textarea
+                className="focus-input min-h-36 w-full resize-y"
+                value={draftSignal.body}
+                onChange={(event) =>
+                  setDraftSignal((current) => ({ ...current, body: event.target.value }))
+                }
+                placeholder="What was said, observed, or requested?"
+              />
+            </label>
+            <Button type="submit" variant="primary">
+              <MessageSquarePlus className="h-4 w-4" />
+              Add signal
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Signal Inbox</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            A useful CRM should behave like source memory, not just an activity log.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {workspace.signals.map((signal) => (
+            <SignalRow
+              key={signal.id}
+              signal={signal}
+              accountName={accountsById.get(signal.accountId)?.name ?? "Unknown account"}
+            />
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function LoopView({
+  workspace,
+  accountsById,
+  onApproveIdea,
+}: {
+  workspace: Workspace;
+  accountsById: Map<string, Account>;
+  onApproveIdea: (ideaId: string) => void;
+}) {
+  return (
+    <div className="section-grid">
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+        {workspace.ideas.map((idea) => (
+          <IdeaCard key={idea.id} idea={idea} onApproveIdea={onApproveIdea} />
+        ))}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1fr_0.9fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Open CRM Buildroom</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Public-safe view of what users asked for, what the product is
+              considering, and what shipped.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {workspace.signals.map((signal) => {
+              const account = accountsById.get(signal.accountId);
+              return (
+                <div key={signal.id} className="rounded-lg border bg-background p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone="signal">{signal.source}</Badge>
+                    <Badge tone={priorityTone[signal.impact]}>{signal.impact}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {account?.segment ?? "General market"}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-sm font-medium">{signal.title}</div>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    {signal.body}
+                  </p>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Evolution Log</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              The product should explain why it changed and what evidence moved it.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {workspace.evolutionLog.map((entry) => (
+              <div key={entry.id} className="border-l-2 border-accent pl-4">
+                <div className="text-xs text-muted-foreground">
+                  {formatDate(entry.date)}
+                </div>
+                <div className="mt-1 text-sm font-semibold">{entry.title}</div>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  {entry.summary}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {entry.evidence.map((item) => (
+                    <Badge key={item} tone="muted">
+                      {item}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function CodexView({
+  workspace,
+  accountsById,
+  copiedTaskId,
+  onCopyPrompt,
+}: {
+  workspace: Workspace;
+  accountsById: Map<string, Account>;
+  copiedTaskId: string | null;
+  onCopyPrompt: (task: CodexTask) => void;
+}) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[1fr_0.9fr]">
+      <Card>
+        <CardHeader>
+          <CardTitle>Codex Task Queue</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Agent work should start from explicit context, source boundaries, and
+            human review.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {workspace.codexTasks.map((task) => {
+            const account = task.accountId ? accountsById.get(task.accountId) : undefined;
+            return (
+              <div key={task.id} className="rounded-lg border bg-background p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone="agent">{task.status.replace("_", " ")}</Badge>
+                      {account && <Badge tone="account">{account.name}</Badge>}
+                    </div>
+                    <div className="mt-3 text-sm font-semibold">{task.title}</div>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      {task.prompt}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="primary" onClick={() => onCopyPrompt(task)}>
+                    <Sparkles className="h-4 w-4" />
+                    {copiedTaskId === task.id ? "Copied" : "Copy prompt"}
+                  </Button>
+                </div>
+                <div className="mt-3 rounded-md border bg-card p-3 text-xs leading-5 text-muted-foreground">
+                  <span className="font-semibold text-foreground">Guardrail: </span>
+                  {task.guardrail}
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Agent Operating Contract</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            The CRM is designed so Codex can help without becoming an unchecked
+            black box.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[
+            "Read workspace records, docs, and linked signals before proposing action.",
+            "Cite the account, signal, idea, or release evidence behind every recommendation.",
+            "Draft work for human approval before sending customer-facing messages.",
+            "Never use private data from another workspace or public demo fixture.",
+            "Record meaningful work in the Evolution Log so the product can learn over time.",
+          ].map((item) => (
+            <div key={item} className="flex gap-3 rounded-lg border bg-background p-3">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+              <p className="text-sm leading-6 text-muted-foreground">{item}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function SettingsView({
+  onExport,
+  onReset,
+}: {
+  onExport: () => void;
+  onReset: () => void;
+}) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-3">
+      <Card>
+        <CardHeader>
+          <CardTitle>Local Data</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            This version persists workspace changes in browser local storage.
+          </p>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button variant="primary" onClick={onExport}>
+            <FileDown className="h-4 w-4" />
+            Export JSON
+          </Button>
+          <Button variant="secondary" onClick={onReset}>
+            <RefreshCcw className="h-4 w-4" />
+            Reset demo
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Self-Hosted Path</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            The first release keeps data local. Server-backed storage, auth, and
+            connector workers can be added behind the same workspace model.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>1. Start with the local workspace.</p>
+          <p>2. Add your own data directory or API adapter.</p>
+          <p>3. Connect Codex with the repository instructions.</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Privacy Boundary</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Public fixtures should stay synthetic. Private account work belongs
+            in private workspaces or encrypted hosted instances.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {["No API keys", "No customer exports", "No private transcripts"].map((item) => (
+            <div key={item} className="flex items-center gap-2 text-sm">
+              <Check className="h-4 w-4 text-success" />
+              {item}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  icon: Icon,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  icon: typeof Home;
+  tone?: "default" | "destructive";
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-center justify-between gap-4 pt-4">
+        <div>
+          <div className="text-xs font-medium text-muted-foreground">{label}</div>
+          <div className="metric-value">{value}</div>
+        </div>
+        <div
+          className={cn(
+            "flex h-10 w-10 items-center justify-center rounded-lg",
+            tone === "destructive"
+              ? "bg-destructive/10 text-destructive"
+              : "bg-signal/10 text-signal",
+          )}
+        >
+          <Icon className="h-5 w-5" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SignalRow({
+  signal,
+  accountName,
+}: {
+  signal: Signal;
+  accountName: string;
+}) {
+  return (
+    <article className="rounded-lg border bg-background p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone="signal">{signal.source}</Badge>
+        <Badge tone={priorityTone[signal.impact]}>{signal.impact}</Badge>
+        <span className="text-xs text-muted-foreground">
+          {accountName} · {formatDate(signal.receivedAt)}
+        </span>
+      </div>
+      <h3 className="mt-2 text-sm font-semibold">{signal.title}</h3>
+      <p className="mt-1 text-sm leading-6 text-muted-foreground">{signal.body}</p>
+      <div className="mt-2 text-xs text-muted-foreground">Source: {signal.sourceRef}</div>
+    </article>
+  );
+}
+
+function IdeaCard({
+  idea,
+  onApproveIdea,
+}: {
+  idea: Idea;
+  onApproveIdea: (ideaId: string) => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-3">
+          <Badge tone="idea">{idea.status}</Badge>
+          <span className="text-xs text-muted-foreground">{idea.confidence}% confidence</span>
+        </div>
+        <CardTitle>{idea.title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="min-h-24 text-sm leading-6 text-muted-foreground">{idea.problem}</p>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <div className="text-xs text-muted-foreground">
+            {idea.votes} votes · {idea.targetRelease}
+          </div>
+          <Button size="sm" variant="secondary" onClick={() => onApproveIdea(idea.id)}>
+            Advance
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border bg-background p-3">
+      <div className="text-xs font-medium text-muted-foreground">{label}</div>
+      <div className="mt-1 text-sm font-semibold">{value}</div>
+    </div>
+  );
+}
+
+function InfoList({
+  title,
+  items,
+  tone,
+}: {
+  title: string;
+  items: string[];
+  tone: "success" | "warning";
+}) {
+  return (
+    <div>
+      <div className="mb-2 text-sm font-semibold">{title}</div>
+      <div className="space-y-2">
+        {items.map((item) => (
+          <div key={item} className="flex gap-2 rounded-md border bg-background p-3">
+            <span
+              className={cn(
+                "mt-2 h-1.5 w-1.5 shrink-0 rounded-full",
+                tone === "success" ? "bg-success" : "bg-warning",
+              )}
+            />
+            <p className="text-sm leading-6 text-muted-foreground">{item}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default App;

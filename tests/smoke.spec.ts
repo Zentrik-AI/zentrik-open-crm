@@ -137,8 +137,15 @@ test("supports local account setup, contacts, persistence, and reset", async ({ 
   await expect(page.getByRole("heading", { name: "Northstar Robotics" })).toBeVisible();
 });
 
-test("routes private feedback and GitHub-ready feedback differently", async ({ page }) => {
+test("routes private, support, and GitHub-ready feedback differently", async ({
+  context,
+  page,
+}) => {
   test.skip(test.info().project.name !== "chromium", "Feedback routing runs only in the desktop project.");
+
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: "http://127.0.0.1:5177",
+  });
 
   await page.getByRole("button", { name: "Tell Open CRM", exact: true }).click();
   await page.getByLabel("Feedback title").fill("Keyboard workflow feels hidden");
@@ -153,7 +160,9 @@ test("routes private feedback and GitHub-ready feedback differently", async ({ p
   await expect(page.getByText("Triage feedback: Keyboard workflow feels hidden")).toBeHidden();
 
   await page.getByRole("button", { name: "Tell Open CRM", exact: true }).click();
-  await page.getByRole("button", { name: /GitHub issue/ }).click();
+  await page
+    .getByRole("button", { name: /^GitHub issue Shape a reproducible/ })
+    .click();
   await page.getByLabel("Workflow area").selectOption("Self-hosting");
   await page.getByLabel("Feedback title").fill("Preview command should document the port");
   await page
@@ -166,6 +175,29 @@ test("routes private feedback and GitHub-ready feedback differently", async ({ p
 
   await page.getByRole("button", { name: "Codex", exact: true }).click();
   await expect(page.getByText("Triage feedback: Preview command should document the port")).toBeVisible();
+
+  await page.getByRole("button", { name: "Tell Open CRM", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Download feedback bundle" })).toBeEnabled();
+  await page.getByRole("button", { name: "Copy GitHub issue draft" }).click();
+  await expect(page.getByRole("button", { name: "Issue draft copied" })).toBeVisible();
+  const issueDraft = await page.evaluate(() => navigator.clipboard.readText());
+  expect(issueDraft).toContain("Open CRM feedback: Preview command should document the port");
+  expect(issueDraft).toContain("In-app feedback bundle: open-crm:feedback:");
+
+  await page
+    .getByRole("button", { name: /^Support request Prepare private/ })
+    .click();
+  await page.getByLabel("Feedback type").selectOption("install_support");
+  await page.getByLabel("Feedback title").fill("Cloud invite did not arrive");
+  await page
+    .getByLabel("What happened, and what should be better?")
+    .fill("I created an account and opted into the Buildroom, but the invite link never arrived.");
+  await page.getByRole("button", { name: "Send through loop" }).click();
+  await expect(page.getByRole("heading", { name: "Capture Signal" })).toBeVisible();
+  await expect(page.getByText("Cloud invite did not arrive")).toBeVisible();
+
+  await page.getByRole("button", { name: "Codex", exact: true }).click();
+  await expect(page.getByText("Triage feedback: Cloud invite did not arrive")).toBeVisible();
 });
 
 test("keeps primary navigation usable on mobile", async ({ page }) => {

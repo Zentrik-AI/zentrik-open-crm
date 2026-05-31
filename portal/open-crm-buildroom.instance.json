@@ -17,6 +17,36 @@
     "accentColor": "#0f766e",
     "isDefault": true
   },
+  "intakeChannels": [
+    {
+      "key": "in_app_feedback",
+      "label": "Tell Open CRM",
+      "source": "In-App Feedback",
+      "defaultPrivacy": "private",
+      "acceptedPayload": "open-crm-feedback.v1"
+    },
+    {
+      "key": "buildroom_request",
+      "label": "Open CRM Buildroom request",
+      "source": "Portal",
+      "defaultPrivacy": "public-safe-summary",
+      "moderation": "hidden_until_review"
+    },
+    {
+      "key": "github_issue",
+      "label": "GitHub issue",
+      "source": "GitHub",
+      "defaultPrivacy": "public",
+      "repository": "Zentrik-AI/zentrik-open-crm"
+    },
+    {
+      "key": "support_request",
+      "label": "Support request",
+      "source": "Support",
+      "defaultPrivacy": "private",
+      "moderation": "private_triage"
+    }
+  ],
   "products": [
     {
       "externalId": "zentrik-open-crm:product:core",

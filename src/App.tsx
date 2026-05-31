@@ -4,11 +4,14 @@ import {
   Bot,
   Check,
   ClipboardCheck,
+  Copy,
   Database,
+  ExternalLink,
   FileDown,
   GitBranch,
   Home,
   Inbox,
+  LifeBuoy,
   Layers3,
   Lightbulb,
   Lock,
@@ -53,7 +56,62 @@ type View =
   | "loop"
   | "codex"
   | "settings";
-type FeedbackMode = "private_signal" | "buildroom_request" | "github_issue";
+type FeedbackMode =
+  | "private_signal"
+  | "buildroom_request"
+  | "github_issue"
+  | "support_request";
+type FeedbackKind =
+  | "request"
+  | "bug"
+  | "confusing"
+  | "privacy"
+  | "agent_output"
+  | "install_support";
+type FeedbackPrivacy = "private" | "public-safe-summary" | "public";
+
+interface FeedbackBundle {
+  schemaVersion: "open-crm-feedback.v1";
+  externalId: string;
+  createdAt: string;
+  product: "Zentrik Open CRM";
+  source: SignalSource;
+  sourceFacet: FeedbackKind;
+  sourceLabel: string;
+  mode: FeedbackMode;
+  modeLabel: string;
+  privacy: FeedbackPrivacy;
+  route: string;
+  workflowArea: string;
+  title: string;
+  body: string;
+  linkedAccount: {
+    localId: string;
+    publicLabel: string;
+    privateName?: string;
+  };
+  publicSafety: {
+    reviewRequired: boolean;
+    instruction: string;
+  };
+  zentrikSignal: {
+    externalId: string;
+    source: SignalSource;
+    sourceFacet: FeedbackKind;
+    sourceLabel: string;
+    product: "Zentrik Open CRM";
+    privacy: FeedbackPrivacy;
+    summary: string;
+  };
+  githubIssueDraft?: {
+    title: string;
+    body: string;
+  };
+}
+
+const BUILDROOM_URL = "https://open-crm.ideas.zentrik.ai";
+const GITHUB_ISSUES_URL =
+  "https://github.com/Zentrik-AI/zentrik-open-crm/issues/new/choose";
 
 const navItems: Array<{ id: View; label: string; icon: typeof Home }> = [
   { id: "today", label: "Today", icon: Home },
@@ -90,7 +148,10 @@ const feedbackModes: Record<
     label: string;
     summary: string;
     sourceRef: string;
+    source: SignalSource;
+    privacy: FeedbackPrivacy;
     createsIdea: boolean;
+    createsTask: boolean;
     publicSurface: string;
   }
 > = {
@@ -98,24 +159,52 @@ const feedbackModes: Record<
     label: "Private signal",
     summary: "Capture context for Zentrik without publishing anything.",
     sourceRef: "In-app feedback · private",
+    source: "feedback",
+    privacy: "private",
     createsIdea: false,
+    createsTask: false,
     publicSurface: "Private Zentrik workspace only",
   },
   buildroom_request: {
     label: "Buildroom request",
     summary: "Create a public-safe idea candidate and initial vote.",
     sourceRef: "Open CRM Buildroom draft · public-safe",
+    source: "feedback",
+    privacy: "public-safe-summary",
     createsIdea: true,
+    createsTask: true,
     publicSurface: "Open CRM Buildroom after moderation",
   },
   github_issue: {
     label: "GitHub issue",
     summary: "Shape a reproducible public issue for open-source work.",
     sourceRef: "GitHub issue draft · public",
+    source: "github",
+    privacy: "public",
     createsIdea: true,
+    createsTask: true,
     publicSurface: "GitHub issue plus Zentrik signal",
   },
+  support_request: {
+    label: "Support request",
+    summary: "Prepare private setup or hosted-account help.",
+    sourceRef: "Open CRM support draft · private",
+    source: "support",
+    privacy: "private",
+    createsIdea: false,
+    createsTask: true,
+    publicSurface: "Private support channel plus Zentrik signal",
+  },
 };
+
+const feedbackKinds: Array<{ id: FeedbackKind; label: string }> = [
+  { id: "request", label: "Feature request" },
+  { id: "bug", label: "Bug or regression" },
+  { id: "confusing", label: "Confusing workflow" },
+  { id: "privacy", label: "Privacy concern" },
+  { id: "agent_output", label: "Agent output issue" },
+  { id: "install_support", label: "Install/support issue" },
+];
 
 const workflowAreas = [
   "First-run setup",
@@ -161,6 +250,41 @@ const emptyContactDraft = {
   influence: "champion" as Contact["influence"],
 };
 
+function createGitHubIssueDraft({
+  title,
+  body,
+  workflowArea,
+  kind,
+  externalId,
+}: {
+  title: string;
+  body: string;
+  workflowArea: string;
+  kind: string;
+  externalId: string;
+}) {
+  return {
+    title: `Open CRM feedback: ${title}`,
+    body: [
+      "## User workflow",
+      workflowArea,
+      "",
+      "## Feedback type",
+      kind,
+      "",
+      "## What happened",
+      body,
+      "",
+      "## Source or evidence",
+      `In-app feedback bundle: ${externalId}`,
+      "",
+      "## Public data check",
+      "- [ ] This issue does not include private account records, customer names, credentials, transcripts, emails, or exports",
+      "- [ ] Any reproduction steps use synthetic or public-safe data",
+    ].join("\n"),
+  };
+}
+
 function App() {
   const [workspace, setWorkspace] = useState<Workspace>(() => loadWorkspace());
   const [view, setView] = useState<View>("today");
@@ -182,11 +306,16 @@ function App() {
   });
   const [draftFeedback, setDraftFeedback] = useState({
     mode: "private_signal" as FeedbackMode,
+    kind: "request" as FeedbackKind,
     accountId: workspace.accounts[0]?.id ?? "",
     workflowArea: workflowAreas[0],
     title: "",
     body: "",
   });
+  const [lastFeedbackBundle, setLastFeedbackBundle] =
+    useState<FeedbackBundle | null>(null);
+  const [copiedIssueDraft, setCopiedIssueDraft] = useState(false);
+  const [copyIssueDraftError, setCopyIssueDraftError] = useState(false);
 
   useEffect(() => {
     saveWorkspace(workspace);
@@ -470,20 +599,74 @@ function App() {
 
     const mode = feedbackModes[draftFeedback.mode];
     const receivedAt = new Date().toISOString();
+    const kind =
+      feedbackKinds.find((item) => item.id === draftFeedback.kind) ??
+      feedbackKinds[0];
+    const account = accountsById.get(draftFeedback.accountId);
     const signalId = makeId("sig");
     const ideaId = mode.createsIdea ? makeId("idea") : undefined;
-    const taskId = mode.createsIdea ? makeId("task") : undefined;
+    const taskId = mode.createsIdea || mode.createsTask ? makeId("task") : undefined;
     const bodyWithContext = [
       `Workflow area: ${draftFeedback.workflowArea}`,
+      `Feedback type: ${kind.label}`,
       `Mode: ${mode.label}`,
+      `Route: ${mode.publicSurface}`,
       "",
       body,
     ].join("\n");
+    const bundleExternalId = `open-crm:feedback:${signalId}`;
+    const issueDraft = draftFeedback.mode === "github_issue"
+      ? createGitHubIssueDraft({
+          title,
+          body,
+          workflowArea: draftFeedback.workflowArea,
+          kind: kind.label,
+          externalId: bundleExternalId,
+        })
+      : undefined;
+    const bundle: FeedbackBundle = {
+      schemaVersion: "open-crm-feedback.v1",
+      externalId: bundleExternalId,
+      createdAt: receivedAt,
+      product: "Zentrik Open CRM",
+      source: mode.source,
+      sourceFacet: kind.id,
+      sourceLabel: mode.sourceRef,
+      mode: draftFeedback.mode,
+      modeLabel: mode.label,
+      privacy: mode.privacy,
+      route: mode.publicSurface,
+      workflowArea: draftFeedback.workflowArea,
+      title,
+      body,
+      linkedAccount: {
+        localId: draftFeedback.accountId,
+        publicLabel: account?.segment ?? "Open CRM user",
+        privateName: mode.privacy === "private" ? account?.name : undefined,
+      },
+      publicSafety: {
+        reviewRequired: mode.privacy !== "private",
+        instruction:
+          mode.privacy === "private"
+            ? "Keep this feedback private unless the user later approves a public-safe summary."
+            : "Review and rewrite before publication. Remove account names, domains, credentials, raw notes, and private customer context.",
+      },
+      zentrikSignal: {
+        externalId: bundleExternalId,
+        source: mode.source,
+        sourceFacet: kind.id,
+        sourceLabel: mode.sourceRef,
+        product: "Zentrik Open CRM",
+        privacy: mode.privacy,
+        summary: `${draftFeedback.workflowArea}: ${title}`,
+      },
+      githubIssueDraft: issueDraft,
+    };
 
     const signal: Signal = {
       id: signalId,
       accountId: draftFeedback.accountId,
-      source: draftFeedback.mode === "github_issue" ? "github" : "feedback",
+      source: mode.source,
       title,
       body: bodyWithContext,
       sentiment: "mixed",
@@ -512,7 +695,7 @@ function App() {
       : null;
 
     const task: CodexTask | null =
-      taskId && ideaId
+      taskId
         ? {
             id: taskId,
             title: `Triage feedback: ${title}`,
@@ -522,6 +705,7 @@ function App() {
             prompt: [
               `Evaluate this ${mode.label.toLowerCase()} for Zentrik Open CRM.`,
               `Workflow area: ${draftFeedback.workflowArea}.`,
+              `Feedback type: ${kind.label}.`,
               "Decide whether it should remain a signal, merge into an existing idea, or become implementation work.",
               "Return a public-safe summary, likely affected workflow, acceptance criteria, and validation plan.",
             ].join(" "),
@@ -553,8 +737,55 @@ function App() {
       ],
     }));
 
+    setLastFeedbackBundle(bundle);
+    setCopiedIssueDraft(false);
+    setCopyIssueDraftError(false);
     setDraftFeedback((current) => ({ ...current, title: "", body: "" }));
     setView(mode.createsIdea ? "loop" : "signals");
+  }
+
+  function downloadFeedbackBundle() {
+    if (!lastFeedbackBundle) {
+      return;
+    }
+
+    const payload = JSON.stringify(lastFeedbackBundle, null, 2);
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safeId = lastFeedbackBundle.externalId.replace(/[^a-z0-9]+/gi, "-");
+    link.href = url;
+    link.download = `${safeId}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function copyGitHubIssueDraft() {
+    if (!lastFeedbackBundle?.githubIssueDraft) {
+      return;
+    }
+
+    const draft = [
+      `# ${lastFeedbackBundle.githubIssueDraft.title}`,
+      "",
+      lastFeedbackBundle.githubIssueDraft.body,
+    ].join("\n");
+
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard API unavailable");
+      }
+      await navigator.clipboard.writeText(draft);
+      setCopiedIssueDraft(true);
+      setCopyIssueDraftError(false);
+      window.setTimeout(() => setCopiedIssueDraft(false), 1600);
+    } catch {
+      setCopiedIssueDraft(false);
+      setCopyIssueDraftError(true);
+      window.setTimeout(() => setCopyIssueDraftError(false), 2400);
+    }
   }
 
   async function copyCodexPrompt(task: CodexTask) {
@@ -770,6 +1001,11 @@ function App() {
               draftFeedback={draftFeedback}
               setDraftFeedback={setDraftFeedback}
               onSubmit={submitFeedback}
+              lastFeedbackBundle={lastFeedbackBundle}
+              copiedIssueDraft={copiedIssueDraft}
+              copyIssueDraftError={copyIssueDraftError}
+              onDownloadFeedbackBundle={downloadFeedbackBundle}
+              onCopyGitHubIssueDraft={copyGitHubIssueDraft}
             />
           )}
           {view === "loop" && (
@@ -1584,10 +1820,16 @@ function FeedbackView({
   draftFeedback,
   setDraftFeedback,
   onSubmit,
+  lastFeedbackBundle,
+  copiedIssueDraft,
+  copyIssueDraftError,
+  onDownloadFeedbackBundle,
+  onCopyGitHubIssueDraft,
 }: {
   workspace: Workspace;
   draftFeedback: {
     mode: FeedbackMode;
+    kind: FeedbackKind;
     accountId: string;
     workflowArea: string;
     title: string;
@@ -1596,6 +1838,7 @@ function FeedbackView({
   setDraftFeedback: React.Dispatch<
     React.SetStateAction<{
       mode: FeedbackMode;
+      kind: FeedbackKind;
       accountId: string;
       workflowArea: string;
       title: string;
@@ -1603,6 +1846,11 @@ function FeedbackView({
     }>
   >;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  lastFeedbackBundle: FeedbackBundle | null;
+  copiedIssueDraft: boolean;
+  copyIssueDraftError: boolean;
+  onDownloadFeedbackBundle: () => void;
+  onCopyGitHubIssueDraft: () => void;
 }) {
   const mode = feedbackModes[draftFeedback.mode];
   const destinationSteps = mode.createsIdea
@@ -1612,12 +1860,19 @@ function FeedbackView({
         "Create Codex triage task",
         `Prepare for ${mode.publicSurface}`,
       ]
-    : [
-        "Create private signal",
-        "Hold for pattern detection",
-        "Avoid public projection",
-        "Use during insight synthesis",
-      ];
+    : mode.createsTask
+      ? [
+          "Create private support signal",
+          "Create support triage task",
+          "Keep out of public GitHub and Buildroom",
+          "Use during support and product synthesis",
+        ]
+      : [
+          "Create private signal",
+          "Hold for pattern detection",
+          "Avoid public projection",
+          "Use during insight synthesis",
+        ];
 
   return (
     <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
@@ -1631,7 +1886,7 @@ function FeedbackView({
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={onSubmit}>
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-2">
               {(Object.keys(feedbackModes) as FeedbackMode[]).map((modeId) => {
                 const option = feedbackModes[modeId];
                 return (
@@ -1664,7 +1919,7 @@ function FeedbackView({
               })}
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-3">
               <label className="block space-y-2">
                 <span className="text-xs font-medium text-muted-foreground">
                   Source account
@@ -1682,6 +1937,28 @@ function FeedbackView({
                   {workspace.accounts.map((account) => (
                     <option key={account.id} value={account.id}>
                       {account.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Feedback type
+                </span>
+                <select
+                  className="focus-input w-full"
+                  value={draftFeedback.kind}
+                  onChange={(event) =>
+                    setDraftFeedback((current) => ({
+                      ...current,
+                      kind: event.target.value as FeedbackKind,
+                    }))
+                  }
+                >
+                  {feedbackKinds.map((kind) => (
+                    <option key={kind.id} value={kind.id}>
+                      {kind.label}
                     </option>
                   ))}
                 </select>
@@ -1778,6 +2055,84 @@ function FeedbackView({
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Send Or Share</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Hosted feedback can submit directly later. Local and self-hosted
+              users need a safe artifact or public route today.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {lastFeedbackBundle ? (
+              <div className="rounded-lg border bg-background p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="signal">{lastFeedbackBundle.sourceLabel}</Badge>
+                  <Badge tone={lastFeedbackBundle.privacy === "private" ? "muted" : "idea"}>
+                    {lastFeedbackBundle.privacy}
+                  </Badge>
+                </div>
+                <div className="mt-2 text-sm font-semibold">
+                  {lastFeedbackBundle.title}
+                </div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {lastFeedbackBundle.externalId}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border bg-background p-3 text-sm leading-6 text-muted-foreground">
+                Submit feedback to create a portable Open CRM feedback bundle.
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                disabled={!lastFeedbackBundle}
+                onClick={onDownloadFeedbackBundle}
+              >
+                <FileDown className="h-4 w-4" />
+                Download feedback bundle
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={!lastFeedbackBundle?.githubIssueDraft}
+                onClick={onCopyGitHubIssueDraft}
+              >
+                <Copy className="h-4 w-4" />
+                {copiedIssueDraft
+                  ? "Issue draft copied"
+                  : copyIssueDraftError
+                    ? "Copy failed"
+                    : "Copy GitHub issue draft"}
+              </Button>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <a
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border bg-secondary px-3 text-sm font-medium text-secondary-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:shadow-focus"
+                href={BUILDROOM_URL}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <GitBranch className="h-4 w-4" />
+                Join Buildroom
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+              <a
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border bg-secondary px-3 text-sm font-medium text-secondary-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:shadow-focus"
+                href={GITHUB_ISSUES_URL}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <LifeBuoy className="h-4 w-4" />
+                GitHub issues
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
           </CardContent>
         </Card>
 

@@ -104,6 +104,8 @@ value. The first public path should support:
 - public market and review research
 - GitHub/community feedback
 - Codex prompts that operate on local workspace context
+- local feedback-bundle export for users who are not connected to hosted
+  services yet
 
 Private connectors can deepen the product later, but the first experience should
 show the loop without asking for trust too early.
@@ -138,6 +140,7 @@ The ecosystem is ready for first public use when:
 - new submissions enter a review state
 - accepted submissions create or link to ideas
 - votes are visible and tied to account/user identity
+- local/self-hosted feedback can be exported as `open-crm-feedback.v1`
 - release notes can point back to public-safe evidence
 - Codex has a documented operating contract
 - agent work and human review are visible enough that the product feels

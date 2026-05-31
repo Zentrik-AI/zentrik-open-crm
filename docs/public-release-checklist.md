@@ -32,6 +32,8 @@ The repository should be private until every item in this checklist is complete.
 - [ ] Secret scanning and push protection are enabled where available.
 - [ ] Private vulnerability reporting is enabled before public visibility.
 - [ ] Issues use the provided templates.
+- [ ] Issue config points users toward Buildroom for product requests and
+      private reporting for sensitive security issues.
 - [ ] Discussions are enabled only if someone will moderate them.
 - [ ] Repository description and topics match the product positioning.
 
@@ -45,6 +47,8 @@ The repository should be private until every item in this checklist is complete.
 - [ ] Public-safe mode is enabled by default or clearly available.
 - [ ] Export/reset controls do not leak private runtime state.
 - [ ] Buildroom submission flow explains public/private boundaries.
+- [ ] Tell Open CRM can export an `open-crm-feedback.v1` bundle.
+- [ ] GitHub-shaped feedback can be copied as a public issue draft.
 
 ## Legal And IP
 
@@ -60,6 +64,8 @@ The repository should be private until every item in this checklist is complete.
 - [ ] README explains what the product is, who it is for, and how to run it.
 - [ ] Contributing guide explains contribution license and data policy.
 - [ ] Security guide gives a private vulnerability path.
+- [ ] Feedback/support guide explains Tell Open CRM, Buildroom, GitHub Issues,
+      support requests, and security reporting.
 - [ ] Roadmap explains what is open-source, what is hosted later, and what is
       not part of the early release.
 - [ ] Open CRM Buildroom portal exists or the placeholder points to the expected

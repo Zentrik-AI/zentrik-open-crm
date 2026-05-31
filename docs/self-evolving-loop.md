@@ -67,3 +67,19 @@ The local app should first prove the loop without external services:
 
 Hosted and connected installations can later send the same envelope directly to
 Zentrik and Open CRM Buildroom.
+
+## Current User Routes
+
+The app now supports four practical routes:
+
+- **Private signal**: creates a private signal for pattern detection.
+- **Buildroom request**: creates a public-safe idea candidate and initial vote
+  for moderation.
+- **GitHub issue**: creates a reproducible issue-shaped draft and a Zentrik
+  signal.
+- **Support request**: creates a private support signal and Codex triage task.
+
+After submission, local and self-hosted users can download an
+`open-crm-feedback.v1` bundle. GitHub-shaped feedback can also be copied as a
+public issue draft. Hosted installs should submit the same envelope directly to
+Zentrik once the cloud API path exists.

@@ -17,6 +17,11 @@ The app is structured around a `Workspace` model:
 - Codex tasks
 - evolution log entries
 
+Tell Open CRM also produces an `open-crm-feedback.v1` bundle for local and
+self-hosted users. That bundle is not a second persistence model; it is a
+portable signal envelope that can be imported into Zentrik, copied into GitHub,
+or sent through support without scraping UI state.
+
 This keeps the core product portable. The same model can later be backed by a
 local file store, SQLite, hosted Postgres, or a Zentrik workspace API.
 
@@ -40,6 +45,8 @@ When adding a backend, keep these surfaces separate:
 - connector workers: Gmail, calendar, calls, GitHub, reviews, support, usage
 - agent runner: task preparation and review workflows
 - public Buildroom API: public-safe feedback and release state
+- feedback intake API: hosted `open-crm-feedback.v1` submissions, support
+  requests, and GitHub/Buildroom backlinks
 
 The public Buildroom must never expose deal details, raw private notes, private
 contact data, or transcripts unless a user explicitly publishes safe summaries.

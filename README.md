@@ -7,6 +7,7 @@ real sources, not another place to manually maintain stale records.
 
 [Product Intent](./docs/product-intent.md) ·
 [First Use](./docs/first-use.md) ·
+[Feedback And Support](./docs/feedback-and-support.md) ·
 [Roadmap](./docs/roadmap.md) ·
 [Brand Archetype](./docs/brand-archetype.md) ·
 [Licensing And IP](./docs/licensing-and-ip.md) ·
@@ -104,6 +105,7 @@ proprietary platform code. See [NOTICE](./NOTICE),
 - [Brand Archetype](./docs/brand-archetype.md)
 - [First Use](./docs/first-use.md)
 - [Self-Evolving Loop](./docs/self-evolving-loop.md)
+- [Feedback And Support](./docs/feedback-and-support.md)
 - [Release QA](./docs/release-qa.md)
 - [Licensing And IP](./docs/licensing-and-ip.md)
 - [Public Release Checklist](./docs/public-release-checklist.md)
@@ -121,3 +123,8 @@ manifest lives in [portal/open-crm-buildroom.instance.json](./portal/open-crm-bu
 
 Open CRM Buildroom is where public-safe user requests, votes, release notes, and
 outcome checks should make the product's evolution visible.
+
+Use [Feedback And Support](./docs/feedback-and-support.md) to choose the right
+channel: Tell Open CRM for contextual feedback, Buildroom for public requests
+and votes, GitHub Issues for reproducible open-source work, support requests for
+private help, and private vulnerability reporting for security issues.

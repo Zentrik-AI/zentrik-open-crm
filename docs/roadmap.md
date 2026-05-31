@@ -12,11 +12,13 @@ workspace operations.
   clarity.
 - Make Codex tasks safe to inspect before use.
 - Keep public Buildroom mode from leaking private account fields.
+- Let local/self-hosted users export feedback bundles and GitHub issue drafts.
 
 ## Next
 
 - Add CSV import for accounts and signals.
 - Add a guided first-run setup for users who do not want demo data.
+- Add hosted direct submission for Tell Open CRM feedback bundles.
 - Add release notes and outcome checks inside the Open CRM Loop.
 - Add public-safe Buildroom export so accepted ideas can be published cleanly.
 - Add self-hosted persistence beyond local browser storage.

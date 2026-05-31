@@ -23,6 +23,10 @@ operators who need account memory without CRM administration overhead.
   task.
 - Submit GitHub-shaped feedback as a reproducible public issue candidate plus
   Codex triage task.
+- Submit support-shaped feedback as a private support signal plus Codex triage
+  task.
+- Download the latest `open-crm-feedback.v1` bundle.
+- Copy a GitHub issue draft for GitHub-shaped feedback.
 - Advance an idea and see the evolution log record why the product moved.
 - Copy a guarded Codex prompt that includes explicit context and privacy rules.
 - Export the local workspace JSON.

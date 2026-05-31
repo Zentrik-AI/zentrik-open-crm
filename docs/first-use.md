@@ -7,12 +7,14 @@ checkout should let someone understand the product loop in one sitting.
 
 1. Run the app locally.
 2. Open the Today board and inspect the demo accounts.
-3. Capture a signal from a recent account conversation, support issue, review,
+3. Add a local account or select one of the demo accounts.
+4. Add or inspect the account's contacts.
+5. Capture a signal from a recent account conversation, support issue, review,
    GitHub issue, or market observation.
-4. Open the account detail page and confirm the signal changes account memory.
-5. Copy one Codex task and review the prompt before using it.
-6. Open the Open CRM Loop and advance one idea after reviewing its evidence.
-7. Export the local workspace if the data should be preserved.
+6. Open the account detail page and confirm the signal changes account memory.
+7. Copy one Codex task and review the prompt before using it.
+8. Open the Open CRM Loop and advance one idea after reviewing its evidence.
+9. Export the local workspace if the data should be preserved.
 
 ## What A New User Should Learn
 
@@ -36,6 +38,7 @@ If a change affects the first-use path, validate that a new local user can still
 
 - start the app from a clean checkout
 - understand the demo data
+- add a local account and contact
 - add a signal
 - inspect an account
 - copy an agent prompt

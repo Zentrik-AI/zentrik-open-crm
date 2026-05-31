@@ -35,7 +35,7 @@ the middle path for small technical teams:
 ## Product Surface
 
 - Today board for accounts, risks, next actions, and recent evidence
-- Accounts and account detail views
+- Account creation, contacts, and account detail views
 - Manual signal capture and signal inbox
 - Open CRM Loop for ideas, evidence, agent work, releases, and outcome checks
 - Codex task queue with copyable prompts and guardrails
@@ -44,12 +44,13 @@ the middle path for small technical teams:
 ## First Useful Workflow
 
 1. Add or use a demo account.
-2. Capture one real signal from a call, email, support thread, review, GitHub
+2. Add or review the account's contacts.
+3. Capture one real signal from a call, email, support thread, review, GitHub
    issue, usage note, or market observation.
-3. Review the account detail page to see what changed.
-4. Copy a Codex task when you want agent help drafting follow-up, researching an
+4. Review the account detail page to see what changed.
+5. Copy a Codex task when you want agent help drafting follow-up, researching an
    account, or shaping product feedback.
-5. Use the Open CRM Loop to connect signals to ideas and release outcomes.
+6. Use the Open CRM Loop to connect signals to ideas and release outcomes.
 
 ## Run Locally
 
@@ -103,6 +104,7 @@ proprietary platform code. See [NOTICE](./NOTICE),
 - [Brand Archetype](./docs/brand-archetype.md)
 - [First Use](./docs/first-use.md)
 - [Self-Evolving Loop](./docs/self-evolving-loop.md)
+- [Release QA](./docs/release-qa.md)
 - [Licensing And IP](./docs/licensing-and-ip.md)
 - [Public Release Checklist](./docs/public-release-checklist.md)
 - [Roadmap](./docs/roadmap.md)

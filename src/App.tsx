@@ -35,7 +35,9 @@ import {
 import { cn, formatCurrency, formatDate, makeId } from "./lib/utils";
 import type {
   Account,
+  AccountStage,
   CodexTask,
+  Contact,
   Idea,
   Priority,
   Signal,
@@ -125,6 +127,40 @@ const workflowAreas = [
   "Privacy",
 ];
 
+const accountStages: AccountStage[] = [
+  "researching",
+  "active",
+  "expanding",
+  "renewing",
+  "at_risk",
+];
+
+const priorities: Priority[] = ["low", "medium", "high", "urgent"];
+const contactInfluences: Contact["influence"][] = [
+  "economic",
+  "champion",
+  "technical",
+  "user",
+];
+
+const emptyAccountDraft = {
+  name: "",
+  domain: "",
+  segment: "",
+  owner: "",
+  stage: "researching" as AccountStage,
+  priority: "medium" as Priority,
+  nextAction: "",
+  contactName: "",
+  contactRole: "",
+};
+
+const emptyContactDraft = {
+  name: "",
+  role: "",
+  influence: "champion" as Contact["influence"],
+};
+
 function App() {
   const [workspace, setWorkspace] = useState<Workspace>(() => loadWorkspace());
   const [view, setView] = useState<View>("today");
@@ -136,6 +172,8 @@ function App() {
   );
   const [copiedTaskId, setCopiedTaskId] = useState<string | null>(null);
   const [copyErrorTaskId, setCopyErrorTaskId] = useState<string | null>(null);
+  const [draftAccount, setDraftAccount] = useState(emptyAccountDraft);
+  const [draftContact, setDraftContact] = useState(emptyContactDraft);
   const [draftSignal, setDraftSignal] = useState({
     accountId: workspace.accounts[0]?.id ?? "",
     source: "call" as SignalSource,
@@ -237,6 +275,127 @@ function App() {
         ...current.evolutionLog,
       ],
     }));
+  }
+
+  function addAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = draftAccount.name.trim();
+    if (!name) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const owner = draftAccount.owner.trim() || "Unassigned";
+    const accountId = makeId("acct");
+    const contactName = draftAccount.contactName.trim();
+    const contactRole = draftAccount.contactRole.trim();
+    const segment = draftAccount.segment.trim() || "New relationship";
+    const domain =
+      draftAccount.domain.trim() ||
+      `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "account"}.example`;
+    const nextAction =
+      draftAccount.nextAction.trim() || "Capture the first signal and define the account plan";
+    const due = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+
+    const account: Account = {
+      id: accountId,
+      name,
+      domain,
+      segment,
+      stage: draftAccount.stage,
+      priority: draftAccount.priority,
+      arr: 0,
+      health: 70,
+      fit: 70,
+      sourceConfidence: 35,
+      owner,
+      tags: ["new account"],
+      contacts:
+        contactName && contactRole
+          ? [
+              {
+                id: makeId("contact"),
+                name: contactName,
+                role: contactRole,
+                influence: "champion",
+                lastSeen: now,
+              },
+            ]
+          : [],
+      needs: ["Needs discovery"],
+      risks: ["No recent signal captured yet"],
+      nextAction: {
+        id: makeId("act"),
+        label: nextAction,
+        due,
+        owner,
+        status: "open",
+      },
+      lastTouch: now,
+    };
+
+    setWorkspace((current) => touchWorkspace({
+      ...current,
+      accounts: [account, ...current.accounts],
+      evolutionLog: [
+        {
+          id: makeId("log"),
+          date: now,
+          title: `New account created: ${name}`,
+          summary:
+            "A local account record was created with a first next action and optional primary contact.",
+          evidence: ["Manual local account setup"],
+        },
+        ...current.evolutionLog,
+      ],
+    }));
+    setSelectedAccountId(accountId);
+    setDraftAccount(emptyAccountDraft);
+    setDraftSignal((current) => ({ ...current, accountId }));
+    setDraftFeedback((current) => ({ ...current, accountId }));
+  }
+
+  function addContact(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const accountId = selectedAccount?.id;
+    const name = draftContact.name.trim();
+    const role = draftContact.role.trim();
+    if (!accountId || !name || !role || !selectedAccount) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const contact: Contact = {
+      id: makeId("contact"),
+      name,
+      role,
+      influence: draftContact.influence,
+      lastSeen: now,
+    };
+
+    setWorkspace((current) => touchWorkspace({
+      ...current,
+      accounts: current.accounts.map((account) =>
+        account.id === accountId
+          ? {
+              ...account,
+              contacts: [...account.contacts, contact],
+              lastTouch: now,
+            }
+          : account,
+      ),
+      evolutionLog: [
+        {
+          id: makeId("log"),
+          date: now,
+          title: `Contact added: ${name}`,
+          summary: `${role} was added to ${selectedAccount.name}.`,
+          evidence: ["Manual local contact setup"],
+        },
+        ...current.evolutionLog,
+      ],
+    }));
+    setDraftContact(emptyContactDraft);
   }
 
   function approveIdea(ideaId: string) {
@@ -451,6 +610,8 @@ function App() {
     const reset = resetWorkspace();
     setWorkspace(reset);
     setSelectedAccountId(reset.accounts[0]?.id ?? "");
+    setDraftAccount(emptyAccountDraft);
+    setDraftContact(emptyContactDraft);
     setDraftSignal((current) => ({
       ...current,
       accountId: reset.accounts[0]?.id ?? "",
@@ -584,6 +745,12 @@ function App() {
               selectedAccount={visibleSelectedAccount}
               publicMode={publicMode}
               signals={workspace.signals}
+              draftAccount={draftAccount}
+              draftContact={draftContact}
+              setDraftAccount={setDraftAccount}
+              setDraftContact={setDraftContact}
+              onAddAccount={addAccount}
+              onAddContact={addContact}
               onSelectAccount={setSelectedAccountId}
               onCompleteAction={completeNextAction}
             />
@@ -845,6 +1012,12 @@ function AccountsView({
   selectedAccount,
   publicMode,
   signals,
+  draftAccount,
+  draftContact,
+  setDraftAccount,
+  setDraftContact,
+  onAddAccount,
+  onAddContact,
   onSelectAccount,
   onCompleteAction,
 }: {
@@ -852,137 +1025,430 @@ function AccountsView({
   selectedAccount: Account | undefined;
   publicMode: boolean;
   signals: Signal[];
+  draftAccount: typeof emptyAccountDraft;
+  draftContact: typeof emptyContactDraft;
+  setDraftAccount: React.Dispatch<React.SetStateAction<typeof emptyAccountDraft>>;
+  setDraftContact: React.Dispatch<React.SetStateAction<typeof emptyContactDraft>>;
+  onAddAccount: (event: FormEvent<HTMLFormElement>) => void;
+  onAddContact: (event: FormEvent<HTMLFormElement>) => void;
   onSelectAccount: (accountId: string) => void;
   onCompleteAction: (accountId: string) => void;
 }) {
-  if (accounts.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-10 text-center">
-          <div className="text-sm font-semibold">No accounts match the current search.</div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Clear the search query or reset the demo workspace to continue.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!selectedAccount) {
-    return (
-      <Card>
-        <CardContent className="py-10 text-center">
-          <div className="text-sm font-semibold">No account selected</div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Reset the demo workspace or import accounts to continue.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   const accountSignals = signals.filter(
-    (signal) => signal.accountId === selectedAccount.id,
+    (signal) => signal.accountId === selectedAccount?.id,
   );
 
   return (
     <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
       <div className="space-y-3">
-        {accounts.map((account) => (
-          <button
-            key={account.id}
-            className={cn(
-              "w-full rounded-lg border bg-card p-4 text-left transition hover:border-primary/50",
-              selectedAccount.id === account.id && "border-primary shadow-focus",
-            )}
-            onClick={() => onSelectAccount(account.id)}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">{account.name}</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {account.segment}
+        <AccountSetupCard
+          draftAccount={draftAccount}
+          setDraftAccount={setDraftAccount}
+          onAddAccount={onAddAccount}
+        />
+
+        <div className="space-y-3">
+          <div className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
+            Accounts
+          </div>
+          {accounts.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <div className="text-sm font-semibold">No accounts match the current search.</div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Clear the search query or add a new local account.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            accounts.map((account) => (
+              <button
+                key={account.id}
+                className={cn(
+                  "w-full rounded-lg border bg-card p-4 text-left transition hover:border-primary/50",
+                  selectedAccount?.id === account.id && "border-primary shadow-focus",
+                )}
+                onClick={() => onSelectAccount(account.id)}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{account.name}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {account.segment}
+                    </div>
+                  </div>
+                  <Badge tone={priorityTone[account.priority]}>{account.priority}</Badge>
                 </div>
-              </div>
-              <Badge tone={priorityTone[account.priority]}>{account.priority}</Badge>
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-              <MiniStat label="Health" value={`${account.health}%`} />
-              <MiniStat label="Fit" value={`${account.fit}%`} />
-              <MiniStat
-                label="ARR"
-                value={publicMode ? "Hidden" : formatCurrency(account.arr)}
-              />
-            </div>
-          </button>
-        ))}
+                <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                  <MiniStat label="Health" value={`${account.health}%`} />
+                  <MiniStat label="Fit" value={`${account.fit}%`} />
+                  <MiniStat
+                    label="ARR"
+                    value={publicMode ? "Hidden" : formatCurrency(account.arr)}
+                  />
+                </div>
+              </button>
+            ))
+          )}
+        </div>
       </div>
 
-      <Card>
-        <CardHeader className="border-b">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle>{selectedAccount.name}</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {publicMode ? "Domain hidden in Buildroom mode" : selectedAccount.domain}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Badge tone="account">{selectedAccount.stage.replace("_", " ")}</Badge>
-              <Badge tone="muted">{selectedAccount.owner}</Badge>
-              <Badge tone="signal">{selectedAccount.sourceConfidence}% evidence</Badge>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="grid gap-4 lg:grid-cols-3">
-            <MiniStat label="Health" value={`${selectedAccount.health}%`} />
-            <MiniStat label="Fit" value={`${selectedAccount.fit}%`} />
-            <MiniStat
-              label="Annual value"
-              value={publicMode ? "Hidden" : formatCurrency(selectedAccount.arr)}
-            />
-          </div>
-
-          <div className="mt-5 grid gap-4 lg:grid-cols-2">
-            <InfoList title="Needs" items={selectedAccount.needs} tone="success" />
-            <InfoList title="Risks" items={publicMode ? ["Private risk notes hidden"] : selectedAccount.risks} tone="warning" />
-          </div>
-
-          <div className="mt-5 rounded-lg border bg-background p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+      {selectedAccount ? (
+        <Card>
+          <CardHeader className="border-b">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="text-sm font-semibold">Next action</div>
+                <CardTitle>{selectedAccount.name}</CardTitle>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {selectedAccount.nextAction.label}
+                  {publicMode ? "Domain hidden in Buildroom mode" : selectedAccount.domain}
                 </p>
               </div>
-              <Button
-                size="sm"
-                variant={selectedAccount.nextAction.status === "done" ? "secondary" : "primary"}
-                disabled={selectedAccount.nextAction.status === "done"}
-                onClick={() => onCompleteAction(selectedAccount.id)}
-              >
-                <Check className="h-4 w-4" />
-                {selectedAccount.nextAction.status === "done" ? "Complete" : "Mark done"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Badge tone="account">{selectedAccount.stage.replace("_", " ")}</Badge>
+                <Badge tone="muted">{selectedAccount.owner}</Badge>
+                <Badge tone="signal">{selectedAccount.sourceConfidence}% evidence</Badge>
+              </div>
             </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <MiniStat label="Health" value={`${selectedAccount.health}%`} />
+              <MiniStat label="Fit" value={`${selectedAccount.fit}%`} />
+              <MiniStat
+                label="Annual value"
+                value={publicMode ? "Hidden" : formatCurrency(selectedAccount.arr)}
+              />
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <InfoList title="Needs" items={selectedAccount.needs} tone="success" />
+              <InfoList title="Risks" items={publicMode ? ["Private risk notes hidden"] : selectedAccount.risks} tone="warning" />
+            </div>
+
+            <ContactsPanel
+              account={selectedAccount}
+              publicMode={publicMode}
+              draftContact={draftContact}
+              setDraftContact={setDraftContact}
+              onAddContact={onAddContact}
+            />
+
+            <div className="mt-5 rounded-lg border bg-background p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">Next action</div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {selectedAccount.nextAction.label}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant={selectedAccount.nextAction.status === "done" ? "secondary" : "primary"}
+                  disabled={selectedAccount.nextAction.status === "done"}
+                  onClick={() => onCompleteAction(selectedAccount.id)}
+                >
+                  <Check className="h-4 w-4" />
+                  {selectedAccount.nextAction.status === "done" ? "Complete" : "Mark done"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <div className="mb-3 text-sm font-semibold">Linked signals</div>
+              <div className="space-y-3">
+                {accountSignals.length === 0 ? (
+                  <div className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
+                    No signals yet. Capture a call note, ticket summary, review,
+                    or usage observation to build account memory.
+                  </div>
+                ) : (
+                  accountSignals.map((signal) => (
+                    <SignalRow
+                      key={signal.id}
+                      signal={signal}
+                      accountName={selectedAccount.name}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <div className="text-sm font-semibold">No account selected</div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Add a local account or clear the search query to continue.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function AccountSetupCard({
+  draftAccount,
+  setDraftAccount,
+  onAddAccount,
+}: {
+  draftAccount: typeof emptyAccountDraft;
+  setDraftAccount: React.Dispatch<React.SetStateAction<typeof emptyAccountDraft>>;
+  onAddAccount: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Add account</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Start a real local workspace without importing a whole CRM first.
+        </p>
+      </CardHeader>
+      <CardContent>
+        <form className="space-y-3" onSubmit={onAddAccount}>
+          <label className="block space-y-2">
+            <span className="text-xs font-medium text-muted-foreground">Account name</span>
+            <input
+              className="focus-input w-full"
+              value={draftAccount.name}
+              onChange={(event) =>
+                setDraftAccount((current) => ({ ...current, name: event.target.value }))
+              }
+              placeholder="Acme Studio"
+            />
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-xs font-medium text-muted-foreground">Domain</span>
+            <input
+              className="focus-input w-full"
+              value={draftAccount.domain}
+              onChange={(event) =>
+                setDraftAccount((current) => ({ ...current, domain: event.target.value }))
+              }
+              placeholder="acme.example"
+            />
+          </label>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">Segment</span>
+              <input
+                className="focus-input w-full"
+                value={draftAccount.segment}
+                onChange={(event) =>
+                  setDraftAccount((current) => ({ ...current, segment: event.target.value }))
+                }
+                placeholder="Founder-led B2B"
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">Owner</span>
+              <input
+                className="focus-input w-full"
+                value={draftAccount.owner}
+                onChange={(event) =>
+                  setDraftAccount((current) => ({ ...current, owner: event.target.value }))
+                }
+                placeholder="Maya"
+              />
+            </label>
           </div>
 
-          <div className="mt-5">
-            <div className="mb-3 text-sm font-semibold">Linked signals</div>
-            <div className="space-y-3">
-              {accountSignals.map((signal) => (
-                <SignalRow
-                  key={signal.id}
-                  signal={signal}
-                  accountName={selectedAccount.name}
-                />
-              ))}
-            </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">Stage</span>
+              <select
+                className="focus-input w-full"
+                value={draftAccount.stage}
+                onChange={(event) =>
+                  setDraftAccount((current) => ({
+                    ...current,
+                    stage: event.target.value as AccountStage,
+                  }))
+                }
+              >
+                {accountStages.map((stage) => (
+                  <option key={stage} value={stage}>
+                    {stage.replace("_", " ")}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">Priority</span>
+              <select
+                className="focus-input w-full"
+                value={draftAccount.priority}
+                onChange={(event) =>
+                  setDraftAccount((current) => ({
+                    ...current,
+                    priority: event.target.value as Priority,
+                  }))
+                }
+              >
+                {priorities.map((priority) => (
+                  <option key={priority} value={priority}>
+                    {priority}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
-        </CardContent>
-      </Card>
+
+          <label className="block space-y-2">
+            <span className="text-xs font-medium text-muted-foreground">First next action</span>
+            <input
+              className="focus-input w-full"
+              value={draftAccount.nextAction}
+              onChange={(event) =>
+                setDraftAccount((current) => ({ ...current, nextAction: event.target.value }))
+              }
+              placeholder="Book discovery follow-up"
+            />
+          </label>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">Primary contact</span>
+              <input
+                className="focus-input w-full"
+                value={draftAccount.contactName}
+                onChange={(event) =>
+                  setDraftAccount((current) => ({
+                    ...current,
+                    contactName: event.target.value,
+                  }))
+                }
+                placeholder="Lena Park"
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">Contact role</span>
+              <input
+                className="focus-input w-full"
+                value={draftAccount.contactRole}
+                onChange={(event) =>
+                  setDraftAccount((current) => ({
+                    ...current,
+                    contactRole: event.target.value,
+                  }))
+                }
+                placeholder="Founder"
+              />
+            </label>
+          </div>
+
+          <Button type="submit" variant="primary">
+            <Users className="h-4 w-4" />
+            Add account
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ContactsPanel({
+  account,
+  publicMode,
+  draftContact,
+  setDraftContact,
+  onAddContact,
+}: {
+  account: Account;
+  publicMode: boolean;
+  draftContact: typeof emptyContactDraft;
+  setDraftContact: React.Dispatch<React.SetStateAction<typeof emptyContactDraft>>;
+  onAddContact: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <div className="mt-5 rounded-lg border bg-background p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold">Contacts</div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Keep relationship memory close to the account, not in a detached
+            address book.
+          </p>
+        </div>
+        <Badge tone="muted">{account.contacts.length} people</Badge>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {account.contacts.length === 0 ? (
+          <div className="rounded-md border bg-card p-3 text-sm text-muted-foreground">
+            No contacts yet.
+          </div>
+        ) : (
+          account.contacts.map((contact) => (
+            <div key={contact.id} className="rounded-md border bg-card p-3">
+              <div className="text-sm font-semibold">
+                {publicMode ? "Contact name hidden" : contact.name}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {contact.role} · {contact.influence} · Last seen {formatDate(contact.lastSeen)}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <form className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_160px_auto]" onSubmit={onAddContact}>
+        <label className="block space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Contact name</span>
+          <input
+            className="focus-input w-full"
+            value={draftContact.name}
+            onChange={(event) =>
+              setDraftContact((current) => ({ ...current, name: event.target.value }))
+            }
+            placeholder="New contact"
+          />
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Role</span>
+          <input
+            className="focus-input w-full"
+            value={draftContact.role}
+            onChange={(event) =>
+              setDraftContact((current) => ({ ...current, role: event.target.value }))
+            }
+            placeholder="Operations lead"
+          />
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Influence</span>
+          <select
+            className="focus-input w-full"
+            value={draftContact.influence}
+            onChange={(event) =>
+              setDraftContact((current) => ({
+                ...current,
+                influence: event.target.value as Contact["influence"],
+              }))
+            }
+          >
+            {contactInfluences.map((influence) => (
+              <option key={influence} value={influence}>
+                {influence}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="flex items-end">
+          <Button type="submit" variant="secondary">
+            Add contact
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

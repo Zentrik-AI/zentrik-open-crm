@@ -7,6 +7,7 @@ workspace operations.
 
 - Make the local-first CRM useful from a clean checkout.
 - Keep demo data synthetic, realistic, and clearly fictitious.
+- Support lightweight account and contact creation without requiring import.
 - Improve account memory, signal capture, source confidence, and next-action
   clarity.
 - Make Codex tasks safe to inspect before use.

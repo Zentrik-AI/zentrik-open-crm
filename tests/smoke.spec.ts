@@ -14,9 +14,13 @@ test("supports the core CRM workflow on desktop", async ({ context, page }) => {
   });
 
   await expect(page.getByRole("heading", { name: "Zentrik Open CRM Demo" })).toBeVisible();
+  await expect(page.getByText("Start with source-grounded account work")).toBeVisible();
   await expect(page.getByText("Daily Account Board")).toBeVisible();
 
-  await page.getByRole("button", { name: "Accounts" }).click();
+  await page.getByRole("button", { name: /Capture a signal/ }).click();
+  await expect(page.getByRole("heading", { name: "Capture Signal" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Accounts", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Northstar Robotics" })).toBeVisible();
   await expect(page.getByText("Annual value")).toBeVisible();
 
@@ -30,7 +34,7 @@ test("supports the core CRM workflow on desktop", async ({ context, page }) => {
   await expect(page.getByText("No accounts match the current search.")).toBeVisible();
   await page.getByPlaceholder("Search accounts, risks, needs").fill("");
 
-  await page.getByRole("button", { name: "Signals" }).click();
+  await page.getByRole("button", { name: "Signals", exact: true }).click();
   await page.getByLabel("Title").fill("Trial user asked for Gmail connector");
   await page
     .getByLabel("Body")
@@ -39,30 +43,47 @@ test("supports the core CRM workflow on desktop", async ({ context, page }) => {
   await expect(page.getByText("Trial user asked for Gmail connector")).toBeVisible();
   await expect(page.getByLabel("Title")).toHaveValue("");
 
-  await page.getByRole("button", { name: "Today" }).click();
+  await page.getByRole("button", { name: "Tell Open CRM", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Tell Open CRM" })).toBeVisible();
+  await page.getByRole("button", { name: /Buildroom request/ }).click();
+  await page.getByLabel("Workflow area").selectOption("Privacy");
+  await page
+    .getByLabel("Feedback title")
+    .fill("Public mode should explain what will be hidden");
+  await page
+    .getByLabel("What happened, and what should be better?")
+    .fill("When I switch into Buildroom mode, I need a clearer summary of which account fields are hidden before I share anything externally.");
+  await page.getByRole("button", { name: "Send through loop" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Public mode should explain what will be hidden" }),
+  ).toBeVisible();
+  await expect(page.getByText("Feedback became an idea candidate")).toBeVisible();
+
+  await page.getByRole("button", { name: "Today", exact: true }).click();
   await expect(page.getByText("Weighted pipeline").locator("../..")).toContainText("Hidden");
   await page.getByRole("button", { name: "Done" }).first().click();
   await expect(page.getByText("Open next actions").locator("../..")).toContainText("3");
 
-  await page.getByRole("button", { name: "Open CRM Loop" }).click();
+  await page.getByRole("button", { name: "Open CRM Loop", exact: true }).click();
   await page.getByRole("button", { name: "Advance" }).first().click();
   await expect(page.getByText("Idea advanced from workspace review")).toBeVisible();
 
-  await page.getByRole("button", { name: "Codex" }).click();
+  await page.getByRole("button", { name: "Codex", exact: true }).click();
+  await expect(page.getByText("Triage feedback: Public mode should explain what will be hidden")).toBeVisible();
   await page.getByRole("button", { name: "Copy prompt" }).first().click();
   await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
   const copiedPrompt = await page.evaluate(() => navigator.clipboard.readText());
   expect(copiedPrompt).toContain("domain hidden in Buildroom mode");
   expect(copiedPrompt).not.toContain("harbor-reed.invalid");
 
-  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export JSON" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("zentrik-open-crm-workspace.json");
 
   await page.getByRole("button", { name: "Reset demo" }).click();
-  await page.getByRole("button", { name: "Today" }).click();
+  await page.getByRole("button", { name: "Today", exact: true }).click();
   await expect(page.getByText("Open next actions").locator("../..")).toContainText("4");
 });
 
@@ -70,10 +91,13 @@ test("keeps primary navigation usable on mobile", async ({ page }) => {
   test.skip(test.info().project.name !== "mobile-chrome", "Mobile workflow runs only in the mobile project.");
 
   await expect(page.getByRole("heading", { name: "Zentrik Open CRM Demo" })).toBeVisible();
-  await page.getByRole("button", { name: "Signals" }).click();
+  await expect(page.getByText("Start with source-grounded account work")).toBeVisible();
+  await page.getByRole("button", { name: "Tell Open CRM", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Tell Open CRM" })).toBeVisible();
+  await page.getByRole("button", { name: "Signals", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Capture Signal" })).toBeVisible();
-  await page.getByRole("button", { name: "Accounts" }).click();
+  await page.getByRole("button", { name: "Accounts", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Northstar Robotics" })).toBeVisible();
-  await page.getByRole("button", { name: "Codex" }).click();
+  await page.getByRole("button", { name: "Codex", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Codex Task Queue" })).toBeVisible();
 });

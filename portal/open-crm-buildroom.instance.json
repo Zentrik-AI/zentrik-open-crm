@@ -262,7 +262,7 @@
   "operatingRules": [
     "Treat portal submissions as product signal, not support commitments.",
     "Review hidden submissions before public visibility.",
-    "Link accepted requests to source-grounded ideas in the Zentrik workspace.",
+    "Link accepted requests to source-grounded ideas in the Open CRM product workspace.",
     "Use public-safe summaries only; never expose raw CRM records, emails, calls, or account notes.",
     "Publish release updates with the evidence that caused the change and the outcome metric that will be reviewed.",
     "Show public-safe agent work trails so users can understand how signals became work without exposing private data."

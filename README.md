@@ -1,22 +1,54 @@
 # Zentrik Open CRM
 
-Zentrik Open CRM is an open-source, local-first CRM for source-grounded account
-work and agent-assisted follow-up.
+![Zentrik Open CRM product hero](./assets/brand/open-crm-hero.png)
 
-It is built for builders, founders, consultants, small B2B teams, and technical
-operators who want a CRM that helps them understand what is happening in their
-market instead of only storing contacts. It starts as a self-hosted web app and
-is designed to support a hosted edition, Zentrik Open CRM Cloud.
+An open-source, local-first CRM for builders who want account work grounded in
+real sources, not another place to manually maintain stale records.
 
-## What It Does
+[Product Intent](./docs/product-intent.md) ·
+[First Use](./docs/first-use.md) ·
+[Roadmap](./docs/roadmap.md) ·
+[Brand Archetype](./docs/brand-archetype.md) ·
+[Self-Hosting](./docs/self-hosting.md) ·
+[Contributing](./CONTRIBUTING.md)
 
-- Tracks accounts, stakeholders, deal context, signals, and next actions.
-- Links every important recommendation back to source material.
-- Gives Codex and similar agents a safe operating surface for account research,
-  follow-up preparation, triage, and product feedback synthesis.
-- Shows the Open CRM Loop: signals become ideas, ideas become agent work, agent
-  work becomes releases, and releases are evaluated against user feedback.
-- Keeps local and self-hosted users in control of their data.
+Zentrik Open CRM is built for founders, consultants, agencies, small B2B teams,
+and technical operators who sell, support, and build close to their users. It is
+useful as a CRM on day one, and it also shows a larger product loop: users
+submit feedback, signals become product evidence, agents prepare work, humans
+review decisions, and releases are checked against outcomes.
+
+## Why Open CRM
+
+Most lightweight CRMs are easy to start but weak at remembering why an account
+matters. Most powerful CRMs become expensive administration systems. Open CRM is
+the middle path for small technical teams:
+
+- account memory stays tied to calls, emails, support notes, reviews, usage,
+  GitHub, and market signals
+- next actions show the source that caused the recommendation
+- Codex and similar agents get an explicit, privacy-aware operating surface
+- the product can run locally, self-hosted, or eventually through Open CRM Cloud
+- users can shape the product through the public Open CRM Buildroom loop
+
+## Product Surface
+
+- Today board for accounts, risks, next actions, and recent evidence
+- Accounts and account detail views
+- Manual signal capture and signal inbox
+- Open CRM Loop for ideas, evidence, agent work, releases, and outcome checks
+- Codex task queue with copyable prompts and guardrails
+- Settings, public-safe mode, export, and demo reset controls
+
+## First Useful Workflow
+
+1. Add or use a demo account.
+2. Capture one real signal from a call, email, support thread, review, GitHub
+   issue, usage note, or market observation.
+3. Review the account detail page to see what changed.
+4. Copy a Codex task when you want agent help drafting follow-up, researching an
+   account, or shaping product feedback.
+5. Use the Open CRM Loop to connect signals to ideas and release outcomes.
 
 ## Run Locally
 
@@ -41,15 +73,6 @@ This first version is a Vite React app with local browser persistence. It
 includes synthetic demo data only. It intentionally has no production API keys
 or private customer records.
 
-The current surface includes:
-
-- Today board
-- Accounts and account detail
-- Signal intake
-- Open CRM Loop
-- Codex task queue
-- Settings and export controls
-
 ## Repository Guardrails
 
 This repository is public-product code. Private operating data or customer data
@@ -63,12 +86,20 @@ building integrations.
 - [Product Intent](./docs/product-intent.md)
 - [Product Narrative](./docs/product-narrative.md)
 - [Outward Ecosystem](./docs/outward-ecosystem.md)
+- [Brand Archetype](./docs/brand-archetype.md)
+- [First Use](./docs/first-use.md)
+- [Self-Evolving Loop](./docs/self-evolving-loop.md)
+- [Roadmap](./docs/roadmap.md)
 - [Architecture](./docs/architecture.md)
 - [Codex Operator Guide](./docs/codex-operator-guide.md)
 - [Self-Hosting](./docs/self-hosting.md)
 - [Privacy Boundaries](./docs/privacy-boundaries.md)
+- [Public Brand Assets](./assets/brand/README.md)
 
 ## Public Portal
 
 The first public feedback portal is **Open CRM Buildroom**. Its initial instance
 manifest lives in [portal/open-crm-buildroom.instance.json](./portal/open-crm-buildroom.instance.json).
+
+Open CRM Buildroom is where public-safe user requests, votes, release notes, and
+outcome checks should make the product's evolution visible.

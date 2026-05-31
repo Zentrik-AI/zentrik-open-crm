@@ -1,8 +1,14 @@
 # Security
 
 Do not report vulnerabilities by opening public issues with sensitive details.
-Use the security contact listed in the public security policy once this
-repository is published.
+Use GitHub private vulnerability reporting once it is enabled for this
+repository. If private reporting is not available yet, contact a maintainer
+privately before sharing exploit details.
+
+## Supported Versions
+
+This project is pre-1.0. Security fixes should target `main` until release
+branches exist.
 
 ## Data Handling
 
@@ -17,3 +23,13 @@ Never commit:
 
 The `.gitignore` blocks common private-data folders, but contributors and agents
 are responsible for reviewing staged changes before committing.
+
+## Sensitive Issue Triage
+
+If an issue or pull request accidentally includes secrets, private customer
+records, private transcripts, private URLs, or production identifiers:
+
+1. Remove public exposure as quickly as possible.
+2. Rotate any exposed credential outside this repository.
+3. Document the remediation without repeating the sensitive value.
+4. Review whether fixtures, screenshots, or exports need stricter guardrails.

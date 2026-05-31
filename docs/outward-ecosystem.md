@@ -17,7 +17,7 @@ The outward system has three surfaces:
 flowchart LR
   A["User uses CRM"] --> B["Signals: usage, calls, tickets, reviews, GitHub"]
   C["User submits or votes in Open CRM Buildroom"] --> D["Portal ideas and votes"]
-  B --> E["Zentrik workspace processes evidence"]
+  B --> E["Open CRM workspace processes evidence"]
   D --> E
   E --> F["Prioritized ideas"]
   F --> G["Codex task queue"]
@@ -37,7 +37,7 @@ The product intent is that the public should be able to see the product's brain
 working: ideas being processed, agent work being prepared, validation waiting on
 humans, releases moving forward, and outcome checks closing the loop.
 
-## Required Zentrik Entities
+## Required Workspace Entities
 
 The first live instance should include:
 

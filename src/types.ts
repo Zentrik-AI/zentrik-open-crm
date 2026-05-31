@@ -12,6 +12,7 @@ export type SignalSource =
   | "email"
   | "support"
   | "community"
+  | "feedback"
   | "review"
   | "github"
   | "usage"

@@ -26,7 +26,7 @@ grounded in actual evidence.
 
 The public story is broader: this is the open-source CRM that improves with its
 users. Requests, votes, workflow pain, usage patterns, and release outcomes
-should feed the Zentrik product workspace and help decide what the CRM becomes
+should feed the Open CRM product workspace and help decide what the CRM becomes
 next.
 
 The product must be:

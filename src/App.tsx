@@ -10,6 +10,7 @@ import {
   Home,
   Inbox,
   Layers3,
+  Lightbulb,
   Lock,
   MessageSquarePlus,
   Moon,
@@ -42,12 +43,21 @@ import type {
   Workspace,
 } from "./types";
 
-type View = "today" | "accounts" | "signals" | "loop" | "codex" | "settings";
+type View =
+  | "today"
+  | "accounts"
+  | "signals"
+  | "feedback"
+  | "loop"
+  | "codex"
+  | "settings";
+type FeedbackMode = "private_signal" | "buildroom_request" | "github_issue";
 
 const navItems: Array<{ id: View; label: string; icon: typeof Home }> = [
   { id: "today", label: "Today", icon: Home },
   { id: "accounts", label: "Accounts", icon: Users },
   { id: "signals", label: "Signals", icon: Inbox },
+  { id: "feedback", label: "Tell Open CRM", icon: MessageSquarePlus },
   { id: "loop", label: "Open CRM Loop", icon: GitBranch },
   { id: "codex", label: "Codex", icon: Bot },
   { id: "settings", label: "Settings", icon: Settings },
@@ -58,6 +68,7 @@ const sourceOptions: SignalSource[] = [
   "email",
   "support",
   "community",
+  "feedback",
   "review",
   "github",
   "usage",
@@ -70,6 +81,49 @@ const priorityTone: Record<Priority, "muted" | "warning" | "destructive"> = {
   high: "warning",
   urgent: "destructive",
 };
+
+const feedbackModes: Record<
+  FeedbackMode,
+  {
+    label: string;
+    summary: string;
+    sourceRef: string;
+    createsIdea: boolean;
+    publicSurface: string;
+  }
+> = {
+  private_signal: {
+    label: "Private signal",
+    summary: "Capture context for Zentrik without publishing anything.",
+    sourceRef: "In-app feedback · private",
+    createsIdea: false,
+    publicSurface: "Private Zentrik workspace only",
+  },
+  buildroom_request: {
+    label: "Buildroom request",
+    summary: "Create a public-safe idea candidate and initial vote.",
+    sourceRef: "Open CRM Buildroom draft · public-safe",
+    createsIdea: true,
+    publicSurface: "Open CRM Buildroom after moderation",
+  },
+  github_issue: {
+    label: "GitHub issue",
+    summary: "Shape a reproducible public issue for open-source work.",
+    sourceRef: "GitHub issue draft · public",
+    createsIdea: true,
+    publicSurface: "GitHub issue plus Zentrik signal",
+  },
+};
+
+const workflowAreas = [
+  "First-run setup",
+  "Account memory",
+  "Signal capture",
+  "Codex tasks",
+  "Buildroom loop",
+  "Self-hosting",
+  "Privacy",
+];
 
 function App() {
   const [workspace, setWorkspace] = useState<Workspace>(() => loadWorkspace());
@@ -88,6 +142,13 @@ function App() {
     title: "",
     body: "",
   });
+  const [draftFeedback, setDraftFeedback] = useState({
+    mode: "private_signal" as FeedbackMode,
+    accountId: workspace.accounts[0]?.id ?? "",
+    workflowArea: workflowAreas[0],
+    title: "",
+    body: "",
+  });
 
   useEffect(() => {
     saveWorkspace(workspace);
@@ -96,6 +157,10 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [view]);
 
   const accountsById = useMemo(
     () => new Map(workspace.accounts.map((account) => [account.id, account])),
@@ -236,6 +301,103 @@ function App() {
     setDraftSignal((current) => ({ ...current, title: "", body: "" }));
   }
 
+  function submitFeedback(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const title = draftFeedback.title.trim();
+    const body = draftFeedback.body.trim();
+    if (!title || !body) {
+      return;
+    }
+
+    const mode = feedbackModes[draftFeedback.mode];
+    const receivedAt = new Date().toISOString();
+    const signalId = makeId("sig");
+    const ideaId = mode.createsIdea ? makeId("idea") : undefined;
+    const taskId = mode.createsIdea ? makeId("task") : undefined;
+    const bodyWithContext = [
+      `Workflow area: ${draftFeedback.workflowArea}`,
+      `Mode: ${mode.label}`,
+      "",
+      body,
+    ].join("\n");
+
+    const signal: Signal = {
+      id: signalId,
+      accountId: draftFeedback.accountId,
+      source: draftFeedback.mode === "github_issue" ? "github" : "feedback",
+      title,
+      body: bodyWithContext,
+      sentiment: "mixed",
+      impact:
+        draftFeedback.mode === "private_signal"
+          ? "medium"
+          : draftFeedback.mode === "github_issue"
+            ? "high"
+            : "medium",
+      receivedAt,
+      sourceRef: mode.sourceRef,
+      linkedIdeaId: ideaId,
+    };
+
+    const idea: Idea | null = ideaId
+      ? {
+          id: ideaId,
+          title,
+          problem: `${draftFeedback.workflowArea}: ${body}`,
+          status: "candidate",
+          votes: draftFeedback.mode === "buildroom_request" ? 1 : 0,
+          linkedSignalIds: [signalId],
+          targetRelease: "triage",
+          confidence: draftFeedback.mode === "buildroom_request" ? 64 : 58,
+        }
+      : null;
+
+    const task: CodexTask | null =
+      taskId && ideaId
+        ? {
+            id: taskId,
+            title: `Triage feedback: ${title}`,
+            status: "ready",
+            accountId: draftFeedback.accountId,
+            ideaId,
+            prompt: [
+              `Evaluate this ${mode.label.toLowerCase()} for Zentrik Open CRM.`,
+              `Workflow area: ${draftFeedback.workflowArea}.`,
+              "Decide whether it should remain a signal, merge into an existing idea, or become implementation work.",
+              "Return a public-safe summary, likely affected workflow, acceptance criteria, and validation plan.",
+            ].join(" "),
+            guardrail:
+              "Do not expose private account records. Convert raw local context into a public-safe product summary before Buildroom or GitHub publication.",
+          }
+        : null;
+
+    setWorkspace((current) => touchWorkspace({
+      ...current,
+      signals: [signal, ...current.signals],
+      ideas: idea ? [idea, ...current.ideas] : current.ideas,
+      codexTasks: task ? [task, ...current.codexTasks] : current.codexTasks,
+      evolutionLog: [
+        {
+          id: makeId("log"),
+          date: receivedAt,
+          title: idea ? "Feedback became an idea candidate" : "Feedback captured as signal",
+          summary: idea
+            ? `${mode.label} created a Zentrik signal, idea candidate, and Codex triage task.`
+            : `${mode.label} created a private Zentrik signal for future synthesis.`,
+          evidence: [
+            mode.sourceRef,
+            draftFeedback.workflowArea,
+            mode.publicSurface,
+          ],
+        },
+        ...current.evolutionLog,
+      ],
+    }));
+
+    setDraftFeedback((current) => ({ ...current, title: "", body: "" }));
+    setView(mode.createsIdea ? "loop" : "signals");
+  }
+
   async function copyCodexPrompt(task: CodexTask) {
     const account = task.accountId ? accountsById.get(task.accountId) : undefined;
     const idea = task.ideaId
@@ -290,6 +452,10 @@ function App() {
     setWorkspace(reset);
     setSelectedAccountId(reset.accounts[0]?.id ?? "");
     setDraftSignal((current) => ({
+      ...current,
+      accountId: reset.accounts[0]?.id ?? "",
+    }));
+    setDraftFeedback((current) => ({
       ...current,
       accountId: reset.accounts[0]?.id ?? "",
     }));
@@ -405,6 +571,7 @@ function App() {
               accountsById={accountsById}
               publicMode={publicMode}
               onCompleteAction={completeNextAction}
+              onNavigate={setView}
               onSelectAccount={(accountId) => {
                 setSelectedAccountId(accountId);
                 setView("accounts");
@@ -428,6 +595,14 @@ function App() {
               draftSignal={draftSignal}
               setDraftSignal={setDraftSignal}
               onSubmit={addSignal}
+            />
+          )}
+          {view === "feedback" && (
+            <FeedbackView
+              workspace={workspace}
+              draftFeedback={draftFeedback}
+              setDraftFeedback={setDraftFeedback}
+              onSubmit={submitFeedback}
             />
           )}
           {view === "loop" && (
@@ -461,6 +636,7 @@ function TodayView({
   accountsById,
   publicMode,
   onCompleteAction,
+  onNavigate,
   onSelectAccount,
 }: {
   metrics: {
@@ -473,6 +649,7 @@ function TodayView({
   accountsById: Map<string, Account>;
   publicMode: boolean;
   onCompleteAction: (accountId: string) => void;
+  onNavigate: (view: View) => void;
   onSelectAccount: (accountId: string) => void;
 }) {
   const openAccounts = workspace.accounts.filter(
@@ -482,6 +659,13 @@ function TodayView({
 
   return (
     <div className="section-grid">
+      <FirstUsePanel
+        signalCount={workspace.signals.length}
+        accountCount={workspace.accounts.length}
+        taskCount={workspace.codexTasks.length}
+        onNavigate={onNavigate}
+      />
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Weighted pipeline"
@@ -564,6 +748,95 @@ function TodayView({
         </Card>
       </div>
     </div>
+  );
+}
+
+function FirstUsePanel({
+  signalCount,
+  accountCount,
+  taskCount,
+  onNavigate,
+}: {
+  signalCount: number;
+  accountCount: number;
+  taskCount: number;
+  onNavigate: (view: View) => void;
+}) {
+  const steps = [
+    {
+      label: "Review accounts",
+      detail: `${accountCount} synthetic accounts are ready for inspection.`,
+      icon: Users,
+      view: "accounts" as const,
+    },
+    {
+      label: "Capture a signal",
+      detail: `${signalCount} signals show how evidence changes the workspace.`,
+      icon: MessageSquarePlus,
+      view: "signals" as const,
+    },
+    {
+      label: "Submit feedback",
+      detail: "Test private, Buildroom, and GitHub-ready feedback modes.",
+      icon: Lightbulb,
+      view: "feedback" as const,
+    },
+    {
+      label: "Copy a Codex task",
+      detail: `${taskCount} guarded prompts are ready for agent-assisted work.`,
+      icon: Bot,
+      view: "codex" as const,
+    },
+    {
+      label: "Trace the loop",
+      detail: "Ideas, releases, and outcome checks explain product evolution.",
+      icon: GitBranch,
+      view: "loop" as const,
+    },
+  ];
+
+  return (
+    <section className="rounded-lg border bg-card p-4 shadow-sm">
+      <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Sparkles className="h-4 w-4 text-signal" />
+            Start with source-grounded account work
+          </div>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Open CRM is useful before connectors. Inspect the demo workspace,
+            add one real signal, review the account memory it creates, then let
+            an agent prepare work from explicit context.
+          </p>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          {steps.map((step) => {
+            const Icon = step.icon;
+            return (
+              <button
+                key={step.label}
+                className="group flex min-h-24 items-start gap-3 rounded-md border bg-background p-3 text-left transition hover:border-primary/50 hover:bg-muted"
+                onClick={() => onNavigate(step.view)}
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-signal/10 text-signal">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="flex items-center gap-2 text-sm font-semibold">
+                    {step.label}
+                    <ArrowRight className="h-3.5 w-3.5 opacity-0 transition group-hover:opacity-100" />
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                    {step.detail}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -836,6 +1109,230 @@ function SignalsView({
           ))}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function FeedbackView({
+  workspace,
+  draftFeedback,
+  setDraftFeedback,
+  onSubmit,
+}: {
+  workspace: Workspace;
+  draftFeedback: {
+    mode: FeedbackMode;
+    accountId: string;
+    workflowArea: string;
+    title: string;
+    body: string;
+  };
+  setDraftFeedback: React.Dispatch<
+    React.SetStateAction<{
+      mode: FeedbackMode;
+      accountId: string;
+      workflowArea: string;
+      title: string;
+      body: string;
+    }>
+  >;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const mode = feedbackModes[draftFeedback.mode];
+  const destinationSteps = mode.createsIdea
+    ? [
+        "Create source-grounded signal",
+        "Create idea candidate",
+        "Create Codex triage task",
+        `Prepare for ${mode.publicSurface}`,
+      ]
+    : [
+        "Create private signal",
+        "Hold for pattern detection",
+        "Avoid public projection",
+        "Use during insight synthesis",
+      ];
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+      <Card>
+        <CardHeader>
+          <CardTitle>Tell Open CRM</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Test how feedback becomes Zentrik signal, idea candidates, and agent
+            work without exposing private CRM data by default.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={onSubmit}>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {(Object.keys(feedbackModes) as FeedbackMode[]).map((modeId) => {
+                const option = feedbackModes[modeId];
+                return (
+                  <button
+                    key={modeId}
+                    type="button"
+                    className={cn(
+                      "rounded-md border p-3 text-left transition hover:border-primary/50",
+                      draftFeedback.mode === modeId
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background text-foreground",
+                    )}
+                    onClick={() =>
+                      setDraftFeedback((current) => ({ ...current, mode: modeId }))
+                    }
+                  >
+                    <span className="block text-sm font-semibold">{option.label}</span>
+                    <span
+                      className={cn(
+                        "mt-1 block text-xs leading-5",
+                        draftFeedback.mode === modeId
+                          ? "text-primary-foreground/80"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {option.summary}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block space-y-2">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Source account
+                </span>
+                <select
+                  className="focus-input w-full"
+                  value={draftFeedback.accountId}
+                  onChange={(event) =>
+                    setDraftFeedback((current) => ({
+                      ...current,
+                      accountId: event.target.value,
+                    }))
+                  }
+                >
+                  {workspace.accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Workflow area
+                </span>
+                <select
+                  className="focus-input w-full"
+                  value={draftFeedback.workflowArea}
+                  onChange={(event) =>
+                    setDraftFeedback((current) => ({
+                      ...current,
+                      workflowArea: event.target.value,
+                    }))
+                  }
+                >
+                  {workflowAreas.map((area) => (
+                    <option key={area} value={area}>
+                      {area}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">
+                Feedback title
+              </span>
+              <input
+                className="focus-input w-full"
+                value={draftFeedback.title}
+                onChange={(event) =>
+                  setDraftFeedback((current) => ({
+                    ...current,
+                    title: event.target.value,
+                  }))
+                }
+                placeholder="Short, specific product feedback"
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-muted-foreground">
+                What happened, and what should be better?
+              </span>
+              <textarea
+                className="focus-input min-h-40 w-full resize-y"
+                value={draftFeedback.body}
+                onChange={(event) =>
+                  setDraftFeedback((current) => ({
+                    ...current,
+                    body: event.target.value,
+                  }))
+                }
+                placeholder="Describe the workflow, friction, expected result, and any safe reproduction context."
+              />
+            </label>
+
+            <Button type="submit" variant="primary">
+              <Lightbulb className="h-4 w-4" />
+              Send through loop
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Loop Preview</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              This is what Zentrik and agents would receive from the selected mode.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {destinationSteps.map((step, index) => (
+              <div key={step} className="flex gap-3 rounded-lg border bg-background p-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-signal/10 text-xs font-semibold text-signal">
+                  {index + 1}
+                </span>
+                <div>
+                  <div className="text-sm font-semibold">{step}</div>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {index === 0
+                      ? mode.sourceRef
+                      : index === destinationSteps.length - 1
+                        ? mode.publicSurface
+                        : "Zentrik links this to existing insights and ideas before work starts."}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Why This Mode Exists</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
+            <p>
+              Private signal is safest for rough context. Buildroom request is best
+              when the user wants the community to vote. GitHub issue is best when
+              the feedback is reproducible and implementation-ready.
+            </p>
+            <div className="rounded-lg border bg-background p-3 text-xs leading-5">
+              <span className="font-semibold text-foreground">Privacy rule: </span>
+              raw account context stays private unless the user explicitly chooses
+              a public-safe route.
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

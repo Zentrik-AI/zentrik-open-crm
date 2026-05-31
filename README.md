@@ -9,6 +9,7 @@ real sources, not another place to manually maintain stale records.
 [First Use](./docs/first-use.md) ·
 [Roadmap](./docs/roadmap.md) ·
 [Brand Archetype](./docs/brand-archetype.md) ·
+[Licensing And IP](./docs/licensing-and-ip.md) ·
 [Self-Hosting](./docs/self-hosting.md) ·
 [Contributing](./CONTRIBUTING.md)
 
@@ -81,6 +82,19 @@ must never enter this repo.
 Read [Privacy Boundaries](./docs/privacy-boundaries.md) before importing data or
 building integrations.
 
+## License And Trademarks
+
+Zentrik Open CRM is licensed under the
+[Apache License 2.0](./LICENSE). Contributions intentionally submitted to this
+repository are accepted under the same license unless stated otherwise before
+inclusion.
+
+Zentrik AI reserves its trademarks, product names, hosted services, private
+APIs, private workspaces, product intelligence systems, runtime credentials, and
+proprietary platform code. See [NOTICE](./NOTICE),
+[Trademark Policy](./TRADEMARKS.md), and
+[Licensing And IP](./docs/licensing-and-ip.md).
+
 ## Core Docs
 
 - [Product Intent](./docs/product-intent.md)
@@ -89,6 +103,8 @@ building integrations.
 - [Brand Archetype](./docs/brand-archetype.md)
 - [First Use](./docs/first-use.md)
 - [Self-Evolving Loop](./docs/self-evolving-loop.md)
+- [Licensing And IP](./docs/licensing-and-ip.md)
+- [Public Release Checklist](./docs/public-release-checklist.md)
 - [Roadmap](./docs/roadmap.md)
 - [Architecture](./docs/architecture.md)
 - [Codex Operator Guide](./docs/codex-operator-guide.md)

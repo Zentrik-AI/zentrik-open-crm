@@ -18,6 +18,9 @@ workspace.
 - If a feature needs realistic source material, use public sources, cite the
   source in documentation when needed, and summarize or synthesize rather than
   copying protected content.
+- Do not copy private Zentrik app code, hosted-service internals, production
+  workspace contracts, proprietary insight logic, or private orchestration
+  systems into this public repository.
 
 ## Product Direction
 
@@ -38,3 +41,5 @@ through a hosted edition.
 - Keep docs direct and useful for agents. Avoid bloated conceptual repetition.
 - Use semantic tokens and accessible controls. Do not add decorative visual
   noise that makes daily CRM work harder.
+- Keep `LICENSE`, `NOTICE`, `TRADEMARKS.md`, and
+  `docs/licensing-and-ip.md` aligned when changing the open-source boundary.

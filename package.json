@@ -4,6 +4,22 @@
   "private": false,
   "type": "module",
   "description": "Open-source, local-first CRM for source-grounded account work and agent-assisted follow-up.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zentrik-AI/zentrik-open-crm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Zentrik-AI/zentrik-open-crm/issues"
+  },
+  "homepage": "https://github.com/Zentrik-AI/zentrik-open-crm#readme",
+  "keywords": [
+    "crm",
+    "open-source",
+    "local-first",
+    "agentic-crm",
+    "zentrik"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

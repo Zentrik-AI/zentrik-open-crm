@@ -42,6 +42,20 @@ Every pull request should state:
 - whether it touches data handling, privacy, or public Buildroom behavior
 - how it was validated
 
+## Contribution License
+
+Unless you clearly state otherwise before a contribution is included, anything
+you intentionally submit to this repository is contributed under the Apache
+License 2.0.
+
+Only submit work you have the right to contribute. Do not submit code,
+screenshots, fixtures, logs, docs, or examples copied from private employer
+systems, private Zentrik workspaces, customer environments, transcripts, emails,
+or confidential product plans.
+
+For larger corporate contributions, Zentrik AI may ask for additional
+contributor confirmation before merging.
+
 ## Local Checks
 
 ```bash
@@ -59,3 +73,10 @@ or docs.
 Use `.invalid`, `.example`, or `example.com` domains for sample accounts. If a
 test needs realistic source material, summarize public information and cite the
 source in documentation when needed.
+
+## Zentrik IP Boundary
+
+This repository is the open-source CRM product. Do not copy private Zentrik app
+code, hosted-service internals, private workspace schemas, production IDs,
+runtime credentials, proprietary insight-generation logic, or private
+orchestration systems into this repository.

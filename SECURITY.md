@@ -24,6 +24,14 @@ Never commit:
 The `.gitignore` blocks common private-data folders, but contributors and agents
 are responsible for reviewing staged changes before committing.
 
+## Public Release Gate
+
+Keep the repository private until the public-release checklist has been
+completed, including history review, secret scanning, trademark review,
+dependency license review, and private vulnerability reporting setup.
+
+See [Public Release Checklist](./docs/public-release-checklist.md).
+
 ## Sensitive Issue Triage
 
 If an issue or pull request accidentally includes secrets, private customer

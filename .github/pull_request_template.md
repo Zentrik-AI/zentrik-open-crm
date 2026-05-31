@@ -12,6 +12,13 @@
 Explain if checked:
 
 
+## Contribution and IP
+
+- [ ] I have the right to submit this contribution under Apache 2.0
+- [ ] This PR does not copy private Zentrik platform code, private workspace
+      material, customer records, transcripts, emails, credentials, or
+      proprietary hosted-service internals
+
 ## Validation
 
 - [ ] `npm run typecheck`

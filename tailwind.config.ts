@@ -1,73 +1,90 @@
 import type { Config } from "tailwindcss";
 
+/** hsl(var(--token) / <alpha-value>) so every color supports opacity modifiers. */
+const token = (name: string) => `hsl(var(--${name}) / <alpha-value>)`;
+
 const config = {
   darkMode: ["class"],
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        shell: "hsl(var(--shell))",
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
+        background: token("background"),
+        foreground: token("foreground"),
+        "faint-foreground": token("faint-foreground"),
+        surface: token("surface"),
+        "surface-raised": token("surface-raised"),
+        "surface-sunken": token("surface-sunken"),
+        card: { DEFAULT: token("card"), foreground: token("card-foreground") },
+        border: { DEFAULT: token("border"), strong: token("border-strong") },
+        input: token("input"),
+        ring: token("ring"),
+        muted: { DEFAULT: token("muted"), foreground: token("muted-foreground") },
+        primary: { DEFAULT: token("primary"), foreground: token("primary-foreground") },
+        secondary: { DEFAULT: token("secondary"), foreground: token("secondary-foreground") },
+        accent: { DEFAULT: token("accent"), bg: token("accent-bg"), fg: token("accent-fg") },
+        signal: { DEFAULT: token("signal"), bg: token("signal-bg"), fg: token("signal-fg") },
+        account: { DEFAULT: token("account"), bg: token("account-bg"), fg: token("account-fg") },
+        agent: { DEFAULT: token("agent"), bg: token("agent-bg"), fg: token("agent-fg") },
+        idea: { DEFAULT: token("idea"), bg: token("idea-bg"), fg: token("idea-fg") },
         success: {
-          DEFAULT: "hsl(var(--success))",
-          foreground: "hsl(var(--success-foreground))",
+          DEFAULT: token("success"),
+          bg: token("success-bg"),
+          fg: token("success-fg"),
+          foreground: token("success-foreground"),
         },
         warning: {
-          DEFAULT: "hsl(var(--warning))",
-          foreground: "hsl(var(--warning-foreground))",
+          DEFAULT: token("warning"),
+          bg: token("warning-bg"),
+          fg: token("warning-fg"),
+          foreground: token("warning-foreground"),
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: token("destructive"),
+          bg: token("destructive-bg"),
+          fg: token("destructive-fg"),
+          foreground: token("destructive-foreground"),
         },
-        signal: {
-          DEFAULT: "hsl(var(--signal))",
-          foreground: "hsl(var(--signal-foreground))",
-        },
-        account: {
-          DEFAULT: "hsl(var(--account))",
-          foreground: "hsl(var(--account-foreground))",
-        },
-        agent: {
-          DEFAULT: "hsl(var(--agent))",
-          foreground: "hsl(var(--agent-foreground))",
-        },
-        idea: {
-          DEFAULT: "hsl(var(--idea))",
-          foreground: "hsl(var(--idea-foreground))",
-        },
+      },
+      fontFamily: {
+        serif: "var(--font-serif)",
+        sans: "var(--font-sans)",
+        mono: "var(--font-mono)",
+      },
+      fontSize: {
+        display: ["1.875rem", { lineHeight: "1.12", letterSpacing: "-0.02em", fontWeight: "500" }],
+        h1: ["1.375rem", { lineHeight: "1.15", letterSpacing: "-0.015em", fontWeight: "500" }],
+        h2: ["1.125rem", { lineHeight: "1.25", letterSpacing: "-0.01em", fontWeight: "500" }],
+        h3: ["0.9375rem", { lineHeight: "1.3", letterSpacing: "-0.005em", fontWeight: "500" }],
+        body: ["0.875rem", { lineHeight: "1.55" }],
+        "body-sm": ["0.8125rem", { lineHeight: "1.5" }],
+        label: ["0.6875rem", { lineHeight: "1.2", letterSpacing: "0.06em", fontWeight: "500" }],
+        "stat-xl": ["1.625rem", { lineHeight: "1.12", fontWeight: "500" }],
+        stat: ["0.9375rem", { lineHeight: "1.3", fontWeight: "500" }],
+        kbd: ["0.6875rem", { lineHeight: "1", fontWeight: "500" }],
       },
       borderRadius: {
-        lg: "8px",
-        md: "6px",
-        sm: "4px",
+        sm: "var(--r-sm)",
+        md: "var(--r-md)",
+        lg: "var(--r-lg)",
+        xl: "var(--r-xl)",
       },
       boxShadow: {
-        focus: "0 0 0 3px hsl(var(--ring) / 0.28)",
+        e1: "var(--e-1)",
+        e2: "var(--e-2)",
+        e3: "var(--e-3)",
+        focus: "var(--focus-ring)",
+      },
+      transitionTimingFunction: {
+        out: "var(--ease-out)",
+        "in-out": "var(--ease-in-out)",
+        spring: "var(--ease-spring)",
+      },
+      transitionDuration: {
+        fast: "120ms",
+        base: "200ms",
+        slow: "320ms",
+        trace: "500ms",
       },
     },
   },

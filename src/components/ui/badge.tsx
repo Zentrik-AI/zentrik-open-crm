@@ -1,42 +1,48 @@
 import * as React from "react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
-
-type BadgeTone =
-  | "default"
-  | "muted"
-  | "success"
-  | "warning"
-  | "destructive"
-  | "signal"
-  | "account"
-  | "agent"
-  | "idea";
-
-const tones: Record<BadgeTone, string> = {
-  default: "border-border bg-secondary text-secondary-foreground",
-  muted: "border-border bg-muted text-muted-foreground",
-  success: "border-success/30 bg-success/10 text-success",
-  warning: "border-warning/30 bg-warning/10 text-warning",
-  destructive: "border-destructive/30 bg-destructive/10 text-destructive",
-  signal: "border-signal/30 bg-signal/10 text-signal",
-  account: "border-account/30 bg-account/10 text-account",
-  agent: "border-agent/30 bg-agent/10 text-agent",
-  idea: "border-idea/30 bg-idea/10 text-idea",
-};
+import { type Tone } from "../../lib/meta";
+import { toneChip, toneSolidBg } from "../../lib/tone";
+import { LiveDot } from "./dot";
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  tone?: BadgeTone;
+  tone?: Tone;
+  /** A leading status dot in the tone color. */
+  dot?: boolean;
+  /** Animate the dot (running / live). Implies `dot`. */
+  live?: boolean;
+  /** A leading lucide glyph (e.g. signal source). */
+  icon?: LucideIcon;
+  /** Ghost variant: transparent with a strong border (e.g. "Buildroom-safe"). */
+  ghost?: boolean;
 }
 
-export function Badge({ className, tone = "default", ...props }: BadgeProps) {
+export function Badge({
+  className,
+  tone = "neutral",
+  dot,
+  live,
+  icon: Icon,
+  ghost,
+  children,
+  ...props
+}: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex min-h-6 items-center rounded-md border px-2 py-0.5 text-xs font-medium",
-        tones[tone],
+        "inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 text-label font-medium",
+        ghost ? "border border-border-strong bg-transparent text-muted-foreground" : toneChip[tone],
         className,
       )}
       {...props}
-    />
+    >
+      {live ? (
+        <LiveDot tone={tone} />
+      ) : dot ? (
+        <span className={cn("h-1.5 w-1.5 rounded-full", toneSolidBg[tone])} aria-hidden />
+      ) : null}
+      {Icon && <Icon className="h-3 w-3" aria-hidden />}
+      {children}
+    </span>
   );
 }

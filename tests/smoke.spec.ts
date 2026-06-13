@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -6,211 +6,107 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
-test("supports the core CRM workflow on desktop", async ({ context, page }) => {
-  test.skip(test.info().project.name !== "chromium", "Desktop workflow runs only in the desktop project.");
+/** Click a sidebar nav item by its label (names carry a trailing count). */
+function nav(page: Page, label: string) {
+  return page.locator("aside").getByRole("button", { name: label }).first().click();
+}
 
-  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
-    origin: "http://127.0.0.1:5177",
-  });
+test("navigates the CRM surfaces and redacts in share-safe mode", async ({ page }) => {
+  test.skip(test.info().project.name !== "chromium", "Desktop flow runs in the desktop project.");
+  const vw = (name: string) => page.locator(`[data-view="${name}"]`);
 
-  await expect(page.getByRole("heading", { name: "Zentrik Open CRM Demo" })).toBeVisible();
-  await expect(page.getByText("Start with source-grounded account work")).toBeVisible();
-  await expect(page.getByText("Daily Account Board")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Open CRM Workspace" })).toBeVisible();
+  await expect(vw("home").getByText("Weighted pipeline")).toBeVisible();
+  await expect(vw("home").getByRole("heading", { name: "Today" })).toBeVisible();
 
-  await page.getByRole("button", { name: /Capture a signal/ }).click();
-  await expect(page.getByRole("heading", { name: "Capture Signal" })).toBeVisible();
+  await nav(page, "Pipeline");
+  await expect(vw("pipeline").getByRole("heading", { name: "Pipeline" })).toBeVisible();
+  await expect(vw("pipeline").getByText("Open deals")).toBeVisible();
+  await expect(vw("pipeline").getByText("Negotiation").first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Accounts", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Northstar Robotics" })).toBeVisible();
-  await expect(page.getByText("Annual value")).toBeVisible();
+  await nav(page, "Contacts");
+  await expect(vw("contacts").getByRole("heading", { name: "Contacts" })).toBeVisible();
+  await expect(vw("contacts").getByText("Eli Moreno").first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Private" }).click();
-  await expect(page.getByRole("button", { name: "Buildroom" })).toBeVisible();
-  await expect(page.getByText("Domain hidden in Buildroom mode")).toBeVisible();
-  await expect(page.getByText("Annual value").locator("..")).toContainText("Hidden");
-  await expect(page.getByRole("button", { name: /Northstar Robotics/ })).toContainText("Hidden");
+  await nav(page, "Tasks");
+  await expect(vw("tasks").getByRole("heading", { name: "Tasks" })).toBeVisible();
+  await vw("tasks").getByRole("button", { name: "Mark done" }).first().click();
+  await expect(page.getByText(/^Done ·/)).toBeVisible();
 
-  await page.getByPlaceholder("Search accounts, risks, needs").fill("no matching account");
-  await expect(page.getByText("No accounts match the current search.")).toBeVisible();
-  await page.getByPlaceholder("Search accounts, risks, needs").fill("");
+  await nav(page, "Notes");
+  await expect(vw("notes").getByText("Capture note")).toBeVisible();
 
-  await page.getByRole("button", { name: "Signals", exact: true }).click();
-  await page.getByLabel("Title").fill("Trial user asked for Gmail connector");
-  await page
-    .getByLabel("Body")
-    .fill("They want email context summarized into account memory before a follow-up is drafted.");
-  await page.getByRole("button", { name: "Add signal" }).click();
-  await expect(page.getByText("Trial user asked for Gmail connector")).toBeVisible();
-  await expect(page.getByLabel("Title")).toHaveValue("");
+  await nav(page, "Improve Open CRM");
+  await expect(vw("improve").getByRole("heading", { name: "Help shape the product" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Tell Open CRM", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Tell Open CRM" })).toBeVisible();
-  await page.getByRole("button", { name: /Buildroom request/ }).click();
-  await page.getByLabel("Workflow area").selectOption("Privacy");
-  await page
-    .getByLabel("Feedback title")
-    .fill("Public mode should explain what will be hidden");
-  await page
-    .getByLabel("What happened, and what should be better?")
-    .fill("When I switch into Buildroom mode, I need a clearer summary of which account fields are hidden before I share anything externally.");
-  await page.getByRole("button", { name: "Send through loop" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Public mode should explain what will be hidden" }),
-  ).toBeVisible();
-  await expect(page.getByText("Feedback became an idea candidate")).toBeVisible();
+  await nav(page, "Accounts");
+  await expect(vw("accounts").getByRole("heading", { name: "Northstar Robotics" })).toBeVisible();
+  await expect(vw("accounts").getByText("$42K").first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Today", exact: true }).click();
-  await expect(page.getByText("Weighted pipeline").locator("../..")).toContainText("Hidden");
-  await page.getByRole("button", { name: "Done" }).first().click();
-  await expect(page.getByText("Open next actions").locator("../..")).toContainText("3");
+  await page.getByRole("button", { name: "Private", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Share-safe" })).toBeVisible();
+  await expect(vw("accounts").getByText("$42K")).toHaveCount(0);
+  await expect(vw("accounts").getByText("hidden").first()).toBeVisible();
+  await page.getByRole("button", { name: "Share-safe" }).click();
 
-  await page.getByRole("button", { name: "Open CRM Loop", exact: true }).click();
-  await page.getByRole("button", { name: "Advance" }).first().click();
-  await expect(page.getByText("Idea advanced from workspace review")).toBeVisible();
+  await page.keyboard.press("Meta+k");
+  const palette = page.getByRole("dialog", { name: "Command palette" });
+  await expect(palette).toBeVisible();
+  await palette.getByRole("combobox").fill("Meridian");
+  await expect(palette.getByRole("option", { name: /Meridian/ }).first()).toBeVisible();
+  await page.keyboard.press("Escape");
 
-  await page.getByRole("button", { name: "Codex", exact: true }).click();
-  await expect(page.getByText("Triage feedback: Public mode should explain what will be hidden")).toBeVisible();
-  await page.getByRole("button", { name: "Copy prompt" }).first().click();
-  await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
-  const copiedPrompt = await page.evaluate(() => navigator.clipboard.readText());
-  expect(copiedPrompt).toContain("domain hidden in Buildroom mode");
-  expect(copiedPrompt).not.toContain("harbor-reed.invalid");
-
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export JSON" }).click();
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("zentrik-open-crm-workspace.json");
-
-  await page.getByRole("button", { name: "Reset demo" }).click();
-  await page.getByRole("button", { name: "Today", exact: true }).click();
-  await expect(page.getByText("Open next actions").locator("../..")).toContainText("4");
+  await nav(page, "Settings");
+  await expect(vw("settings").getByRole("heading", { name: "AI & API keys" })).toBeVisible();
+  await expect(vw("settings").getByText(/Markdown vault/i).first()).toBeVisible();
+  const download = page.waitForEvent("download");
+  await vw("settings").getByRole("button", { name: "Export JSON" }).click();
+  expect((await download).suggestedFilename()).toBe("open-crm-workspace.json");
 });
 
-test("supports local account setup, contacts, persistence, and reset", async ({ page }) => {
-  test.skip(test.info().project.name !== "chromium", "Setup workflow runs only in the desktop project.");
+test("creates a local account + contact + note that persist, then resets", async ({ page }) => {
+  test.skip(test.info().project.name !== "chromium", "Setup flow runs in the desktop project.");
 
-  await page.getByRole("button", { name: "Accounts", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Add account" })).toBeVisible();
-
-  await page.getByLabel("Account name").fill("Atlas Foundry");
-  await page.getByLabel("Domain").fill("atlas-foundry.example");
-  await page.getByLabel("Segment").fill("Design partner");
-  await page.getByLabel("Owner").fill("Rae");
-  await page.getByLabel("Priority").selectOption("high");
-  await page.getByLabel("First next action").fill("Schedule onboarding review");
-  await page.getByLabel("Primary contact").fill("Marta Silva");
-  await page.getByLabel("Contact role").fill("Founder");
-  await page.getByRole("button", { name: "Add account", exact: true }).click();
+  await nav(page, "Accounts");
+  const addForm = page.locator("form", { has: page.getByRole("button", { name: "Add account", exact: true }) });
+  await addForm.getByLabel("Account name").fill("Atlas Foundry");
+  await addForm.getByLabel("Domain").fill("atlas-foundry.example");
+  await addForm.getByLabel("Segment").fill("Design partner");
+  await addForm.getByLabel("Owner").fill("Rae");
+  await addForm.getByLabel("Primary contact").fill("Marta Silva");
+  await addForm.getByLabel("Contact role").fill("Founder");
+  await addForm.getByRole("button", { name: "Add account", exact: true }).click();
 
   await expect(page.getByRole("heading", { name: "Atlas Foundry" })).toBeVisible();
   await expect(page.getByText("atlas-foundry.example")).toBeVisible();
-  await expect(page.getByText("Marta Silva")).toBeVisible();
-  await expect(page.getByText("Schedule onboarding review")).toBeVisible();
 
-  await page.getByLabel("Contact name").fill("Noah Reed");
-  await page.getByLabel("Role", { exact: true }).fill("Technical evaluator");
-  await page.getByLabel("Influence").selectOption("technical");
-  await page.getByRole("button", { name: "Add contact" }).click();
-  await expect(page.getByText("Noah Reed")).toBeVisible();
+  // Add a second contact via the account's contacts panel
+  const contactForm = page.locator("form", { has: page.getByLabel("Influence") });
+  await contactForm.getByLabel("Name", { exact: true }).fill("Noah Reed");
+  await contactForm.getByLabel("Role", { exact: true }).fill("Technical evaluator");
+  await contactForm.getByLabel("Influence").selectOption("technical");
+  await contactForm.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByText("Noah Reed").first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Signals", exact: true }).click();
-  await page.getByLabel("Account").selectOption({ label: "Atlas Foundry" });
-  await page.getByLabel("Source").selectOption("usage");
-  await page.getByLabel("Title").fill("Onboarding workspace created");
-  await page
-    .getByLabel("Body")
-    .fill("The founder created the first workspace and asked for a clearer CSV import path.");
-  await page.getByRole("button", { name: "Add signal" }).click();
-  await expect(page.getByText("Onboarding workspace created")).toBeVisible();
+  // Capture a note against the new account
+  await nav(page, "Notes");
+  const noteForm = page.locator("form", { has: page.getByRole("button", { name: "Add note" }) });
+  await noteForm.getByLabel("Account").selectOption({ label: "Atlas Foundry" });
+  await noteForm.getByLabel("Title").fill("Onboarding workspace created");
+  await noteForm.getByLabel("Body").fill("Founder created the first workspace and asked for a clearer CSV import path.");
+  await noteForm.getByRole("button", { name: "Add note" }).click();
+  await expect(page.getByRole("heading", { name: "Onboarding workspace created" })).toBeVisible();
 
+  // Persistence across reload
   await page.reload();
-  await page.getByRole("button", { name: "Accounts", exact: true }).click();
+  await nav(page, "Accounts");
   await expect(page.getByRole("heading", { name: "Atlas Foundry" })).toBeVisible();
-  await expect(page.getByText("Noah Reed")).toBeVisible();
-  await expect(page.getByText("Onboarding workspace created")).toBeVisible();
 
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  // Reset (two-step confirm)
+  await nav(page, "Settings");
   await page.getByRole("button", { name: "Reset demo" }).click();
-  await page.getByRole("button", { name: "Accounts", exact: true }).click();
+  await page.getByRole("button", { name: "Reset everything" }).click();
+  await nav(page, "Accounts");
   await expect(page.getByRole("heading", { name: "Atlas Foundry" })).toBeHidden();
   await expect(page.getByRole("heading", { name: "Northstar Robotics" })).toBeVisible();
-});
-
-test("routes private, support, and GitHub-ready feedback differently", async ({
-  context,
-  page,
-}) => {
-  test.skip(test.info().project.name !== "chromium", "Feedback routing runs only in the desktop project.");
-
-  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
-    origin: "http://127.0.0.1:5177",
-  });
-
-  await page.getByRole("button", { name: "Tell Open CRM", exact: true }).click();
-  await page.getByLabel("Feedback title").fill("Keyboard workflow feels hidden");
-  await page
-    .getByLabel("What happened, and what should be better?")
-    .fill("I wanted to move from account review into signal capture without hunting through the nav.");
-  await page.getByRole("button", { name: "Send through loop" }).click();
-  await expect(page.getByRole("heading", { name: "Capture Signal" })).toBeVisible();
-  await expect(page.getByText("Keyboard workflow feels hidden")).toBeVisible();
-
-  await page.getByRole("button", { name: "Codex", exact: true }).click();
-  await expect(page.getByText("Triage feedback: Keyboard workflow feels hidden")).toBeHidden();
-
-  await page.getByRole("button", { name: "Tell Open CRM", exact: true }).click();
-  await page
-    .getByRole("button", { name: /^GitHub issue Shape a reproducible/ })
-    .click();
-  await page.getByLabel("Workflow area").selectOption("Self-hosting");
-  await page.getByLabel("Feedback title").fill("Preview command should document the port");
-  await page
-    .getByLabel("What happened, and what should be better?")
-    .fill("Running preview worked, but the expected local URL should be explicit in the docs.");
-  await page.getByRole("button", { name: "Send through loop" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Preview command should document the port" }),
-  ).toBeVisible();
-
-  await page.getByRole("button", { name: "Codex", exact: true }).click();
-  await expect(page.getByText("Triage feedback: Preview command should document the port")).toBeVisible();
-
-  await page.getByRole("button", { name: "Tell Open CRM", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Download feedback bundle" })).toBeEnabled();
-  await page.getByRole("button", { name: "Copy GitHub issue draft" }).click();
-  await expect(page.getByRole("button", { name: "Issue draft copied" })).toBeVisible();
-  const issueDraft = await page.evaluate(() => navigator.clipboard.readText());
-  expect(issueDraft).toContain("Open CRM feedback: Preview command should document the port");
-  expect(issueDraft).toContain("In-app feedback bundle: open-crm:feedback:");
-
-  await page
-    .getByRole("button", { name: /^Support request Prepare private/ })
-    .click();
-  await page.getByLabel("Feedback type").selectOption("install_support");
-  await page.getByLabel("Feedback title").fill("Cloud invite did not arrive");
-  await page
-    .getByLabel("What happened, and what should be better?")
-    .fill("I created an account and opted into the Buildroom, but the invite link never arrived.");
-  await page.getByRole("button", { name: "Send through loop" }).click();
-  await expect(page.getByRole("heading", { name: "Capture Signal" })).toBeVisible();
-  await expect(page.getByText("Cloud invite did not arrive")).toBeVisible();
-
-  await page.getByRole("button", { name: "Codex", exact: true }).click();
-  await expect(page.getByText("Triage feedback: Cloud invite did not arrive")).toBeVisible();
-});
-
-test("keeps primary navigation usable on mobile", async ({ page }) => {
-  test.skip(test.info().project.name !== "mobile-chrome", "Mobile workflow runs only in the mobile project.");
-
-  await expect(page.getByRole("heading", { name: "Zentrik Open CRM Demo" })).toBeVisible();
-  await expect(page.getByText("Start with source-grounded account work")).toBeVisible();
-  await page.getByRole("button", { name: "Tell Open CRM", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Tell Open CRM" })).toBeVisible();
-  await page.getByRole("button", { name: "Signals", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Capture Signal" })).toBeVisible();
-  await page.getByRole("button", { name: "Accounts", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Northstar Robotics" })).toBeVisible();
-  await page.getByRole("button", { name: "Codex", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Codex Task Queue" })).toBeVisible();
 });

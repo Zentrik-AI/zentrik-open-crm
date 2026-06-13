@@ -42,6 +42,24 @@ Every pull request should state:
 - whether it touches data handling, privacy, or public Buildroom behavior
 - how it was validated
 
+## Labels
+
+Labels are routing and triage metadata, not decoration — every label should route a review, drive release notes, or drive triage. Apply them in GitHub (`gh pr edit --add-label …`), not in the PR body.
+
+| Label | Apply when | What it does |
+| --- | --- | --- |
+| `bug` | Fixes incorrect behavior or a regression | Release-notes "Fixes"; triage priority |
+| `enhancement` | New capability or materially expanded behavior | Release-notes "Features" |
+| `experience` | UX/interaction polish with no new feature headline | Release-notes "Experience / polish" |
+| `performance` | Latency, payload, or query-cost work | Requires before/after benchmark evidence in the PR |
+| `security` | Auth, secrets, customer data, privacy/Buildroom, or infra | Flags a security review; add a one-line security/privacy note in the body |
+| `integrations` | Provider connections, imports/exports, OAuth flows | Integration review: data boundaries and setup docs |
+| `dependencies` | Manifest, lockfile, or version updates | Dependency-update track (Dependabot) |
+| `documentation` | Setup, self-hosting, or explanatory content | Lighter validation bar |
+| `release-notes` | Changelog or release-communication content | Pulled into the release rollup |
+
+As a public repository, `good first issue`, `help wanted`, and `question` stay for community triage. There is no `migration` label here — this repo carries no production schema.
+
 ## Contribution License
 
 Unless you clearly state otherwise before a contribution is included, anything

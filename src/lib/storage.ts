@@ -1,7 +1,7 @@
 import { seedWorkspace } from "../data/seed";
 import type { Workspace } from "../types";
 
-const STORAGE_KEY = "zentrik-open-crm.workspace.v1";
+const STORAGE_KEY = "zentrik-open-crm.workspace.v2";
 
 export function touchWorkspace(workspace: Workspace): Workspace {
   return { ...workspace, updatedAt: new Date().toISOString() };

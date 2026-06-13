@@ -7,12 +7,14 @@ export type AccountStage =
 
 export type Priority = "low" | "medium" | "high" | "urgent";
 
-export type SignalSource =
+/** Where a note came from — the source-grounded touchpoint kinds. */
+export type NoteSource =
   | "call"
   | "email"
+  | "meeting"
+  | "note"
   | "support"
   | "community"
-  | "feedback"
   | "review"
   | "github"
   | "usage"
@@ -20,22 +22,24 @@ export type SignalSource =
 
 export type Sentiment = "positive" | "mixed" | "negative" | "neutral";
 
-export type IdeaStatus = "candidate" | "shaping" | "queued" | "released";
+/** The deal pipeline. won/lost are terminal. */
+export type DealStage =
+  | "lead"
+  | "qualified"
+  | "proposal"
+  | "negotiation"
+  | "won"
+  | "lost";
+
+export type TaskStatus = "open" | "done";
 
 export interface Contact {
   id: string;
   name: string;
   role: string;
   influence: "economic" | "champion" | "technical" | "user";
+  email?: string;
   lastSeen: string;
-}
-
-export interface NextAction {
-  id: string;
-  label: string;
-  due: string;
-  owner: string;
-  status: "open" | "done";
 }
 
 export interface Account {
@@ -45,6 +49,7 @@ export interface Account {
   segment: string;
   stage: AccountStage;
   priority: Priority;
+  /** Current recurring revenue (distinct from open pipeline in `deals`). */
   arr: number;
   health: number;
   fit: number;
@@ -54,22 +59,52 @@ export interface Account {
   contacts: Contact[];
   needs: string[];
   risks: string[];
-  nextAction: NextAction;
   lastTouch: string;
+  createdAt: string;
 }
 
-export interface Signal {
+export interface Deal {
   id: string;
   accountId: string;
-  source: SignalSource;
+  name: string;
+  stage: DealStage;
+  value: number;
+  owner: string;
+  closeDate: string;
+  probability: number;
+  createdAt: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  accountId?: string;
+  dealId?: string;
+  contactId?: string;
+  due: string;
+  owner: string;
+  priority: Priority;
+  status: TaskStatus;
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface Note {
+  id: string;
+  accountId: string;
+  contactId?: string;
+  dealId?: string;
+  source: NoteSource;
   title: string;
   body: string;
   sentiment: Sentiment;
-  impact: Priority;
-  receivedAt: string;
-  sourceRef: string;
-  linkedIdeaId?: string;
+  createdAt: string;
+  sourceRef?: string;
 }
+
+/* ---- Improve Open CRM (product-feedback layer — not the user's CRM data) -- */
+
+export type IdeaStatus = "candidate" | "shaping" | "queued" | "released";
 
 export interface Idea {
   id: string;
@@ -77,27 +112,16 @@ export interface Idea {
   problem: string;
   status: IdeaStatus;
   votes: number;
-  linkedSignalIds: string[];
   targetRelease: string;
   confidence: number;
 }
 
-export interface CodexTask {
-  id: string;
-  title: string;
-  status: "ready" | "running" | "needs_review";
-  accountId?: string;
-  ideaId?: string;
-  prompt: string;
-  guardrail: string;
-}
-
-export interface EvolutionLogEntry {
+export interface ChangelogEntry {
   id: string;
   date: string;
   title: string;
   summary: string;
-  evidence: string[];
+  tags: string[];
 }
 
 export interface Workspace {
@@ -105,8 +129,10 @@ export interface Workspace {
   edition: "Self-Hosted" | "Cloud";
   updatedAt: string;
   accounts: Account[];
-  signals: Signal[];
+  deals: Deal[];
+  tasks: Task[];
+  notes: Note[];
+  /** Product-feedback layer, surfaced only under "Improve Open CRM". */
   ideas: Idea[];
-  codexTasks: CodexTask[];
-  evolutionLog: EvolutionLogEntry[];
+  changelog: ChangelogEntry[];
 }

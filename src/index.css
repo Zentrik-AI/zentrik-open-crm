@@ -2,83 +2,161 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================================
+   Zentrik Open CRM — "Editorial Signal" v1.0
+   Warm paper substrate · Fraunces / Inter / IBM Plex Mono · one ink-teal accent.
+   Every token is an HSL channel triple consumed as hsl(var(--token) / <alpha>).
+   ========================================================================== */
+
 @layer base {
   :root {
-    --background: 210 33% 98%;
-    --foreground: 222 47% 11%;
-    --shell: 216 35% 97%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --primary: 222 58% 18%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 214 28% 94%;
-    --secondary-foreground: 222 47% 13%;
-    --muted: 214 32% 93%;
-    --muted-foreground: 216 14% 38%;
-    --accent: 176 43% 43%;
-    --accent-foreground: 180 80% 10%;
-    --success: 147 58% 34%;
-    --success-foreground: 0 0% 100%;
-    --warning: 37 91% 42%;
-    --warning-foreground: 30 95% 10%;
-    --destructive: 0 72% 46%;
-    --destructive-foreground: 0 0% 100%;
-    --signal: 202 82% 38%;
-    --signal-foreground: 0 0% 100%;
-    --account: 261 39% 46%;
-    --account-foreground: 0 0% 100%;
-    --agent: 166 62% 31%;
-    --agent-foreground: 0 0% 100%;
-    --idea: 25 87% 43%;
-    --idea-foreground: 0 0% 100%;
-    --border: 214 24% 86%;
-    --input: 214 24% 86%;
-    --ring: 202 82% 38%;
+    /* substrate, ink, chrome */
+    --background: 44 36% 95%;
+    --foreground: 30 16% 18%;
+    --faint-foreground: 32 9% 42%;
+    --surface: 42 40% 99%;
+    --surface-raised: 0 0% 100%;
+    --surface-sunken: 42 26% 92%;
+    --card: 42 40% 99%;
+    --card-foreground: 30 16% 18%;
+    --border: 36 16% 66%;
+    --border-strong: 34 16% 56%;
+    --input: 42 26% 92%;
+    --ring: 176 60% 32%;
+    --muted: 40 22% 90%;
+    --muted-foreground: 32 9% 38%;
+
+    /* primary / secondary / accent (ink-teal = the one signature hue) */
+    --primary: 176 58% 28%;
+    --primary-foreground: 42 40% 99%;
+    --secondary: 40 22% 90%;
+    --secondary-foreground: 30 16% 22%;
+    --accent: 176 58% 28%;
+    --accent-bg: 176 38% 90%;
+    --accent-fg: 176 64% 20%;
+
+    /* semantic ramps — color encodes KIND, never decoration */
+    --signal: 202 80% 36%;
+    --signal-bg: 202 64% 91%;
+    --signal-fg: 202 84% 24%;
+    --account: 30 16% 30%;
+    --account-bg: 36 22% 89%;
+    --account-fg: 30 18% 22%;
+    --agent: 262 44% 46%;
+    --agent-bg: 262 44% 93%;
+    --agent-fg: 262 52% 34%;
+    --idea: 24 68% 44%;
+    --idea-bg: 28 62% 91%;
+    --idea-fg: 24 72% 30%;
+    --success: 158 50% 32%;
+    --success-bg: 158 42% 89%;
+    --success-fg: 158 58% 22%;
+    --success-foreground: 42 40% 99%;
+    --warning: 36 78% 40%;
+    --warning-bg: 38 76% 88%;
+    --warning-fg: 30 80% 28%;
+    --warning-foreground: 42 40% 99%;
+    --destructive: 6 62% 44%;
+    --destructive-bg: 6 60% 92%;
+    --destructive-fg: 6 66% 34%;
+    --destructive-foreground: 42 40% 99%;
+
+    /* radius */
+    --r-sm: 6px;
+    --r-md: 8px;
+    --r-lg: 12px;
+    --r-xl: 16px;
+
+    /* elevation — warm-tinted, low-spread */
+    --e-1: 0 1px 2px hsl(30 30% 18% / 0.05), 0 1px 1px hsl(30 30% 18% / 0.04);
+    --e-2: 0 4px 12px hsl(30 30% 16% / 0.08), 0 1px 2px hsl(30 30% 16% / 0.05);
+    --e-3: 0 12px 32px hsl(30 30% 14% / 0.14);
+
+    /* fonts */
+    --font-serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+    --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    /* motion */
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+    --d-fast: 120ms;
+    --d-base: 200ms;
+    --d-slow: 320ms;
+    --d-trace: 500ms;
+
+    --focus-ring: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring) / 0.55);
   }
 
   .dark {
-    --background: 220 22% 9%;
-    --foreground: 210 24% 95%;
-    --shell: 222 25% 12%;
-    --card: 220 24% 13%;
-    --card-foreground: 210 24% 95%;
-    --primary: 210 24% 92%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 220 18% 19%;
-    --secondary-foreground: 210 24% 95%;
-    --muted: 220 18% 18%;
-    --muted-foreground: 214 13% 70%;
-    --accent: 176 48% 52%;
-    --accent-foreground: 180 80% 10%;
-    --success: 147 56% 46%;
-    --success-foreground: 150 70% 8%;
-    --warning: 39 90% 55%;
-    --warning-foreground: 30 95% 10%;
-    --destructive: 0 73% 58%;
-    --destructive-foreground: 0 0% 100%;
-    --signal: 200 85% 58%;
-    --signal-foreground: 205 80% 8%;
-    --account: 262 72% 70%;
-    --account-foreground: 260 40% 10%;
-    --agent: 166 62% 54%;
-    --agent-foreground: 166 70% 8%;
-    --idea: 27 93% 60%;
-    --idea-foreground: 25 80% 10%;
-    --border: 220 16% 24%;
-    --input: 220 16% 24%;
-    --ring: 200 85% 58%;
+    --background: 30 12% 9%;
+    --foreground: 42 28% 91%;
+    --faint-foreground: 36 10% 56%;
+    --surface: 32 11% 13%;
+    --surface-raised: 34 10% 17%;
+    --surface-sunken: 28 12% 7%;
+    --card: 32 11% 13%;
+    --card-foreground: 42 28% 91%;
+    --border: 34 8% 32%;
+    --border-strong: 36 8% 42%;
+    --input: 28 12% 7%;
+    --ring: 176 52% 56%;
+    --muted: 34 9% 20%;
+    --muted-foreground: 38 12% 66%;
+
+    --primary: 176 48% 54%;
+    --primary-foreground: 30 14% 9%;
+    --secondary: 34 9% 20%;
+    --secondary-foreground: 42 24% 86%;
+    --accent: 176 48% 54%;
+    --accent-bg: 176 38% 18%;
+    --accent-fg: 176 46% 80%;
+
+    --signal: 202 76% 62%;
+    --signal-bg: 202 56% 17%;
+    --signal-fg: 202 70% 82%;
+    --account: 38 16% 76%;
+    --account-bg: 32 10% 21%;
+    --account-fg: 38 20% 84%;
+    --agent: 258 58% 72%;
+    --agent-bg: 262 36% 22%;
+    --agent-fg: 258 52% 84%;
+    --idea: 26 76% 64%;
+    --idea-bg: 26 50% 20%;
+    --idea-fg: 28 70% 80%;
+    --success: 158 50% 54%;
+    --success-bg: 158 42% 17%;
+    --success-fg: 158 46% 78%;
+    --success-foreground: 30 14% 9%;
+    --warning: 38 84% 60%;
+    --warning-bg: 36 58% 19%;
+    --warning-fg: 38 82% 78%;
+    --warning-foreground: 30 14% 9%;
+    --destructive: 6 70% 63%;
+    --destructive-bg: 6 50% 21%;
+    --destructive-fg: 6 68% 82%;
+    --destructive-foreground: 30 14% 9%;
+
+    --e-1: 0 1px 2px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(40 20% 60% / 0.05);
+    --e-2: 0 4px 14px hsl(0 0% 0% / 0.55), inset 0 1px 0 hsl(40 20% 60% / 0.05);
+    --e-3: 0 14px 36px hsl(0 0% 0% / 0.6), inset 0 1px 0 hsl(40 20% 60% / 0.06);
   }
 
   * {
     @apply border-border;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
-    font-family:
-      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-      "Segoe UI", sans-serif;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv05" 1, "cv08" 1, "ss01" 1;
     letter-spacing: 0;
+    text-rendering: optimizeLegibility;
   }
 
   button,
@@ -86,38 +164,213 @@
   textarea,
   select {
     font: inherit;
+    color: inherit;
+  }
+
+  /* All numerics ride the mono rail, tabular + slashed zero. */
+  .font-mono,
+  .tnum {
+    font-variant-numeric: tabular-nums slashed-zero;
+    font-feature-settings: "tnum" 1, "zero" 1;
+  }
+
+  ::selection {
+    background: hsl(var(--accent-bg));
+    color: hsl(var(--accent-fg));
+  }
+
+  /* Quiet, warm scrollbars */
+  * {
+    scrollbar-color: hsl(var(--border-strong)) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--border-strong) / 0.7);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.6);
+    background-clip: padding-box;
   }
 }
 
 @layer components {
+  /* App scaffold: quiet sidebar + main column */
   .app-grid {
     display: grid;
     min-height: 100vh;
-    grid-template-columns: 264px minmax(0, 1fr);
+    grid-template-columns: 248px minmax(0, 1fr);
   }
 
-  .focus-input {
-    @apply rounded-md border border-input bg-card px-3 py-2 text-sm outline-none transition placeholder:text-muted-foreground focus:shadow-focus;
+  .focus-ring {
+    box-shadow: var(--focus-ring);
   }
 
-  .metric-value {
-    @apply text-2xl font-semibold tabular-nums leading-8;
-  }
-
-  .nav-item {
-    @apply flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground;
-  }
-
-  .nav-item-active {
-    @apply bg-card text-foreground shadow-sm;
-  }
-
-  .section-grid {
-    @apply grid gap-4;
+  /* Faint editorial baseline grid, painted only in gutters as a background motif */
+  .editorial-grid {
+    background-image: linear-gradient(
+      to bottom,
+      hsl(var(--border) / 0.5) 1px,
+      transparent 1px
+    );
+    background-size: 100% 28px;
   }
 }
 
-@media (max-width: 920px) {
+@layer utilities {
+  /* Diagonal hatch — redacted (private) fields + weak-evidence meter fills.
+     Weak evidence reads as a different KIND, not merely a shorter bar. */
+  .hatch-redact {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      hsl(var(--border-strong) / 0.5) 0,
+      hsl(var(--border-strong) / 0.5) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+  }
+  .hatch-weak {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      hsl(var(--warning) / 0.9) 0,
+      hsl(var(--warning) / 0.9) 2px,
+      hsl(var(--warning) / 0.35) 2px,
+      hsl(var(--warning) / 0.35) 5px
+    );
+  }
+
+  /* The Grounding Underline — the signature mark, also available as a static
+     utility for non-animated cases. Solid = source-backed; dashed = a hunch. */
+  .ground {
+    text-decoration: none;
+    background-image: linear-gradient(hsl(var(--accent)), hsl(var(--accent)));
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 100% 2px;
+    padding-bottom: 1px;
+  }
+  .ground-dashed {
+    background-image: linear-gradient(
+      to right,
+      hsl(var(--faint-foreground)) 0,
+      hsl(var(--faint-foreground)) 4px,
+      transparent 4px,
+      transparent 7px
+    );
+    background-repeat: repeat-x;
+    background-position: 0 100%;
+    background-size: 7px 1px;
+    padding-bottom: 1px;
+  }
+
+  @keyframes settle {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes draw {
+    from {
+      stroke-dashoffset: var(--draw-len, 100);
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+  @keyframes strike {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+  @keyframes rise-fade {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+  @keyframes shrink-x {
+    from {
+      width: 100%;
+    }
+    to {
+      width: 0%;
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  /* one-shot enter for a route's content: fade + a short rise */
+  @keyframes view-enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .animate-settle {
+    animation: settle var(--d-base) var(--ease-out) both;
+  }
+  .animate-fade {
+    animation: fade var(--d-fast) var(--ease-out) both;
+  }
+  .animate-view-enter {
+    animation: view-enter var(--d-base) var(--ease-out) both;
+  }
+  .animate-pulse-soft {
+    animation: pulse-soft 2.4s ease-in-out infinite;
+  }
+  .animate-rise-fade {
+    animation: rise-fade var(--d-slow) var(--ease-out) forwards;
+  }
+}
+
+/* Honor reduced motion globally; components also render final-state cues. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 1023.98px) {
   .app-grid {
     grid-template-columns: 1fr;
   }

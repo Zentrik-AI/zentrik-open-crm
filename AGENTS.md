@@ -39,6 +39,12 @@ through a hosted edition.
 - Preserve local-first behavior unless the current task explicitly changes the
   persistence model.
 - Keep docs direct and useful for agents. Avoid bloated conceptual repetition.
+- End agent-authored PRs with the `Agents:` trailer from
+  `.github/pull_request_template.md`. Link a Cursor team transcript
+  (`https://cursor.com/s/…`), Codex cloud task
+  (`https://chatgpt.com/codex/tasks/…`), or Claude Code web session
+  (`https://claude.ai/code/…`) when a teammate can open it; otherwise the
+  tool name.
 - Use semantic tokens and accessible controls. Do not add decorative visual
   noise that makes daily CRM work harder.
 - Keep `LICENSE`, `NOTICE`, `TRADEMARKS.md`, and

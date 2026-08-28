@@ -43,3 +43,19 @@ through a hosted edition.
   noise that makes daily CRM work harder.
 - Keep `LICENSE`, `NOTICE`, `TRADEMARKS.md`, and
   `docs/licensing-and-ip.md` aligned when changing the open-source boundary.
+
+## Branch And Sandbox Workflow
+
+- Treat `develop` as the pre-production integration branch and start new work
+  from `origin/develop`.
+- Open feature pull requests against `develop`. Keep `main` for reviewed
+  production promotion from `develop`.
+- Use the shared Zentrik worktree command and the repository profile in
+  `.zentrik/worktree.json` for durable worktrees. Do not create ad hoc durable
+  worktrees or choose random ports.
+- The persistent sandbox runs the current `develop` checkout. Before reviewing
+  it, fetch `origin/develop` and fast-forward the sandbox only when its working
+  tree is clean.
+- Run `npm run typecheck`, `npm run build`, and `npm run test:e2e` before
+  proposing production promotion. Do not treat a passing local build as a
+  substitute for the protected `main` review.

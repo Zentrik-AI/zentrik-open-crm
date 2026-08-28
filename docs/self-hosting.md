@@ -38,3 +38,10 @@ Zentrik Open CRM Cloud should preserve the same product contract:
 - humans approve customer-facing work
 - public Buildroom data is explicitly separated from private CRM data
 - exports remain possible
+
+## Zentrik Pre-Production
+
+Within the Zentrik repository, `develop` is the continuously validated
+pre-production branch and `main` is the production source. A local sandbox can
+serve the current `develop` checkout with the shared worktree lifecycle; see
+[Pre-production And Release](./preproduction-and-release.md).

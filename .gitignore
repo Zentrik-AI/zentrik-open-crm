@@ -5,6 +5,9 @@ dist/
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
+.zentrik-worktree.json
+.agent-branch-prefix
+.local-state-backups/
 
 .env
 .env.*

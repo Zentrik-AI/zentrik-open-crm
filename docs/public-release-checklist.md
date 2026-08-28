@@ -7,6 +7,8 @@ The repository should be private until every item in this checklist is complete.
 - [ ] Remote is `Zentrik-AI/zentrik-open-crm`.
 - [ ] Repository visibility is private during preparation.
 - [ ] `main` has a clean, public-safe commit history.
+- [ ] `develop` is the pre-production integration branch and contains no
+      private data.
 - [ ] No branches contain private Zentrik data or private customer material.
 - [ ] No generated build output, local test artifacts, logs, or runtime state are
       tracked.
@@ -28,7 +30,11 @@ The repository should be private until every item in this checklist is complete.
 ## GitHub Settings
 
 - [ ] Branch protection is enabled for `main`.
-- [ ] Required checks include typecheck, build, and Playwright smoke tests.
+- [ ] Required checks include the full `build` job on `develop` changes and
+      `develop` -> `main` promotion pull requests; that job runs typecheck,
+      build, and Playwright smoke tests.
+- [ ] Production promotion is a reviewed pull request from `develop` to
+      `main`; direct feature pushes to `main` are not part of the workflow.
 - [ ] Secret scanning and push protection are enabled where available.
 - [ ] Private vulnerability reporting is enabled before public visibility.
 - [ ] Issues use the provided templates.

@@ -71,3 +71,21 @@ npm run test:e2e
 ```
 
 Also run markdown link and public-data scans before public release.
+
+## Pre-Production Gate
+
+Run the release checks on the current `develop` checkout before opening a
+promotion pull request:
+
+```bash
+npm ci
+npm run typecheck
+npm run build
+npm run test:e2e
+```
+
+For an integrated browser review, use the persistent sandbox described in
+[Pre-production And Release](./preproduction-and-release.md). Confirm the
+desktop and mobile flows listed above, then open a reviewed `develop` -> `main`
+pull request. The `build` check must pass on the promotion commit before
+merging.

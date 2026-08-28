@@ -65,3 +65,22 @@ Recommended layout for private data:
 The app currently uses browser local storage. A server-backed workspace should
 preserve the same operating contract: explicit records, source references,
 human-approved actions, and public/private separation.
+
+## Delivery Branches
+
+Use `develop` as the pre-production integration branch. Start durable worktrees
+from `origin/develop`, open implementation pull requests into `develop`, and
+review the persistent sandbox before requesting production promotion.
+
+The production gate is a reviewed `develop` -> `main` pull request. Keep
+`main` protected and do not use it as an agent scratch branch. The shared
+worktree lifecycle is the canonical path for a sandbox checkout:
+
+```bash
+zentrik-agent-workflows/bin/zentrik-worktree --repo zentrik-open-crm create \
+  --slug open-crm-develop-sandbox --base origin/develop
+zentrik-agent-workflows/bin/zentrik-worktree --repo <sandbox> up --profile sandbox
+```
+
+Stop the managed runtime with the matching `down` command before removing or
+refreshing the sandbox. Never copy private CRM data into this repository.

@@ -42,6 +42,20 @@ Every pull request should state:
 - whether it touches data handling, privacy, or public Buildroom behavior
 - how it was validated
 
+## Branch And Release Flow
+
+Open CRM uses `develop` as its pre-production integration branch:
+
+- Start feature branches from `origin/develop`.
+- Open normal pull requests against `develop`.
+- Use the local sandbox checkout or the `develop` CI artifact for integrated
+  validation.
+- Promote `develop` to `main` through a reviewed release pull request after the
+  pre-production checks pass.
+
+`main` is protected and is not a feature-development branch. Do not push
+directly to it or use a second release branch.
+
 ## Labels
 
 Labels are routing and triage metadata, not decoration — every label should route a review, drive release notes, or drive triage. Apply them in GitHub (`gh pr edit --add-label …`), not in the PR body.

@@ -32,5 +32,5 @@ Explain if checked:
       transcripts, emails, screenshots, or private exports
 - [ ] New sample data is synthetic and uses safe domains
 
-<!-- Last line. Name tools that edited this PR. Link conversation titles only when a teammate can open them: Cursor https://cursor.com/s/…, Codex https://chatgpt.com/codex/tasks/…, Claude Code https://claude.ai/code/…. Tool name alone is fine. Delete if none. -->
+<!-- Last line. Name each tool and its chat/task title. Hyperlink the title when you have https://. Cursor local: title only. Codex/Claude local: `codex://threads/<id>` or `claude://claude.ai/chat/<id>` in backticks. Delete if none. -->
 Agents:

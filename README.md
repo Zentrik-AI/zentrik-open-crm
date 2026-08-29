@@ -62,6 +62,21 @@ npm run dev
 
 The app will start at [http://127.0.0.1:5177](http://127.0.0.1:5177).
 
+## Development And Release Flow
+
+`develop` is the pre-production branch. Feature branches should start from
+`origin/develop` and open pull requests into `develop`. Every push to
+`develop` runs the full checks and stores the validated `dist/` bundle as a
+short-lived pre-production artifact.
+
+The persistent local sandbox is documented in
+[Pre-production And Release](./docs/preproduction-and-release.md). It is the
+recommended checkout for reviewing the current `develop` state before release.
+
+Production promotion is a reviewed pull request from `develop` to `main`.
+`main` is the production source and remains protected. Do not push feature
+work directly to `main`.
+
 ## Validate Changes
 
 ```bash

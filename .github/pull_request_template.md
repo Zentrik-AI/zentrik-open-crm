@@ -31,3 +31,6 @@ Explain if checked:
 - [ ] No API keys, tokens, cookies, private URLs, workspace IDs, customer data,
       transcripts, emails, screenshots, or private exports
 - [ ] New sample data is synthetic and uses safe domains
+
+<!-- Last line. Name tools that edited this PR. Link conversation titles only when a teammate can open them: Cursor https://cursor.com/s/…, Codex https://chatgpt.com/codex/tasks/…, Claude Code https://claude.ai/code/…. Tool name alone is fine. Delete if none. -->
+Agents:

@@ -40,7 +40,16 @@ through a hosted edition.
   persistence model.
 - Keep docs direct and useful for agents. Avoid bloated conceptual repetition.
 - End agent-authored PRs with the `Agents:` trailer from
-  `.github/pull_request_template.md`. Name each tool and its chat/task title. Hyperlink the title when you have `https://`. Cursor local: title only. Codex/Claude local: `codex://threads/<id>` or `claude://claude.ai/chat/<id>` in backticks. Delete the line if no agent edited the PR.
+  `.github/pull_request_template.md`. Name every tool that edited the branch
+  and its chat/task title when known. Hyperlink only to a tested URL Jorge can
+  open; the template lists the allowed direct and local-launcher forms. Verify a
+  local launcher opens the intended work before using it. Cursor local work gets
+  a plain title. Never use raw custom schemes, invent a chat URL, or turn a local
+  ID into a cloud URL. Tool name alone is fine when the title is unavailable;
+  delete the line when no agent edited the PR. Keep contract copy on one PR per
+  repo, and update only `Agents:` on feature PRs you own. Sibling repos use
+  `Agents:` only: do not add app-only trailers, Cursor rules, `CLAUDE.md`, or
+  Claude settings files where they do not already exist.
 - Use semantic tokens and accessible controls. Do not add decorative visual
   noise that makes daily CRM work harder.
 - Keep `LICENSE`, `NOTICE`, `TRADEMARKS.md`, and

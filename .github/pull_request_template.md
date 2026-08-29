@@ -32,5 +32,5 @@ Explain if checked:
       transcripts, emails, screenshots, or private exports
 - [ ] New sample data is synthetic and uses safe domains
 
-<!-- Last line. Name each tool and its chat/task title. Hyperlink the title when you have https://. Cursor local: title only. Codex/Claude local: `codex://threads/<id>` or `claude://claude.ai/chat/<id>` in backticks. Delete if none. -->
+<!-- Last line. Name every editing tool and its chat/task title. Hyperlink the title only to a tested URL Jorge can open: Cursor Share https://cursor.com/s/…, Codex cloud https://chatgpt.com/codex/tasks/…, Claude Code web https://claude.ai/code/…, local Codex https://zentrik.ai/open-agent.html#codex/threads/<id>, or local Claude Code https://zentrik.ai/open-agent.html#claude/resume/<id>. Cursor local: plain title. Never use raw custom schemes or turn a local ID into a cloud URL. Tool name alone is fine when the title is unavailable. Delete if none. -->
 Agents:

@@ -40,7 +40,7 @@ through a hosted edition.
   persistence model.
 - Keep docs direct and useful for agents. Avoid bloated conceptual repetition.
 - End agent-authored PRs with the `Agents:` trailer from
-  `.github/pull_request_template.md`. Title required; URL forms live in the template comment and the commit/PR guide.
+  `.github/pull_request_template.md`. Conversation/task title required; use an ID-bearing HTTPS link when available. Details live in the template comment and the commit/PR guide when present.
 - Use semantic tokens and accessible controls. Do not add decorative visual
   noise that makes daily CRM work harder.
 - Keep `LICENSE`, `NOTICE`, `TRADEMARKS.md`, and

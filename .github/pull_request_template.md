@@ -32,5 +32,5 @@ Explain if checked:
       transcripts, emails, screenshots, or private exports
 - [ ] New sample data is synthetic and uses safe domains
 
-<!-- Last line. `Tool ([Conversation title](https://…))`. Title required. Put the session/task id in the https URL. Local: https://zentrik.ai/open-agent.html#codex/threads/<id>, #claude/resume/<id>, #cursor/chat/<id>. Cloud: https://chatgpt.com/codex/tasks/<id>, https://claude.ai/code/<id>, https://cursor.com/agents/<id>. Join with comma-space. No custom schemes, no tool-name-only. Delete if none. -->
+<!-- Last line. Name every editing tool. Minimum: Tool (Conversation title). When the tool exposes an ID, use Tool ([Conversation title](ID-bearing HTTPS URL)) and keep the link even if the destination does not work yet. Local URLs: https://zentrik.ai/open-agent.html#codex/threads/<id>, #claude/resume/<id>, #cursor/chat/<id>. Cloud URLs: https://chatgpt.com/codex/tasks/<id>, https://claude.ai/code/<id>, https://cursor.com/agents/<id>. Join with comma-space. Tool name alone is invalid. No custom schemes or share-transcript substitutes. Delete if none. -->
 Agents:

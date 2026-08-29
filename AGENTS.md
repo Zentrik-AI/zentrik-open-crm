@@ -40,19 +40,7 @@ through a hosted edition.
   persistence model.
 - Keep docs direct and useful for agents. Avoid bloated conceptual repetition.
 - End agent-authored PRs with the `Agents:` trailer from
-  `.github/pull_request_template.md`. Build exactly one `Agents:` line with
-  one entry per tool that edited the branch. Use
-  `Tool ([Conversation title](tested-url))`; without a tested URL use
-  `Tool (Conversation title)`, and use `Tool` alone only when the title is
-  unavailable. Join entries with comma + space in first-edit order and do not
-  leave a trailing comma. Use only the tested URL forms listed in the template.
-  Never use raw custom schemes, invent a chat URL, or turn a local ID into a
-  cloud URL. Delete the line when no agent edited the PR. Keep contract copy on
-  one PR per repo, and update only `Agents:` on feature PRs you own. Sibling
-  repos use `Agents:` only; do not add app-only trailers. Keep Claude
-  configuration as a thin `AGENTS.md` import plus attribution suppression. Do
-  not duplicate this grammar in Cursor rules because Cursor reads the root
-  `AGENTS.md`.
+  `.github/pull_request_template.md`. Title required; URL forms live in the template comment and the commit/PR guide.
 - Use semantic tokens and accessible controls. Do not add decorative visual
   noise that makes daily CRM work harder.
 - Keep `LICENSE`, `NOTICE`, `TRADEMARKS.md`, and

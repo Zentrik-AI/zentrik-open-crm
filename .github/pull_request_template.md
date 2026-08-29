@@ -32,5 +32,5 @@ Explain if checked:
       transcripts, emails, screenshots, or private exports
 - [ ] New sample data is synthetic and uses safe domains
 
-<!-- Last line. Exact entry grammar: Tool ([Conversation title](tested-url)); without a tested URL use Tool (Conversation title), and use Tool alone only when the title is unavailable. Name every editing tool once. Join multiple entries with comma + space in first-edit order, with no trailing comma. Allowed links: Cursor Share https://cursor.com/s/…, Codex cloud https://chatgpt.com/codex/tasks/…, Claude Code web https://claude.ai/code/…, local Codex https://zentrik.ai/open-agent.html#codex/threads/<id>, or local Claude Code https://zentrik.ai/open-agent.html#claude/resume/<id>. Never use raw custom schemes or turn a local ID into a cloud URL. Delete if none. -->
+<!-- Last line. `Tool ([Conversation title](https://…))`. Title required. Put the session/task id in the https URL. Local: https://zentrik.ai/open-agent.html#codex/threads/<id>, #claude/resume/<id>, #cursor/chat/<id>. Cloud: https://chatgpt.com/codex/tasks/<id>, https://claude.ai/code/<id>, https://cursor.com/agents/<id>. Join with comma-space. No custom schemes, no tool-name-only. Delete if none. -->
 Agents:

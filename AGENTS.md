@@ -40,11 +40,7 @@ through a hosted edition.
   persistence model.
 - Keep docs direct and useful for agents. Avoid bloated conceptual repetition.
 - End agent-authored PRs with the `Agents:` trailer from
-  `.github/pull_request_template.md`. Link a Cursor team transcript
-  (`https://cursor.com/s/…`), Codex cloud task
-  (`https://chatgpt.com/codex/tasks/…`), or Claude Code web session
-  (`https://claude.ai/code/…`) when a teammate can open it; otherwise the
-  tool name.
+  `.github/pull_request_template.md`. Prefer GitHub-clickable https:// when a teammate can open it (Cursor Share `https://cursor.com/s/…`, Codex cloud `https://chatgpt.com/codex/tasks/…`, Claude Code web `https://claude.ai/code/…`). Put local live-thread URIs in backticks (`codex://threads/<id>`, `claude://claude.ai/chat/<id>`) because GitHub strips custom schemes. Do not invent `cursor.com/link/chat` or `cursor://` chat URLs. Tool name alone is fine.
 - Use semantic tokens and accessible controls. Do not add decorative visual
   noise that makes daily CRM work harder.
 - Keep `LICENSE`, `NOTICE`, `TRADEMARKS.md`, and

@@ -33,8 +33,10 @@ The repository should be private until every item in this checklist is complete.
 - [ ] Required checks include the full `build` job on `develop` changes and
       `develop` -> `main` promotion pull requests; that job runs typecheck,
       build, and Playwright smoke tests.
-- [ ] Production promotion is a reviewed pull request from `develop` to
-      `main`; direct feature pushes to `main` are not part of the workflow.
+- [ ] Production promotion uses a pull request from `develop` to `main`; direct
+      feature pushes to `main` are not part of the workflow.
+- [ ] A maintainer review was completed when practical (recommended, not a
+      branch requirement during the early public-product phase).
 - [ ] Secret scanning and push protection are enabled where available.
 - [ ] Private vulnerability reporting is enabled before public visibility.
 - [ ] Issues use the provided templates.

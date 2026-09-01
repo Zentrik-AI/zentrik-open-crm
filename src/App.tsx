@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Layers3, Lock, Moon, Search, Sun } from "lucide-react";
-import { loadWorkspace, resetWorkspace, saveWorkspace, touchWorkspace } from "./lib/storage";
+import { createDemoWorkspace, hasStoredWorkspace, loadWorkspace, resetWorkspace, saveWorkspace, touchWorkspace } from "./lib/storage";
+import { loadOnboardingState, saveOnboardingState, type OnboardingMode } from "./lib/onboarding";
 import { cn, makeId } from "./lib/utils";
 import { primaryNav, secondaryNav, allNav, type View } from "./lib/nav";
 import { isOpenDeal, pipelineColumns } from "./lib/meta";
@@ -37,11 +38,13 @@ import {
 } from "./lib/sync";
 import { downloadICS, tasksToICS } from "./lib/ics";
 import { createGitHubIssueDraft, type FeedbackDraft } from "./lib/feedback";
+import { buildAccountAgentHandoff, buildWorkspaceAgentStarterPrompt } from "./lib/agent";
 import type { Account, Deal, DealStage, Note, Task, Workspace } from "./types";
 import { PrivacyProvider } from "./components/ui/privacy";
 import { ToastProvider, useToast } from "./components/ui/toast";
 import { NavItem } from "./components/ui/nav-item";
 import { Button } from "./components/ui/button";
+import { Badge } from "./components/ui/badge";
 import { Kbd } from "./components/ui/kbd";
 import { CommandPalette } from "./components/command-palette";
 import { ZentrikMark } from "./components/zentrik-mark";
@@ -53,6 +56,8 @@ import { TasksView } from "./views/TasksView";
 import { NotesView } from "./views/NotesView";
 import { SettingsView, type AiTest } from "./views/SettingsView";
 import { ImproveView } from "./views/ImproveView";
+import { OnboardingView, type WorkspaceSetupDraft } from "./views/OnboardingView";
+import { seedWorkspace } from "./data/seed";
 import type { AiKind } from "./components/ai-panel";
 
 type AiState = { busy: AiKind | null; result: { kind: AiKind; text: string } | null; copied: boolean; error: string | null };
@@ -78,6 +83,8 @@ export default function App() {
 function AppInner() {
   const toast = useToast();
   const [workspace, setWorkspace] = useState<Workspace>(() => loadWorkspace());
+  const [onboarding, setOnboarding] = useState(() => loadOnboardingState(hasStoredWorkspace()));
+  const [onboardingOpen, setOnboardingOpen] = useState(() => !loadOnboardingState(hasStoredWorkspace()).completed);
   const [view, setView] = useState<View>("home");
   const [buildroom, setBuildroom] = useState(false);
   const [darkMode, setDarkMode] = useState(() =>
@@ -177,16 +184,78 @@ function AppInner() {
     selectAccount(id);
     navigate("accounts");
   }
+
+  function completeOnboarding(mode: OnboardingMode) {
+    setOnboarding(saveOnboardingState(mode));
+    setOnboardingOpen(false);
+    setView("home");
+  }
+
+  function useDemoWorkspace() {
+    const demo = createDemoWorkspace();
+    setWorkspace(demo);
+    setSelectedAccountId(demo.accounts[0]?.id ?? "");
+    completeOnboarding("demo");
+    toast({ title: "Demo workspace ready · all records are synthetic", tone: "accent" });
+  }
+
+  function createPersonalWorkspace(draft: WorkspaceSetupDraft) {
+    const now = new Date().toISOString();
+    const accountId = makeId("acct");
+    const accountName = draft.accountName.trim();
+    const contactName = draft.contactName.trim();
+    const contactRole = draft.contactRole.trim();
+    const owner = draft.owner.trim() || "Unassigned";
+    const domain =
+      draft.domain.trim() ||
+      `${accountName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "account"}.example`;
+    const personal: Workspace = {
+      name: draft.workspaceName.trim(),
+      edition: "Self-Hosted",
+      updatedAt: now,
+      accounts: [
+        {
+          id: accountId,
+          name: accountName,
+          domain,
+          segment: draft.segment.trim() || "New relationship",
+          stage: "researching",
+          priority: "medium",
+          arr: 0,
+          health: 70,
+          fit: 70,
+          sourceConfidence: 20,
+          owner,
+          tags: ["new account"],
+          contacts:
+            contactName && contactRole
+              ? [{ id: makeId("contact"), name: contactName, role: contactRole, influence: "champion", lastSeen: now }]
+              : [],
+          needs: ["Capture the first source-backed need"],
+          risks: ["No source note captured yet"],
+          lastTouch: now,
+          createdAt: now,
+        },
+      ],
+      deals: [],
+      tasks: [],
+      notes: [],
+      ideas: structuredClone(seedWorkspace.ideas),
+      changelog: structuredClone(seedWorkspace.changelog),
+    };
+    setWorkspace(personal);
+    setSelectedAccountId(accountId);
+    completeOnboarding("workspace");
+    toast({ title: `Workspace created · ${accountName}`, tone: "success" });
+  }
   function toggleBuildroom() {
-    setBuildroom((value) => {
-      const next = !value;
-      toast(
-        next
-          ? { title: "Share-safe view — revenue, domains, contact names, risk notes, and note bodies are hidden.", tone: "accent", icon: Eye }
-          : { title: "Private view — full account detail is visible.", tone: "neutral", icon: Lock },
-      );
-      return next;
-    });
+    const next = !buildroom;
+    setBuildroom(next);
+    toast(
+      next
+        ? { title: "Share-safe view — private fields are hidden and agent/data-copy actions are paused.", tone: "accent", icon: Eye }
+        : { title: "Private view — full account detail is visible.", tone: "neutral", icon: Lock },
+    );
   }
 
   /* ---- CRM mutations ---- */
@@ -233,7 +302,7 @@ function AppInner() {
       body: draft.body.trim(),
       sentiment: "neutral",
       createdAt: new Date().toISOString(),
-      sourceRef: "Manual entry",
+      sourceRef: draft.sourceRef.trim() || "Manual entry",
     };
     setWorkspace((cur) =>
       touchWorkspace({
@@ -415,18 +484,29 @@ function AppInner() {
     try {
       const handle = await pickVault();
       vaultHandle.current = handle;
-      const next = { ...syncSettings, vaultName: handle.name };
+      setSyncBusy(true);
+      const count = await writeVault(handle, buildVaultFiles(workspace));
+      const next = {
+        ...syncSettings,
+        vaultName: handle.name,
+        lastSyncedAt: new Date().toISOString(),
+        fileCount: count,
+      };
       setSyncSettings(next);
       saveSyncSettings(next);
-      toast({ title: `Vault connected · ${handle.name}`, tone: "accent" });
-    } catch {
-      /* user cancelled */
+      toast({ title: `Agent workspace ready · ${count} files in ${handle.name}`, tone: "success" });
+    } catch (err) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        toast({ title: err.message || "Couldn't create the agent workspace.", tone: "destructive" });
+      }
+    } finally {
+      setSyncBusy(false);
     }
   }
   async function syncNow() {
     if (!vaultHandle.current) {
       await connectVault();
-      if (!vaultHandle.current) return;
+      return;
     }
     setSyncBusy(true);
     try {
@@ -445,6 +525,14 @@ function AppInner() {
     const count = downloadCombinedMarkdown(workspace);
     toast({ title: `Downloaded Markdown for ${count} files`, tone: "success" });
   }
+  async function copyWorkspaceAgentPrompt() {
+    try {
+      await navigator.clipboard.writeText(buildWorkspaceAgentStarterPrompt());
+      toast({ title: "Starter request copied · open it in your synced folder", tone: "agent" });
+    } catch {
+      toast({ title: "Couldn't copy the starter request.", tone: "destructive" });
+    }
+  }
   async function copyAccountMarkdown() {
     if (!selectedAccount) return;
     const md = accountToMarkdown(
@@ -458,6 +546,21 @@ function AppInner() {
       toast({ title: "Account copied as Markdown", tone: "success" });
     } catch {
       toast({ title: "Couldn't copy to clipboard.", tone: "destructive" });
+    }
+  }
+  async function copyAgentHandoff() {
+    if (!selectedAccount) return;
+    const text = buildAccountAgentHandoff({
+      account: selectedAccount,
+      deals: workspace.deals.filter((deal) => deal.accountId === selectedAccount.id),
+      tasks: workspace.tasks.filter((task) => task.accountId === selectedAccount.id),
+      notes: workspace.notes.filter((note) => note.accountId === selectedAccount.id),
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Agent handoff copied · review the task before running it", tone: "agent" });
+    } catch {
+      toast({ title: "Couldn't copy the agent handoff.", tone: "destructive" });
     }
   }
   function exportTasksICS() {
@@ -477,12 +580,13 @@ function AppInner() {
     URL.revokeObjectURL(url);
     toast({ title: "Workspace exported", tone: "success" });
   }
-  async function importWorkspace(file: File) {
+  async function importWorkspace(file: File, onboardingImport = false) {
     try {
       const parsed = JSON.parse(await file.text()) as Workspace;
       if (!Array.isArray(parsed.accounts)) throw new Error("not a workspace file");
       setWorkspace(touchWorkspace(parsed));
       setSelectedAccountId(parsed.accounts[0]?.id ?? "");
+      if (onboardingImport) completeOnboarding("import");
       toast({ title: "Workspace imported", tone: "success" });
     } catch {
       toast({ title: "That file isn't a valid Open CRM workspace.", tone: "destructive" });
@@ -493,6 +597,7 @@ function AppInner() {
     setWorkspace(reset);
     setSelectedAccountId(reset.accounts[0]?.id ?? "");
     setAi(emptyAi);
+    setOnboarding(saveOnboardingState("demo"));
     toast({ title: "Workspace reset to the demo", tone: "warning" });
   }
 
@@ -556,6 +661,17 @@ function AppInner() {
     : id === "notes" ? counts.notes
     : undefined;
 
+  if (onboardingOpen) {
+    return (
+      <OnboardingView
+        onCreateWorkspace={createPersonalWorkspace}
+        onImport={(file) => void importWorkspace(file, true)}
+        onUseDemo={useDemoWorkspace}
+        onClose={onboarding.completed ? () => setOnboardingOpen(false) : undefined}
+      />
+    );
+  }
+
   return (
     <PrivacyProvider buildroom={buildroom}>
       <div className="app-grid bg-background">
@@ -591,7 +707,7 @@ function AppInner() {
                 Local-first
               </div>
               <p className="text-[11px] leading-4 text-muted-foreground">
-                Your data stays in this browser. AI runs on your own key; sync writes to your own vault.
+                Your data stays in this browser. AI runs on your own key; sync writes to your own folder.
               </p>
             </div>
             <div className="border-t border-border px-1 pt-3">
@@ -608,7 +724,10 @@ function AppInner() {
                   <Layers3 className="h-[18px] w-[18px]" />
                 </span>
                 <div className="min-w-0">
-                  <h1 className="truncate font-serif text-[15px] font-medium text-foreground">{workspace.name}</h1>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <h1 className="truncate font-serif text-[15px] font-medium text-foreground">{workspace.name}</h1>
+                    {onboarding.mode === "demo" && <Badge tone="accent">Demo</Badge>}
+                  </div>
                   <p className="truncate text-[11px] text-muted-foreground">{workspace.edition} · local-first</p>
                 </div>
               </div>
@@ -665,7 +784,16 @@ function AppInner() {
             )}
           >
             <div data-view="home" className={cn(view !== "home" && "hidden")}>
-              <HomeView workspace={workspace} accountsById={accountsById} metrics={homeMetrics} onNavigate={navigate} onSelectAccount={selectAccountAndOpen} onToggleTask={toggleTask} />
+              <HomeView
+                workspace={workspace}
+                accountsById={accountsById}
+                metrics={homeMetrics}
+                onboardingMode={onboarding.mode}
+                onOpenOnboarding={() => setOnboardingOpen(true)}
+                onNavigate={navigate}
+                onSelectAccount={selectAccountAndOpen}
+                onToggleTask={toggleTask}
+              />
             </div>
             <div data-view="pipeline" className={cn(view !== "pipeline" && "hidden")}>
               <PipelineView deals={workspace.deals} accounts={workspace.accounts} accountsById={accountsById} onAdvanceDeal={advanceDeal} onLoseDeal={loseDeal} onSelectAccount={selectAccountAndOpen} onAddDeal={addDeal} />
@@ -693,6 +821,7 @@ function AppInner() {
                 onAiCopy={aiCopy}
                 onAiClear={() => setAi(emptyAi)}
                 onCopyMarkdown={copyAccountMarkdown}
+                onCopyAgentHandoff={copyAgentHandoff}
                 onOpenSettings={() => navigate("settings")}
               />
             </div>
@@ -716,9 +845,12 @@ function AppInner() {
                 onConnectVault={connectVault}
                 onSyncNow={syncNow}
                 onDownloadMarkdown={downloadMarkdown}
+                agentPrompt={buildWorkspaceAgentStarterPrompt()}
+                onCopyAgentPrompt={copyWorkspaceAgentPrompt}
                 onExport={exportWorkspace}
                 onImport={importWorkspace}
                 onReset={handleReset}
+                onOpenOnboarding={() => setOnboardingOpen(true)}
               />
             </div>
             <div data-view="improve" className={cn(view !== "improve" && "hidden")}>

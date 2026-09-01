@@ -26,6 +26,7 @@ export function NotesView({
     source: "note",
     title: "",
     body: "",
+    sourceRef: "",
   });
   const set = (patch: Partial<NoteDraft>) => setDraft((c) => ({ ...c, ...patch }));
   const sorted = [...notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -34,8 +35,10 @@ export function NotesView({
     e.preventDefault();
     if (!draft.title.trim() || !draft.body.trim()) return;
     onAddNote(draft);
-    setDraft((c) => ({ ...c, title: "", body: "" }));
+    setDraft((c) => ({ ...c, title: "", body: "", sourceRef: "" }));
   }
+
+  const selectedAccount = accounts.find((account) => account.id === draft.accountId);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
@@ -65,6 +68,25 @@ export function NotesView({
                 ))}
               </Select>
             </Field>
+            {selectedAccount && selectedAccount.contacts.length > 0 && (
+              <Field label="Contact" hint="Optional — connect the source to a person.">
+                <Select value={draft.contactId} onChange={(e) => set({ contactId: e.target.value })}>
+                  <option value="">No contact selected</option>
+                  {selectedAccount.contacts.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.name} · {contact.role}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+            <Field label="Source reference" hint="Optional — enough detail to find the original again.">
+              <Input
+                value={draft.sourceRef}
+                onChange={(e) => set({ sourceRef: e.target.value })}
+                placeholder="Call on Aug 31, support ticket #184…"
+              />
+            </Field>
             <Field label="Title">
               <Input value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="Short summary" />
             </Field>
@@ -73,7 +95,7 @@ export function NotesView({
             </Field>
             <Button type="submit" variant="primary" className="w-full">
               <NotebookPen />
-              Add note
+              Add source note
             </Button>
           </form>
         </CardContent>

@@ -36,6 +36,7 @@ function MarkdownLite({ text }: { text: string }) {
 }
 
 export function AiPanel({
+  shareSafe,
   hasKey,
   modelLabel,
   noteCount,
@@ -48,7 +49,9 @@ export function AiPanel({
   onCopy,
   onClear,
   onOpenSettings,
+  onCopyAgentHandoff,
 }: {
+  shareSafe: boolean;
   hasKey: boolean;
   modelLabel: string;
   noteCount: number;
@@ -61,6 +64,7 @@ export function AiPanel({
   onCopy: () => void;
   onClear: () => void;
   onOpenSettings: () => void;
+  onCopyAgentHandoff: () => void;
 }) {
   const [question, setQuestion] = useState("");
   function ask(e: React.FormEvent<HTMLFormElement>) {
@@ -74,37 +78,50 @@ export function AiPanel({
       <div className="flex items-center justify-between gap-3 border-b border-agent/30 px-4 py-2.5">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-agent" />
-          <span className="font-serif text-h3 text-foreground">AI assist</span>
+          <span className="font-serif text-h3 text-foreground">Agent assist</span>
         </div>
         {hasKey && <Badge tone="agent" dot>{modelLabel}</Badge>}
       </div>
 
       <div className="p-4">
+        {shareSafe && (
+          <div className="mb-3 rounded-md border border-accent/40 bg-accent-bg/35 px-3 py-2.5 text-body-sm text-accent-fg">
+            Agent actions are paused in Share-safe view so hidden account data cannot be copied or sent accidentally.
+          </div>
+        )}
         {!hasKey ? (
-          <div className="flex flex-col items-start gap-3">
+          <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
             <div className="flex gap-2.5">
               <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-agent-bg text-agent-fg">
-                <KeyRound className="h-4 w-4" />
+                <Copy className="h-4 w-4" />
               </span>
-              <p className="text-body-sm text-muted-foreground">
-                Add an Anthropic API key to generate an account brief and a follow-up draft,
-                grounded in this account's notes. Your key is stored only in this browser and
-                sent straight to Anthropic — never to a Zentrik server.
-              </p>
+              <div>
+                <div className="text-h3 text-foreground">Use any agent with explicit context</div>
+                <p className="mt-1 text-body-sm text-muted-foreground">
+                  Copy this account's notes, open work, and review guardrails into Codex, Claude, or another agent. No API key is required.
+                </p>
+                <button className="mt-2 text-[12px] text-agent-fg hover:underline focus-visible:outline-none focus-visible:focus-ring" onClick={onOpenSettings}>
+                  Or add an Anthropic key for in-browser drafts
+                </button>
+              </div>
             </div>
-            <Button variant="agent" size="sm" onClick={onOpenSettings}>
-              <KeyRound />
-              Add API key in Settings
+            <Button variant="agent" size="sm" onClick={onCopyAgentHandoff} disabled={shareSafe}>
+              <Copy />
+              Copy agent handoff
             </Button>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
-              <Button variant="agent" size="sm" onClick={() => onGenerate("brief")} disabled={busy !== null}>
+              <Button variant="agent" size="sm" onClick={onCopyAgentHandoff} disabled={shareSafe}>
+                <Copy />
+                Agent handoff
+              </Button>
+              <Button variant="agent" size="sm" onClick={() => onGenerate("brief")} disabled={shareSafe || busy !== null}>
                 {busy === "brief" ? <LiveDot tone="agent" /> : <FileText />}
                 Account brief
               </Button>
-              <Button variant="agent" size="sm" onClick={() => onGenerate("followup")} disabled={busy !== null}>
+              <Button variant="agent" size="sm" onClick={() => onGenerate("followup")} disabled={shareSafe || busy !== null}>
                 {busy === "followup" ? <LiveDot tone="agent" /> : <Mail />}
                 Draft follow-up
               </Button>
@@ -115,9 +132,9 @@ export function AiPanel({
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="Ask anything about this account…"
-                disabled={busy !== null}
+                disabled={shareSafe || busy !== null}
               />
-              <Button type="submit" variant="agent" size="icon" className="h-9 w-9 shrink-0" disabled={busy !== null || !question.trim()} aria-label="Ask">
+              <Button type="submit" variant="agent" size="icon" className="h-9 w-9 shrink-0" disabled={shareSafe || busy !== null || !question.trim()} aria-label="Ask">
                 {busy === "ask" ? <LiveDot tone="agent" /> : <ArrowUp />}
               </Button>
             </form>

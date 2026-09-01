@@ -4,8 +4,9 @@ Open CRM uses two long-lived branches:
 
 - `develop`: the integration and pre-production branch. Normal feature pull
   requests target this branch.
-- `main`: the production source. Promotion from `develop` requires a reviewed
-  pull request and the protected `build` check.
+- `main`: the production source. Promotion from `develop` uses a pull request
+  and the protected `build` check. Human review is encouraged but not required
+  for now; the branch remains protected by its other controls.
 
 The repository is a browser-only Vite application. It does not yet have a
 hosted Fly or Pages environment, so the running pre-production surface is a
@@ -63,7 +64,8 @@ gh pr create --repo Zentrik-AI/zentrik-open-crm \
   --body "Promote the validated develop state to production."
 ```
 
-The promotion pull request must have the required approval and passing `build`
-check. Merge it with a merge commit so `main` retains the ancestry of the
-validated `develop` history. Do not squash a release promotion. Production
-hosting and tagging remain a separate follow-up once the hosted target exists.
+The promotion pull request must have a passing `build` check. Human review is
+encouraged before merging. Merge it with a merge commit so `main` retains the
+ancestry of the validated `develop` history. Do not squash a release
+promotion. Production hosting and tagging remain a separate follow-up once
+the hosted target exists.

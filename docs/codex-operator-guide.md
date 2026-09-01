@@ -1,5 +1,10 @@
 # Codex Operator Guide
 
+The provider-neutral setup, snapshot boundary, starter request, and review loop
+now live in [Agent Operator Guide](./agent-operator-guide.md). Use that guide for
+Codex, Claude Code, or another file-capable agent. The notes below cover
+Codex-specific product-development work.
+
 Zentrik Open CRM is designed to work with Codex as an account-work partner.
 Codex should help with research, synthesis, drafts, specs, and workflow hygiene,
 while humans keep control over decisions and customer-facing communication.
@@ -72,8 +77,9 @@ Use `develop` as the pre-production integration branch. Start durable worktrees
 from `origin/develop`, open implementation pull requests into `develop`, and
 review the persistent sandbox before requesting production promotion.
 
-The production gate is a reviewed `develop` -> `main` pull request. Keep
-`main` protected and do not use it as an agent scratch branch. The shared
+The production path is a `develop` -> `main` pull request. Keep `main`
+protected by its build and history controls; human review is encouraged but not
+required for now. Do not use `main` as an agent scratch branch. The shared
 worktree lifecycle is the canonical path for a sandbox checkout:
 
 ```bash

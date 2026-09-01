@@ -3,7 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 const controlBase =
-  "w-full rounded-md border border-border bg-surface-sunken px-3 text-body text-foreground outline-none transition-[border-color,box-shadow] duration-fast placeholder:text-faint-foreground focus:border-ring focus:focus-ring disabled:opacity-50";
+  "min-w-0 w-full rounded-md border border-border bg-surface-sunken px-3 text-body text-foreground outline-none transition-[border-color,box-shadow] duration-fast placeholder:text-faint-foreground focus:border-ring focus:focus-ring disabled:opacity-50";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   numeric?: boolean;

@@ -77,8 +77,9 @@ Use `develop` as the pre-production integration branch. Start durable worktrees
 from `origin/develop`, open implementation pull requests into `develop`, and
 review the persistent sandbox before requesting production promotion.
 
-The production gate is a reviewed `develop` -> `main` pull request. Keep
-`main` protected and do not use it as an agent scratch branch. The shared
+The production path is a `develop` -> `main` pull request. Keep `main`
+protected by its build and history controls; human review is encouraged but not
+required for now. Do not use `main` as an agent scratch branch. The shared
 worktree lifecycle is the canonical path for a sandbox checkout:
 
 ```bash

@@ -52,6 +52,7 @@ export type NoteDraft = {
   source: NoteSource;
   title: string;
   body: string;
+  sourceRef: string;
 };
 
 export type TaskDraft = {

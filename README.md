@@ -7,6 +7,7 @@ real sources, not another place to manually maintain stale records.
 
 [Product Intent](./docs/product-intent.md) ·
 [First Use](./docs/first-use.md) ·
+[Agent Operator Guide](./docs/agent-operator-guide.md) ·
 [Feedback And Support](./docs/feedback-and-support.md) ·
 [Roadmap](./docs/roadmap.md) ·
 [Brand Archetype](./docs/brand-archetype.md) ·
@@ -29,7 +30,7 @@ the middle path for small technical teams:
 - account memory stays tied to calls, emails, support notes, reviews, usage,
   GitHub, and market signals
 - next actions show the source that caused the recommendation
-- Codex and similar agents get an explicit, privacy-aware operating surface
+- Codex, Claude Code, and similar agents get an explicit, privacy-aware operating surface
 - the product can run locally, self-hosted, or eventually through Open CRM Cloud
 - users can shape the product through the public Open CRM Buildroom loop
 
@@ -44,14 +45,19 @@ the middle path for small technical teams:
 
 ## First Useful Workflow
 
-1. Add or use a demo account.
+1. On first launch, create a local workspace around one real account, import an
+   Open CRM backup, or explore the clearly labeled synthetic demo.
 2. Add or review the account's contacts.
-3. Capture one real signal from a call, email, support thread, review, GitHub
+3. Capture one real source note from a call, email, support thread, review, GitHub
    issue, usage note, or market observation.
-4. Review the account detail page to see what changed.
-5. Copy a Codex task when you want agent help drafting follow-up, researching an
-   account, or shaping product feedback.
-6. Use the Open CRM Loop to connect signals to ideas and release outcomes.
+4. Create the next human action while the source is fresh.
+5. In **Settings → Agent workspace**, sync a private Markdown snapshot that
+   includes source references and its own operating guide.
+6. Open Codex, Claude Code, or another file-capable agent in that folder and
+   copy the provider-neutral starter request. No API key is required.
+7. Review the evidence and inference, record accepted actions in the visual CRM,
+   and sync again before the next agent session.
+8. Use the Open CRM Loop to connect signals to ideas and release outcomes.
 
 ## Run Locally
 
@@ -61,6 +67,9 @@ npm run dev
 ```
 
 The app will start at [http://127.0.0.1:5177](http://127.0.0.1:5177).
+
+The first-run workbench keeps setup local and asks for only one account. The
+setup guide remains available from Settings after onboarding.
 
 ## Development And Release Flow
 
@@ -126,6 +135,7 @@ proprietary platform code. See [NOTICE](./NOTICE),
 - [Public Release Checklist](./docs/public-release-checklist.md)
 - [Roadmap](./docs/roadmap.md)
 - [Architecture](./docs/architecture.md)
+- [Agent Operator Guide](./docs/agent-operator-guide.md)
 - [Codex Operator Guide](./docs/codex-operator-guide.md)
 - [Self-Hosting](./docs/self-hosting.md)
 - [Privacy Boundaries](./docs/privacy-boundaries.md)

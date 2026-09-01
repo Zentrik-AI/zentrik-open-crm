@@ -147,7 +147,7 @@ export function ContactRow({ contact }: { contact: Contact }) {
   const meta = influenceMeta[contact.influence];
   const buildroom = useBuildroom();
   return (
-    <div className="flex items-center gap-3 rounded-md border border-border bg-surface p-3">
+    <div className="flex min-w-0 max-w-full items-center gap-3 rounded-md border border-border bg-surface p-3">
       <Monogram name={contact.name} tone={meta.tone} redacted={buildroom} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-body font-medium text-foreground">

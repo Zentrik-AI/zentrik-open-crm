@@ -1,15 +1,18 @@
 import { useRef, useState } from "react";
 import {
   Check,
+  Copy,
   ExternalLink,
   Eye,
   EyeOff,
   FileDown,
   FileUp,
   FolderSync,
+  Milestone,
   KeyRound,
   RefreshCcw,
   Sparkles,
+  Terminal,
 } from "lucide-react";
 import { aiModels, maskKey, type AiModel, type AiSettings } from "../lib/ai";
 import { supportsDirectoryPicker, type SyncSettings } from "../lib/sync";
@@ -22,7 +25,13 @@ import { ZentrikMark } from "../components/zentrik-mark";
 
 export type AiTest = { state: "idle" | "testing" | "ok" | "error"; message?: string };
 
-const redactedFields = ["Revenue figures — ARR, deal values, and pipeline", "Account domains", "Contact names and emails", "Risk notes"];
+const redactedFields = [
+  "Revenue figures — ARR, deal values, and pipeline",
+  "Account domains",
+  "Contact names and emails",
+  "Risk notes and note bodies",
+  "Agent and account-data copy actions",
+];
 
 export function SettingsView({
   aiSettings,
@@ -34,9 +43,12 @@ export function SettingsView({
   onConnectVault,
   onSyncNow,
   onDownloadMarkdown,
+  agentPrompt,
+  onCopyAgentPrompt,
   onExport,
   onImport,
   onReset,
+  onOpenOnboarding,
 }: {
   aiSettings: AiSettings;
   onSaveAi: (apiKey: string, model: AiModel) => void;
@@ -47,9 +59,12 @@ export function SettingsView({
   onConnectVault: () => void;
   onSyncNow: () => void;
   onDownloadMarkdown: () => void;
+  agentPrompt: string;
+  onCopyAgentPrompt: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
   onReset: () => void;
+  onOpenOnboarding: () => void;
 }) {
   const [keyInput, setKeyInput] = useState(aiSettings.apiKey);
   const [model, setModel] = useState<AiModel>(aiSettings.model);
@@ -70,18 +85,135 @@ export function SettingsView({
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
         <h1 className="font-serif text-h1 text-foreground">Settings</h1>
-        <p className="mt-0.5 text-body-sm text-muted-foreground">Keys, integrations, and data — all local to this browser.</p>
+        <p className="mt-0.5 text-body-sm text-muted-foreground">Setup, agents, keys, and data — under your control.</p>
       </div>
 
-      {/* AI & API keys */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Milestone className="h-4 w-4 text-accent" />
+            Getting started
+          </CardTitle>
+          <p className="text-body-sm text-muted-foreground">
+            Reopen the local setup guide to create a focused workspace, import a backup, or explore the synthetic demo.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <Button variant="secondary" size="sm" onClick={onOpenOnboarding}>
+            <Milestone />
+            Open setup guide
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card className="border-agent/30">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-agent" />
-            AI & API keys
+            <Terminal className="h-4 w-4 text-agent" />
+            Agent workspace
           </CardTitle>
           <p className="text-body-sm text-muted-foreground">
-            Bring your own Anthropic key to unlock account briefs and follow-up drafts. The key is stored only in this
+            Codex, Claude Code, and other CLI agents cannot see this browser's local storage. Give them a current,
+            source-grounded Markdown snapshot instead. No API key is required.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ol className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3">
+            {[
+              ["1", "Sync", "Write a current snapshot to a dedicated folder."],
+              ["2", "Review", "Open that folder in your agent and paste the request."],
+              ["3", "Apply", "Approve the useful work and record it in the CRM."],
+            ].map(([step, label, detail]) => (
+              <li key={step} className="bg-surface p-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-agent-bg font-mono text-[11px] text-agent-fg">
+                    {step}
+                  </span>
+                  <span className="text-h3 text-foreground">{label}</span>
+                </div>
+                <p className="mt-1.5 text-[12px] leading-5 text-muted-foreground">{detail}</p>
+              </li>
+            ))}
+          </ol>
+
+          <div className="space-y-2">
+            <div className="text-label uppercase text-muted-foreground">1 · Create the readable snapshot</div>
+            <div className="flex flex-wrap items-center gap-2">
+              {canPick ? (
+                <>
+                  <Button variant="secondary" size="sm" onClick={onConnectVault} disabled={syncBusy}>
+                    <FolderSync />
+                    {sync.vaultName ? "Choose another folder" : "Create workspace snapshot"}
+                  </Button>
+                  {sync.vaultName && (
+                    <Button variant="primary" size="sm" onClick={onSyncNow} disabled={syncBusy}>
+                      {syncBusy ? "Syncing…" : "Sync now"}
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <Button variant="secondary" size="sm" onClick={onDownloadMarkdown} disabled={syncBusy}>
+                  <FileDown />
+                  Download Markdown snapshot
+                </Button>
+              )}
+            </div>
+            {sync.vaultName ? (
+              <Well className="flex flex-wrap items-center justify-between gap-2 text-body-sm">
+                <span className="text-foreground">
+                  Folder: <span className="font-medium">{sync.vaultName}</span>
+                </span>
+                <span className="text-faint-foreground">
+                  {sync.lastSyncedAt
+                    ? `${sync.fileCount ?? 0} files · synced ${formatRelative(sync.lastSyncedAt)}`
+                    : "connected · sync required"}
+                </span>
+              </Well>
+            ) : (
+              <p className="text-[12px] text-faint-foreground">
+                {canPick
+                  ? "Choose a dedicated folder such as open-crm-workspace. Each sync writes an index, an agent guide, and one file per account."
+                  : "Move the downloaded file into a private working folder before opening your CLI agent there."}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2 border-t border-border pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-label uppercase text-muted-foreground">2 · Start a grounded review</div>
+                <p className="mt-1 text-[12px] text-muted-foreground">
+                  Open the snapshot folder, run <code className="font-mono text-foreground">codex</code> or{" "}
+                  <code className="font-mono text-foreground">claude</code>, then paste this request.
+                </p>
+              </div>
+              <Button variant="agent" size="sm" onClick={onCopyAgentPrompt}>
+                <Copy />
+                Copy starter request
+              </Button>
+            </div>
+            <pre className="max-h-44 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-surface-sunken p-3 font-mono text-[11px] leading-5 text-muted-foreground">
+              {agentPrompt}
+            </pre>
+          </div>
+
+          <div className="border-t border-border pt-3 text-[12px] leading-5 text-muted-foreground">
+            The snapshot is one-way: agent edits do not update the browser CRM. Review the result, record accepted actions
+            here, then sync again before the next agent session.
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* AI & API keys */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-agent" />
+            Optional in-app AI
+          </CardTitle>
+          <p className="text-body-sm text-muted-foreground">
+            Bring your own Anthropic key to generate account briefs and follow-up drafts inside the account view. This is
+            separate from the CLI agent workspace above. The key is stored only in this
             browser's local storage and sent directly to Anthropic — never to a Zentrik server.
           </p>
         </CardHeader>
@@ -137,64 +269,6 @@ export function SettingsView({
             {aiTest.state === "ok" && !dirty && <Badge tone="success" dot>Connected</Badge>}
             {aiTest.state === "error" && <span className="text-[12px] text-destructive-fg">{aiTest.message}</span>}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Integrations / Sync */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FolderSync className="h-4 w-4 text-accent" />
-            Integrations · Markdown vault
-          </CardTitle>
-          <p className="text-body-sm text-muted-foreground">
-            Sync accounts and notes as Markdown into an Obsidian-style vault, so your CRM works alongside the rest of your
-            system. One <code className="font-mono text-[12px]">.md</code> per account, with frontmatter.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {canPick ? (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="secondary" size="sm" onClick={onConnectVault} disabled={syncBusy}>
-                  <FolderSync />
-                  {sync.vaultName ? "Reconnect vault folder" : "Connect vault folder"}
-                </Button>
-                {sync.vaultName && (
-                  <Button variant="primary" size="sm" onClick={onSyncNow} disabled={syncBusy}>
-                    {syncBusy ? "Syncing…" : "Sync now"}
-                  </Button>
-                )}
-              </div>
-              {sync.vaultName ? (
-                <Well className="flex flex-wrap items-center justify-between gap-2 text-body-sm">
-                  <span className="text-foreground">
-                    Vault: <span className="font-medium">{sync.vaultName}</span>
-                  </span>
-                  <span className="text-faint-foreground">
-                    {sync.lastSyncedAt
-                      ? `${sync.fileCount ?? 0} files · synced ${formatRelative(sync.lastSyncedAt)}`
-                      : "not synced yet"}
-                  </span>
-                </Well>
-              ) : (
-                <p className="text-[12px] text-faint-foreground">
-                  Pick your Obsidian vault (or any folder). Files are written directly into it on each sync.
-                </p>
-              )}
-            </>
-          ) : (
-            <>
-              <Button variant="secondary" size="sm" onClick={onDownloadMarkdown} disabled={syncBusy}>
-                <FileDown />
-                Download Markdown
-              </Button>
-              <p className="text-[12px] text-faint-foreground">
-                This browser doesn't support writing directly to a folder. Download a combined Markdown file instead, or use
-                a Chromium-based browser to sync into a vault folder.
-              </p>
-            </>
-          )}
         </CardContent>
       </Card>
 

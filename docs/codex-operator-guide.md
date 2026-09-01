@@ -1,5 +1,10 @@
 # Codex Operator Guide
 
+The provider-neutral setup, snapshot boundary, starter request, and review loop
+now live in [Agent Operator Guide](./agent-operator-guide.md). Use that guide for
+Codex, Claude Code, or another file-capable agent. The notes below cover
+Codex-specific product-development work.
+
 Zentrik Open CRM is designed to work with Codex as an account-work partner.
 Codex should help with research, synthesis, drafts, specs, and workflow hygiene,
 while humans keep control over decisions and customer-facing communication.

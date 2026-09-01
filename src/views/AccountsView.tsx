@@ -1,4 +1,4 @@
-import { type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { ClipboardCopy, Plus, UserPlus } from "lucide-react";
 import type { Account, Deal, Note, Task } from "../types";
 import { accountStages, contactInfluences, priorities, type AccountDraft, type ContactDraft } from "../lib/drafts";
@@ -56,6 +56,7 @@ export function AccountsView({
   onAiCopy,
   onAiClear,
   onCopyMarkdown,
+  onCopyAgentHandoff,
   onOpenSettings,
 }: {
   accounts: Account[];
@@ -79,9 +80,11 @@ export function AccountsView({
   onAiCopy: () => void;
   onAiClear: () => void;
   onCopyMarkdown: () => void;
+  onCopyAgentHandoff: () => void;
   onOpenSettings: () => void;
 }) {
   const buildroom = useBuildroom();
+  const [addingAccount, setAddingAccount] = useState(accounts.length === 0);
   const acct = selectedAccount;
   const acctDeals = acct ? deals.filter((d) => d.accountId === acct.id) : [];
   const acctTasks = acct ? tasks.filter((t) => t.accountId === acct.id) : [];
@@ -91,14 +94,32 @@ export function AccountsView({
   const openPipeline = acctDeals.filter((d) => isOpenDeal(d.stage)).reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
+    <div className="grid min-w-0 gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
       <h1 className="sr-only">Accounts</h1>
-      <div className="space-y-4">
-        <AccountSetupCard draftAccount={draftAccount} setDraftAccount={setDraftAccount} onAddAccount={onAddAccount} />
+      <div className="min-w-0 space-y-4">
+        {addingAccount && (
+          <AccountSetupCard
+            draftAccount={draftAccount}
+            setDraftAccount={setDraftAccount}
+            onAddAccount={(event) => {
+              onAddAccount(event);
+              if (draftAccount.name.trim()) setAddingAccount(false);
+            }}
+            onCancel={accounts.length > 0 ? () => setAddingAccount(false) : undefined}
+          />
+        )}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-label uppercase text-muted-foreground">Accounts</span>
-            <span className="font-mono text-[11px] tabular-nums text-faint-foreground">{accounts.length}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-label uppercase text-muted-foreground">Accounts</span>
+              <span className="font-mono text-[11px] tabular-nums text-faint-foreground">{accounts.length}</span>
+            </div>
+            {!addingAccount && (
+              <Button size="sm" variant="ghost" onClick={() => setAddingAccount(true)}>
+                <Plus />
+                New
+              </Button>
+            )}
           </div>
           {accounts.length === 0 ? (
             <EmptyState title="No accounts yet." hint="Add a local account above to get started." />
@@ -113,7 +134,7 @@ export function AccountsView({
       </div>
 
       {acct ? (
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <Card>
             <CardHeader className="gap-3 border-b border-border pb-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -131,7 +152,14 @@ export function AccountsView({
                   <Badge tone="signal" dot>
                     {acct.sourceConfidence}% evidence
                   </Badge>
-                  <Button size="sm" variant="ghost" className="h-7" onClick={onCopyMarkdown}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7"
+                    onClick={onCopyMarkdown}
+                    disabled={buildroom}
+                    title={buildroom ? "Switch to Private view before copying account data" : undefined}
+                  >
                     <ClipboardCopy />
                     Copy as Markdown
                   </Button>
@@ -172,6 +200,7 @@ export function AccountsView({
               </div>
 
               <AiPanel
+                shareSafe={buildroom}
                 hasKey={ai.hasKey}
                 modelLabel={ai.modelLabel}
                 noteCount={acctNotes.length}
@@ -184,6 +213,7 @@ export function AccountsView({
                 onCopy={onAiCopy}
                 onClear={onAiClear}
                 onOpenSettings={onOpenSettings}
+                onCopyAgentHandoff={onCopyAgentHandoff}
               />
 
               <div className="grid gap-4 lg:grid-cols-2">
@@ -253,17 +283,28 @@ function AccountSetupCard({
   draftAccount,
   setDraftAccount,
   onAddAccount,
+  onCancel,
 }: {
   draftAccount: AccountDraft;
   setDraftAccount: React.Dispatch<React.SetStateAction<AccountDraft>>;
   onAddAccount: (e: FormEvent<HTMLFormElement>) => void;
+  onCancel?: () => void;
 }) {
   const set = (patch: Partial<AccountDraft>) => setDraftAccount((c) => ({ ...c, ...patch }));
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Add account</CardTitle>
-        <p className="text-body-sm text-muted-foreground">Start a real local workspace without importing a whole CRM first.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>Add account</CardTitle>
+            <p className="mt-1 text-body-sm text-muted-foreground">Start with the context you need now. Add the rest later.</p>
+          </div>
+          {onCancel && (
+            <Button size="sm" variant="ghost" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <form className="space-y-3" onSubmit={onAddAccount}>
@@ -332,12 +373,12 @@ function ContactsPanel({
 }) {
   const set = (patch: Partial<ContactDraft>) => setDraftContact((c) => ({ ...c, ...patch }));
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    <div className="min-w-0 rounded-lg border border-border bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="text-label uppercase text-muted-foreground">Contacts</div>
         <Badge tone="neutral">{account.contacts.length} people</Badge>
       </div>
-      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+      <div className="mt-3 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2">
         {account.contacts.length === 0 ? (
           <div className="rounded-md border border-dashed border-border p-3 text-body-sm text-muted-foreground">No contacts yet.</div>
         ) : (

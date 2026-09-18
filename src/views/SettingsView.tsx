@@ -49,6 +49,8 @@ export function SettingsView({
   onImport,
   onReset,
   onOpenOnboarding,
+  folder,
+  onOpenReview,
 }: {
   aiSettings: AiSettings;
   onSaveAi: (apiKey: string, model: AiModel) => void;
@@ -65,6 +67,9 @@ export function SettingsView({
   onImport: (file: File) => void;
   onReset: () => void;
   onOpenOnboarding: () => void;
+  /** Set when the app runs on a workspace folder shared with agents. */
+  folder: { dir?: string } | null;
+  onOpenReview: () => void;
 }) {
   const [keyInput, setKeyInput] = useState(aiSettings.apiKey);
   const [model, setModel] = useState<AiModel>(aiSettings.model);
@@ -106,6 +111,29 @@ export function SettingsView({
         </CardContent>
       </Card>
 
+      {folder ? (
+        <Card className="border-agent/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Terminal className="h-4 w-4 text-agent" />
+              Agent workspace
+            </CardTitle>
+            <p className="text-body-sm text-muted-foreground">
+              This CRM runs on a folder. Claude Code, Codex, and Cursor read its AGENTS.md and work the records through the{" "}
+              <code className="font-mono text-foreground">./crm</code> command or the MCP server. What they change arrives under Review.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Well className="font-mono text-[12px] text-foreground">{folder.dir}</Well>
+            <pre className="overflow-x-auto rounded-md border border-border bg-surface-sunken p-3 font-mono text-[11px] leading-5 text-muted-foreground">
+              {["./crm status        what needs attention, and why", "./crm help          every command", "claude | codex      start an agent in this folder"].join("\n")}
+            </pre>
+            <Button variant="agent" size="sm" onClick={onOpenReview}>
+              Open Review
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
       <Card className="border-agent/30">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -199,10 +227,16 @@ export function SettingsView({
 
           <div className="border-t border-border pt-3 text-[12px] leading-5 text-muted-foreground">
             The snapshot is one-way: agent edits do not update the browser CRM. Review the result, record accepted actions
-            here, then sync again before the next agent session.
+            here, then sync again before the next agent session. For two-way work, where agents capture notes and propose
+            next actions you approve,{" "}
+            <button onClick={onOpenReview} className="rounded-sm text-agent-fg underline-offset-2 hover:underline focus-visible:outline-none focus-visible:focus-ring">
+              run Open CRM on a folder
+            </button>
+            .
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* AI & API keys */}
       <Card>
@@ -276,7 +310,11 @@ export function SettingsView({
       <Card>
         <CardHeader>
           <CardTitle>Local data</CardTitle>
-          <p className="text-body-sm text-muted-foreground">Your workspace lives in this browser's local storage. Export it to move or back up.</p>
+          <p className="text-body-sm text-muted-foreground">
+            {folder
+              ? "Your workspace lives in workspace.json in the folder above. Back it up like any folder, or keep it under git."
+              : "Your workspace lives in this browser's local storage. Export it to move or back up."}
+          </p>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-2">
@@ -300,7 +338,7 @@ export function SettingsView({
               }}
             />
           </div>
-          {confirming ? (
+          {folder ? null : confirming ? (
             <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive-bg/40 p-3">
               <p className="text-[12px] text-destructive-fg">This clears local changes and restores the demo. Can't be undone.</p>
               <div className="flex gap-2">

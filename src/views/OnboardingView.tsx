@@ -44,13 +44,18 @@ export function OnboardingView({
   onImport,
   onUseDemo,
   onClose,
+  folderBacked = false,
+  workspaceName,
 }: {
   onCreateWorkspace: (draft: WorkspaceSetupDraft) => void;
   onImport: (file: File) => void;
   onUseDemo: () => void;
   onClose?: () => void;
+  folderBacked?: boolean;
+  /** The name an existing, still-empty workspace folder was created with. */
+  workspaceName?: string;
 }) {
-  const [draft, setDraft] = useState(emptySetup);
+  const [draft, setDraft] = useState(() => ({ ...emptySetup, workspaceName: workspaceName || emptySetup.workspaceName }));
   const fileRef = useRef<HTMLInputElement>(null);
   const set = (patch: Partial<WorkspaceSetupDraft>) => setDraft((current) => ({ ...current, ...patch }));
 
@@ -102,7 +107,11 @@ export function OnboardingView({
 
           <div className="mt-6 flex items-start gap-2.5 border-t border-border pt-5 text-body-sm text-muted-foreground sm:mt-9">
             <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-            <p>Your workspace stays in this browser until you export or sync it. No account is required.</p>
+            <p>
+              {folderBacked
+                ? "Your workspace is saved to its folder on this computer. No account is required."
+                : "Your workspace stays in this browser until you export or sync it. No account is required."}
+            </p>
           </div>
         </section>
 

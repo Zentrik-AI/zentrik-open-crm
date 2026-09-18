@@ -33,6 +33,13 @@ export type DealStage =
 
 export type TaskStatus = "open" | "done";
 
+/** Who made a change. People work in the visual CRM; agents work through the
+ *  `crm` command or the MCP server. */
+export interface Actor {
+  kind: "human" | "agent";
+  name: string;
+}
+
 export interface Contact {
   id: string;
   name: string;
@@ -87,6 +94,12 @@ export interface Task {
   status: TaskStatus;
   createdAt: string;
   completedAt?: string;
+  /** Why this task exists, in one sentence. */
+  reason?: string;
+  /** Ids of the notes that ground this task. Empty means it is a hunch. */
+  evidence?: string[];
+  /** Set when an agent created the record. */
+  origin?: Actor;
 }
 
 export interface Note {
@@ -100,6 +113,8 @@ export interface Note {
   sentiment: Sentiment;
   createdAt: string;
   sourceRef?: string;
+  /** Set when an agent created the record. */
+  origin?: Actor;
 }
 
 /* ---- Improve Open CRM (product-feedback layer — not the user's CRM data) -- */
@@ -124,7 +139,98 @@ export interface ChangelogEntry {
   tags: string[];
 }
 
+/* ---- Operations: the one write path shared by the app, the CLI, and MCP --- */
+
+export type AccountPatch = Partial<
+  Pick<Account, "name" | "domain" | "segment" | "stage" | "priority" | "owner" | "arr" | "health" | "fit" | "tags" | "needs" | "risks">
+>;
+
+export type Op =
+  | {
+      type: "account.add";
+      name: string;
+      domain?: string;
+      segment?: string;
+      owner?: string;
+      stage?: AccountStage;
+      priority?: Priority;
+      contact?: { name: string; role: string; influence?: Contact["influence"]; email?: string };
+    }
+  | { type: "account.update"; accountId: string; patch: AccountPatch }
+  | { type: "contact.add"; accountId: string; name: string; role: string; influence?: Contact["influence"]; email?: string }
+  | { type: "deal.add"; accountId: string; name: string; stage?: DealStage; value?: number; owner?: string; closeDate?: string }
+  | { type: "deal.move"; dealId: string; stage: DealStage }
+  | {
+      type: "task.add";
+      title: string;
+      accountId?: string;
+      due?: string;
+      owner?: string;
+      priority?: Priority;
+      reason?: string;
+      evidence?: string[];
+    }
+  | { type: "task.set_status"; taskId: string; status: TaskStatus }
+  | {
+      type: "note.add";
+      accountId: string;
+      title: string;
+      body: string;
+      source: NoteSource;
+      sourceRef?: string;
+      sentiment?: Sentiment;
+      contactId?: string;
+    };
+
+/** An operation plus everything needed to replay it exactly: when, by whom,
+ *  and the id of the record it creates. Applying a change is deterministic. */
+export interface Change {
+  /** Id for the record this change creates. Unused by updates. */
+  recordId: string;
+  /** Secondary id, for the optional first contact on `account.add`. */
+  childId?: string;
+  at: string;
+  actor: Actor;
+  op: Op;
+}
+
+/* ---- Agent loop: proposed changes and the record of what happened -------- */
+
+/** How agent-made changes land. "review" holds each one for a person to
+ *  approve; "direct" applies it immediately and records it in the activity log. */
+export type AgentMode = "review" | "direct";
+
+export type ProposalStatus = "pending" | "applied" | "rejected";
+
+/** One change an agent asked for, waiting for (or resolved by) a person. */
+export interface Proposal {
+  id: string;
+  createdAt: string;
+  actor: Actor;
+  /** The exact operation that runs on approval. */
+  change: Change;
+  summary: string;
+  status: ProposalStatus;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  /** Id of the record the change created or touched, once applied. */
+  targetId?: string;
+}
+
+export interface ActivityEntry {
+  id: string;
+  at: string;
+  actor: Actor;
+  summary: string;
+  targetId?: string;
+  accountId?: string;
+}
+
 export interface Workspace {
+  /** Missing in workspaces written before agent operations existed. */
+  agentMode?: AgentMode;
+  proposals?: Proposal[];
+  activity?: ActivityEntry[];
   name: string;
   edition: "Self-Hosted" | "Cloud";
   updatedAt: string;

@@ -91,6 +91,7 @@ export function AccountsView({
   const acctNotes = acct
     ? notes.filter((n) => n.accountId === acct.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     : [];
+  const notesById = new Map(notes.map((n) => [n.id, n]));
   const openPipeline = acctDeals.filter((d) => isOpenDeal(d.stage)).reduce((s, d) => s + d.value, 0);
 
   return (
@@ -243,7 +244,7 @@ export function AccountsView({
                   <div className="mb-2 text-label uppercase text-muted-foreground">Tasks</div>
                   <div className="space-y-2.5">
                     {acctTasks.map((task) => (
-                      <TaskRow key={task.id} task={task} onToggle={() => onToggleTask(task.id)} />
+                      <TaskRow key={task.id} task={task} notesById={notesById} onToggle={() => onToggleTask(task.id)} />
                     ))}
                   </div>
                 </div>

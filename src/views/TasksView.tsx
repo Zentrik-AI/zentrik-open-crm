@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CalendarPlus, Plus } from "lucide-react";
-import type { Account, Task } from "../types";
+import type { Account, Note, Task } from "../types";
 import { priorities, type TaskDraft } from "../lib/drafts";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -14,11 +14,13 @@ export function TasksView({
   tasks,
   accounts,
   accountsById,
+  notesById,
   onToggleTask,
   onAddTask,
   onSelectAccount,
   onExportICS,
 }: {
+  notesById: Map<string, Note>;
   tasks: Task[];
   accounts: Account[];
   accountsById: Map<string, Account>;
@@ -136,6 +138,7 @@ export function TasksView({
                     key={task.id}
                     task={task}
                     accountName={task.accountId ? accountsById.get(task.accountId)?.name : undefined}
+                    notesById={notesById}
                     onToggle={() => onToggleTask(task.id)}
                     onOpenAccount={task.accountId ? () => onSelectAccount(task.accountId!) : undefined}
                   />

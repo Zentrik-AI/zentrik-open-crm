@@ -12,11 +12,11 @@ const AI_STORAGE_KEY = "zentrik-open-crm.ai.v1";
 const ENDPOINT = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
 
-export type AiModel = "claude-opus-4-8" | "claude-sonnet-4-6" | "claude-haiku-4-5";
+export type AiModel = "claude-opus-5" | "claude-sonnet-5" | "claude-haiku-4-5";
 
 export const aiModels: Array<{ id: AiModel; label: string; note: string }> = [
-  { id: "claude-opus-4-8", label: "Claude Opus 4.8", note: "Most capable" },
-  { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", note: "Balanced" },
+  { id: "claude-opus-5", label: "Claude Opus 5", note: "Most capable" },
+  { id: "claude-sonnet-5", label: "Claude Sonnet 5", note: "Balanced" },
   { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", note: "Fastest, cheapest" },
 ];
 
@@ -25,7 +25,7 @@ export interface AiSettings {
   model: AiModel;
 }
 
-const emptyAiSettings: AiSettings = { apiKey: "", model: "claude-opus-4-8" };
+const emptyAiSettings: AiSettings = { apiKey: "", model: "claude-opus-5" };
 
 export function loadAiSettings(): AiSettings {
   if (typeof window === "undefined") return emptyAiSettings;
@@ -35,7 +35,8 @@ export function loadAiSettings(): AiSettings {
     const parsed = JSON.parse(raw) as Partial<AiSettings>;
     return {
       apiKey: parsed.apiKey ?? "",
-      model: (parsed.model as AiModel) ?? "claude-opus-4-8",
+      // A saved model that is no longer offered falls back to the default.
+      model: aiModels.some((m) => m.id === parsed.model) ? (parsed.model as AiModel) : emptyAiSettings.model,
     };
   } catch {
     return emptyAiSettings;

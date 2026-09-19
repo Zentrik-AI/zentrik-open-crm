@@ -1,6 +1,5 @@
 import type { Account, Deal, Note, Task, Workspace } from "../types";
-import { formatDate, formatDateFull } from "./utils";
-import { dealStageMeta, sourceMeta } from "./meta";
+import { accountMarkdown, buildViewFiles, vaultLayout, type ViewFile } from "../core/markdown.ts";
 import { buildWorkspaceAgentStarterPrompt } from "./agent";
 
 /**
@@ -38,111 +37,8 @@ export function saveSyncSettings(settings: SyncSettings) {
 export const supportsDirectoryPicker = () =>
   typeof window !== "undefined" && typeof (window as Window & { showDirectoryPicker?: unknown }).showDirectoryPicker === "function";
 
-function slug(name: string) {
-  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "account";
-}
-
-type VaultFile = { path: string; content: string };
-
-// Quote scalar YAML values so names with `:`, leading `#`, or brackets stay valid.
+type VaultFile = ViewFile;
 const yq = (v: string) => JSON.stringify(v);
-
-function accountMarkdown(account: Account, deals: Deal[], tasks: Task[], notes: Note[]): string {
-  const fm = [
-    "---",
-    `title: ${yq(account.name)}`,
-    "type: crm-account",
-    `stage: ${yq(account.stage)}`,
-    `priority: ${yq(account.priority)}`,
-    `owner: ${yq(account.owner)}`,
-    `arr: ${account.arr}`,
-    `health: ${account.health}`,
-    `fit: ${account.fit}`,
-    `tags: [${["crm", ...account.tags].map((t) => JSON.stringify(t)).join(", ")}]`,
-    `updated: ${yq(account.lastTouch)}`,
-    "---",
-  ].join("\n");
-
-  const lines: string[] = [fm, "", `# ${account.name}`, "", `*${account.segment} · ${account.domain}*`, ""];
-
-  lines.push("## Needs", ...account.needs.map((n) => `- ${n}`), "");
-  lines.push("## Risks", ...account.risks.map((r) => `- ${r}`), "");
-
-  if (account.contacts.length) {
-    lines.push("## Contacts");
-    for (const c of account.contacts) {
-      lines.push(`- **${c.name}** — ${c.role} (${c.influence})${c.email ? ` · ${c.email}` : ""}`);
-    }
-    lines.push("");
-  }
-
-  if (deals.length) {
-    lines.push("## Deals");
-    for (const d of deals) {
-      lines.push(
-        `- **${d.name}** — ${dealStageMeta[d.stage].label}, $${d.value.toLocaleString()} · ${d.probability}% · close ${formatDate(d.closeDate)}`,
-      );
-    }
-    lines.push("");
-  }
-
-  const openTasks = tasks.filter((t) => t.status === "open");
-  if (openTasks.length) {
-    lines.push("## Open tasks");
-    for (const t of openTasks) lines.push(`- [ ] ${t.title} (due ${formatDate(t.due)}, ${t.priority})`);
-    lines.push("");
-  }
-
-  if (notes.length) {
-    lines.push("## Notes");
-    for (const n of notes) {
-      lines.push(
-        `### ${n.title}`,
-        `*${sourceMeta[n.source].label} · ${formatDateFull(n.createdAt)} · ${n.sentiment}*`,
-        `Source reference: ${n.sourceRef || "Not recorded"}`,
-        "",
-        n.body,
-        "",
-      );
-    }
-  }
-
-  return lines.join("\n");
-}
-
-/** Collision-proof slug per account, keyed by the unique account id. */
-function uniqueSlugs(accounts: Account[]): Map<string, string> {
-  const used = new Set<string>();
-  const map = new Map<string, string>();
-  for (const a of accounts) {
-    const base = slug(a.name);
-    let candidate = base;
-    let i = 2;
-    while (used.has(candidate)) candidate = `${base}-${i++}`;
-    used.add(candidate);
-    map.set(a.id, candidate);
-  }
-  return map;
-}
-
-function indexMarkdown(workspace: Workspace, slugs: Map<string, string>): string {
-  const lines = [
-    "---",
-    `title: ${yq(workspace.name)}`,
-    "type: crm-index",
-    `updated: ${yq(workspace.updatedAt)}`,
-    "---",
-    "",
-    `# ${workspace.name}`,
-    "",
-    "| Account | Stage | Owner | Health |",
-    "| --- | --- | --- | --- |",
-  ];
-  for (const a of workspace.accounts) {
-    lines.push(`| [[${slugs.get(a.id)}\\|${a.name}]] | ${a.stage} | ${a.owner} | ${a.health} |`);
-  }
-  return lines.join("\n");
-}
 
 function agentGuideMarkdown(workspace: Workspace): string {
   return [
@@ -180,20 +76,7 @@ function agentGuideMarkdown(workspace: Workspace): string {
 }
 
 export function buildVaultFiles(workspace: Workspace): VaultFile[] {
-  const slugs = uniqueSlugs(workspace.accounts);
-  const files: VaultFile[] = [
-    { path: "_agent-guide.md", content: agentGuideMarkdown(workspace) },
-    { path: "_index.md", content: indexMarkdown(workspace, slugs) },
-  ];
-  for (const account of workspace.accounts) {
-    const deals = workspace.deals.filter((d) => d.accountId === account.id);
-    const tasks = workspace.tasks.filter((t) => t.accountId === account.id);
-    const notes = workspace.notes
-      .filter((n) => n.accountId === account.id)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    files.push({ path: `${slugs.get(account.id)}.md`, content: accountMarkdown(account, deals, tasks, notes) });
-  }
-  return files;
+  return [{ path: "_agent-guide.md", content: agentGuideMarkdown(workspace) }, ...buildViewFiles(workspace, vaultLayout)];
 }
 
 /** A single account rendered as Markdown — for "copy as Markdown". */

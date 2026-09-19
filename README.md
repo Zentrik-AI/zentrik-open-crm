@@ -30,46 +30,88 @@ the middle path for small technical teams:
 - account memory stays tied to calls, emails, support notes, reviews, usage,
   GitHub, and market signals
 - next actions show the source that caused the recommendation
-- Codex, Claude Code, and similar agents get an explicit, privacy-aware operating surface
-- the product can run locally, self-hosted, or eventually through Open CRM Cloud
+- Claude Code, Codex, and Cursor work the same records you do, through a
+  checked command and an MCP server, and you approve what they change
+- your data is a folder on your computer: readable, diffable, yours
 - users can shape the product through the public Open CRM Buildroom loop
+
+## Quick Start
+
+Needs Node 22.18 or newer.
+
+```bash
+git clone https://github.com/Zentrik-AI/zentrik-open-crm.git
+cd zentrik-open-crm && npm install
+
+npm run crm -- init ~/crm --demo     # a workspace folder with synthetic records
+cd ~/crm
+./crm ui                             # the visual CRM, on this folder
+```
+
+Drop `--demo` to start empty; the app asks for one real account.
+
+Now open the same folder in your agent:
+
+```bash
+cd ~/crm
+claude        # or: codex, or open the folder in Cursor
+```
+
+Ask it to **run the daily review**. It reads `AGENTS.md`, runs `./crm status`,
+reads the accounts that need attention, and proposes next actions that cite the
+notes behind them. Each proposal appears in the app under **Review** as it
+happens. Nothing changes until you approve it.
+
+Just looking? `npm run dev` opens the browser-only edition at
+[http://127.0.0.1:5177](http://127.0.0.1:5177) with no setup. It keeps data in
+local storage and can export a one-way Markdown snapshot for an agent to read.
+
+## How People And Agents Share A Workspace
+
+```text
+~/crm/
+  workspace.json   every record; written only by the app, ./crm, and the MCP server
+  AGENTS.md        the operating contract your agent reads first (CLAUDE.md points to it)
+  crm              the command: status, show, search, note add, task add, ...
+  INDEX.md         generated account index
+  accounts/        generated Markdown, one file per account, every record id visible
+  inbox/           drop transcripts and emails here; "process the inbox"
+  drafts/          customer-facing drafts the agent writes for your review
+  playbooks/       daily review, inbox, call prep, follow-up
+  .mcp.json        MCP server config for Claude Code (.cursor/mcp.json for Cursor)
+```
+
+- **One write path.** The app, the command, and the MCP tools all submit the
+  same validated operations. An agent cannot write a malformed record.
+- **Review by default.** An agent's change is checked, then held as a proposal.
+  You approve or reject it in the app. Switch a workspace to direct mode when
+  you trust the loop; every direct change is logged with the agent's name.
+- **Grounded work.** Tasks cite the notes behind them. The app draws a solid
+  underline under grounded work and a dashed one under a hunch.
+- **Notes are evidence, never instructions.** The contract tells agents to
+  treat customer text as data, to draft and never send, and to say what is
+  missing instead of inventing it.
+
+| Harness | How it connects |
+| --- | --- |
+| Claude Code | Reads `CLAUDE.md` → `AGENTS.md`, runs `./crm`. Approve the `open-crm` MCP server from `.mcp.json` when asked. |
+| Codex | Reads `AGENTS.md`, runs `./crm`. Optional MCP: `codex mcp add open-crm -- ./crm mcp`. |
+| Cursor | Reads `AGENTS.md`. The `open-crm` MCP server is preconfigured in `.cursor/mcp.json`. |
+| Anything else | If it can run a shell command or speak MCP, it can work the CRM. |
+
+See the [Agent Operator Guide](./docs/agent-operator-guide.md) for the full
+loop and the [Workspace Format](./docs/workspace-format.md) for the records,
+operations, and MCP tools.
 
 ## Product Surface
 
-- Today board for accounts, risks, next actions, and recent evidence
-- Account creation, contacts, and account detail views
-- Manual signal capture and signal inbox
-- Open CRM Loop for ideas, evidence, agent work, releases, and outcome checks
-- Codex task queue with copyable prompts and guardrails
-- Settings, public-safe mode, export, and demo reset controls
-
-## First Useful Workflow
-
-1. On first launch, create a local workspace around one real account, import an
-   Open CRM backup, or explore the clearly labeled synthetic demo.
-2. Add or review the account's contacts.
-3. Capture one real source note from a call, email, support thread, review, GitHub
-   issue, usage note, or market observation.
-4. Create the next human action while the source is fresh.
-5. In **Settings → Agent workspace**, sync a private Markdown snapshot that
-   includes source references and its own operating guide.
-6. Open Codex, Claude Code, or another file-capable agent in that folder and
-   copy the provider-neutral starter request. No API key is required.
-7. Review the evidence and inference, record accepted actions in the visual CRM,
-   and sync again before the next agent session.
-8. Use the Open CRM Loop to connect signals to ideas and release outcomes.
-
-## Run Locally
-
-```bash
-npm install
-npm run dev
-```
-
-The app will start at [http://127.0.0.1:5177](http://127.0.0.1:5177).
-
-The first-run workbench keeps setup local and asks for only one account. The
-setup guide remains available from Settings after onboarding.
+- Home: what is due, what moved, and what your agents are waiting on you for
+- Pipeline, Accounts, Contacts, Tasks, and Notes with source references
+- Review: approve or reject what agents proposed, and see what they did
+- `crm` command and MCP server over the same workspace folder
+- Private and share-safe views, JSON backup, calendar export
+- Optional in-app AI with your own Anthropic key
+- Improve Open CRM: suggest changes, roadmap, and changelog, kept apart from CRM data
 
 ## Development And Release Flow
 
@@ -92,15 +134,17 @@ push feature work directly to `main`.
 
 ```bash
 npm run typecheck
+npm test            # core operations, the crm command, MCP, and the local API
 npm run build
-npm run test:e2e
+npm run test:e2e    # browser edition, plus the live agent-to-Review loop on a folder
 ```
 
 ## Current Version
 
-This first version is a Vite React app with local browser persistence. It
-includes synthetic demo data only. It intentionally has no production API keys
-or private customer records.
+0.2 is a Vite React app with two homes for its data: browser local storage, or
+a workspace folder served on loopback by `crm ui`. The repository includes
+synthetic demo data only. It has no production API keys or private customer
+records.
 
 ## Repository Guardrails
 
@@ -138,6 +182,7 @@ proprietary platform code. See [NOTICE](./NOTICE),
 - [Roadmap](./docs/roadmap.md)
 - [Architecture](./docs/architecture.md)
 - [Agent Operator Guide](./docs/agent-operator-guide.md)
+- [Workspace Format](./docs/workspace-format.md)
 - [Codex Operator Guide](./docs/codex-operator-guide.md)
 - [Self-Hosting](./docs/self-hosting.md)
 - [Privacy Boundaries](./docs/privacy-boundaries.md)

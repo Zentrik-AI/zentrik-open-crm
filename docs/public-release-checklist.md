@@ -43,15 +43,21 @@ The repository should be private until every item in this checklist is complete.
 - [ ] Issue config points users toward Buildroom for product requests and
       private reporting for sensitive security issues.
 - [ ] Discussions are enabled only if someone will moderate them.
+- [ ] Forking is allowed (the organization setting blocks it on private
+      repositories; confirm it is on once public).
 - [ ] Repository description and topics match the product positioning.
 
 ## Product Readiness
 
 - [ ] Clean checkout works with `npm ci` and `npm run dev`.
 - [ ] `npm run typecheck` passes.
+- [ ] `npm test` passes.
 - [ ] `npm run build` passes.
 - [ ] `npm run test:e2e` passes.
-- [ ] First-use path works with synthetic demo data.
+- [ ] First-use path works with synthetic demo data, in the browser and on a
+      workspace folder (`crm init --demo`, `./crm ui`).
+- [ ] A coding agent opened cold in a demo workspace can run the daily review
+      and its proposals arrive under Review.
 - [ ] Public-safe mode is enabled by default or clearly available.
 - [ ] Export/reset controls do not leak private runtime state.
 - [ ] Buildroom submission flow explains public/private boundaries.
@@ -76,8 +82,8 @@ The repository should be private until every item in this checklist is complete.
       support requests, and security reporting.
 - [ ] Roadmap explains what is open-source, what is hosted later, and what is
       not part of the early release.
-- [ ] Open CRM Buildroom portal exists or the placeholder points to the expected
-      public surface.
+- [ ] Open CRM Buildroom portal resolves at the URL in the README and the issue
+      template config. It must not show "Portal unavailable".
 
 ## Visibility Change
 

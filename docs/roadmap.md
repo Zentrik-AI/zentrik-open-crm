@@ -5,25 +5,22 @@ workspace operations.
 
 ## Now
 
-- Make the local-first CRM useful from a clean checkout.
+- Make the CRM useful from a clean checkout, in the browser and on a folder.
+- Keep the agent loop trustworthy: one validated write path, review by default,
+  grounded tasks, a visible record of what agents did.
 - Keep demo data synthetic, realistic, and clearly fictitious.
-- Support lightweight account and contact creation without requiring import.
-- Improve account memory, signal capture, source confidence, and next-action
-  clarity.
-- Make Codex tasks safe to inspect before use.
-- Keep public Buildroom mode from leaking private account fields.
-- Let local/self-hosted users export feedback bundles and GitHub issue drafts.
+- Keep share-safe mode from leaking private account fields.
+- Let local users export feedback bundles and GitHub issue drafts.
 
 ## Next
 
-- Add CSV import for accounts and signals.
-- Add a guided first-run setup for users who do not want demo data.
-- Add hosted direct submission for Tell Open CRM feedback bundles.
-- Add release notes and outcome checks inside the Open CRM Loop.
-- Add public-safe Buildroom export so accepted ideas can be published cleanly.
-- Add self-hosted persistence beyond local browser storage.
+- Publish the `crm` command to npm so setup is one `npx` line.
+- Add CSV import for accounts and notes.
+- Add editing and archiving for records, as operations.
 - Add connector contracts for email, calendar, support, GitHub, reviews, and
-  usage events.
+  usage events. Each lands sources as notes with references.
+- Add hosted direct submission for Tell Open CRM feedback bundles.
+- Add public-safe Buildroom export so accepted ideas can be published cleanly.
 
 ## Later
 
@@ -32,6 +29,7 @@ workspace operations.
 - Add richer account intelligence and market research views.
 - Add extension points for custom objects, scoring, and workflows.
 - Add agent-run validation reports after product changes.
+- Add batch proposals so a multi-step plan is reviewed as one unit.
 
 ## Product Bets
 

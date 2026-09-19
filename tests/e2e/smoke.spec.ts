@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { seedWorkspace } from "../src/data/seed";
+import { seedWorkspace } from "../../src/data/seed";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -129,7 +129,7 @@ test("creates a local account + contact + note that persist, then resets", async
   await expect(page.getByText("First useful loop")).toHaveCount(0);
 
   // The account handoff contains the source, the action, and the human-review contract.
-  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:5177" });
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
   await nav(page, "Accounts");
   await page.getByRole("button", { name: "Copy agent handoff" }).click();
   const handoff = await page.evaluate(() => navigator.clipboard.readText());

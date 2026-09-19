@@ -22,6 +22,7 @@ Explain if checked:
 ## Validation
 
 - [ ] `npm run typecheck`
+- [ ] `npm test`
 - [ ] `npm run build`
 - [ ] `npm run test:e2e`
 - [ ] Not run, with reason:

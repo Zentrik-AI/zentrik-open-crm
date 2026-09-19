@@ -1,27 +1,30 @@
 # Self-Hosting
 
-The first version runs entirely in the browser.
+## On Your Computer, With Agents
 
 ```bash
 npm install
-npm run dev
+npm run crm -- init ~/crm
+cd ~/crm && ./crm ui
 ```
 
-Build a static production bundle with:
+`crm ui` builds the app when needed and serves it, with the workspace API, on
+`127.0.0.1` only. Data lives in `~/crm/workspace.json`. Back the folder up like
+any other, or keep it under git. See the
+[Agent Operator Guide](./agent-operator-guide.md).
+
+The local server has no login because it is reachable only from your own
+machine and answers only its own page. Do not put it behind a public reverse
+proxy.
+
+## As A Static Site, Browser Only
 
 ```bash
 npm run build
 ```
 
-Then serve the `dist/` directory with any static host.
-
-## Data
-
-The first version stores data in browser local storage. Use the export control
-to download a JSON copy of the workspace.
-
-Future self-hosted deployments should move data into a private `.crm/` directory
-or database that is not committed to Git.
+Serve `dist/` with any static host. Each visitor's data stays in their own
+browser's local storage. Use Settings → Local data to export a JSON backup.
 
 ## Environment
 

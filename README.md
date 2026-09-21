@@ -57,7 +57,12 @@ cd ~/crm
 claude        # or: codex, or open the folder in Cursor
 ```
 
-Ask it to **run the daily review**. It reads `AGENTS.md`, runs `./crm status`,
+Ask it to **complete `docs/agent-setup.md`, then run one manual daily review**.
+`./crm setup` shows the local setup state; it creates no schedules. See
+[Agent setup and recovery](./docs/agent-setup.md) for manual operation and
+preserving local instructions during upgrades.
+
+The agent reads `AGENTS.md`, runs `./crm status`,
 reads the accounts that need attention, and proposes next actions that cite the
 notes behind them. Each proposal appears in the app under **Review** as it
 happens. Nothing changes until you approve it.
@@ -82,7 +87,8 @@ local storage and can export a one-way Markdown snapshot for an agent to read.
 ```
 
 - **One write path.** The app, the command, and the MCP tools all submit the
-  same validated operations. An agent cannot write a malformed record.
+  same validated operations. These interfaces reject malformed records; direct
+  filesystem access is not a security boundary.
 - **Review by default.** An agent's change is checked, then held as a proposal.
   You approve or reject it in the app. Switch a workspace to direct mode when
   you trust the loop; every direct change is logged with the agent's name.
@@ -136,8 +142,14 @@ push feature work directly to `main`.
 npm run typecheck
 npm test            # core operations, the crm command, MCP, and the local API
 npm run build
+npm run test:package # pack, install with production dependencies, check CLI/agent kit/MCP/UI
 npm run test:e2e    # browser edition, plus the live agent-to-Review loop on a folder
 ```
+
+`npm pack` runs the build through `prepack` and includes the UI bundle and
+compiled JavaScript CLI. An installed tarball runs without build tools.
+`test:package` uses temporary synthetic workspaces, disables install scripts, and removes its
+temporary install after the check; dependency installation needs npm registry access.
 
 ## Current Version
 

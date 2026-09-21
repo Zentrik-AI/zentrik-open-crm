@@ -84,7 +84,7 @@ export function CommandPalette({
       group: "Accounts",
       label: a.name,
       sub: a.segment,
-      ring: a.health,
+      ring: a.health ?? undefined,
       run: () => onSelectAccount(a.id),
     }));
 

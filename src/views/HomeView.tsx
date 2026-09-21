@@ -1,11 +1,9 @@
 import { Activity, ArrowRight, Check, ClipboardList, Columns3, Database, Play, ShieldAlert } from "lucide-react";
 import type { Account, Task, Workspace } from "../types";
 import type { View } from "../lib/nav";
-import { isOpenDeal } from "../lib/meta";
 import { splitCurrency } from "../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { CountUp } from "../components/ui/count";
-import { Sparkline } from "../components/ui/sparkline";
 import { Meter } from "../components/ui/meter";
 import { MetricCard } from "../components/metric-card";
 import { TaskRow } from "../components/task-row";
@@ -52,7 +50,7 @@ export function HomeView({
   onToggleTask: (id: string) => void;
 }) {
   const openTasks = workspace.tasks
-    .filter((t) => t.status === "open")
+    .filter((t) => t.status === "open" && !accountsById.get(t.accountId ?? "")?.archivedAt)
     .sort((a, b) => a.due.localeCompare(b.due))
     .slice(0, 6);
   const recentNotes = [...workspace.notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
@@ -61,11 +59,6 @@ export function HomeView({
   const totalTasks = Math.max(1, workspace.tasks.length);
   const totalAccounts = Math.max(1, workspace.accounts.length);
 
-  const trend = workspace.deals
-    .filter((d) => isOpenDeal(d.stage))
-    .map((d) => (d.value * d.probability) / 100)
-    .sort((x, y) => x - y)
-    .reduce<number[]>((acc, v) => [...acc, (acc[acc.length - 1] ?? 0) + v], []);
   const pipeline = splitCurrency(metrics.weightedPipeline);
   const progress = onboardingProgress(workspace);
   const showGettingStarted = onboardingMode !== "demo" && (!progress.hasSource || !progress.hasAction);
@@ -154,7 +147,7 @@ export function HomeView({
               </span>
             </Private>
           }
-          viz={<Sparkline data={trend.length > 1 ? trend : [0, metrics.weightedPipeline]} tone="signal" width={120} height={22} />}
+          viz={<span className="text-[11px] text-muted-foreground">Current estimate · not historical performance</span>}
         />
         <MetricCard
           label="Deals in play"

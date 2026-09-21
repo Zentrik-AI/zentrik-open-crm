@@ -8,7 +8,9 @@ import { StoreError } from "./store.ts";
 
 /** `crm ui`: serve the built app and the workspace API on loopback. */
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const MODULE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// Source modules live in cli/; packaged JavaScript lives in dist/runtime/cli/.
+const ROOT = fs.existsSync(path.join(MODULE_ROOT, "package.json")) ? MODULE_ROOT : path.resolve(MODULE_ROOT, "../..");
 const DIST = path.join(ROOT, "dist");
 
 /** Tells the app, before it renders, that its records live in a folder. */
@@ -34,12 +36,16 @@ function newestMtime(dir: string): number {
   return newest;
 }
 
-/** A clone has sources but no bundle; an installed package has the bundle
- *  but no sources. Build only when there are sources newer than the bundle. */
+/** Packages include source references, but only a source checkout has
+ *  the Vite configuration needed to rebuild the UI. Ignore package mtimes. */
 function ensureBuilt() {
   const index = path.join(DIST, "index.html");
   const src = path.join(ROOT, "src");
   const built = fs.existsSync(index);
+  if (!fs.existsSync(path.join(ROOT, "vite.config.ts"))) {
+    if (built) return;
+    throw new StoreError("no_bundle", "The app bundle is missing. Reinstall Open CRM.");
+  }
   if (built && (!fs.existsSync(src) || newestMtime(src) <= fs.statSync(index).mtimeMs)) return;
   if (!fs.existsSync(src)) throw new StoreError("no_bundle", "The app bundle is missing. Reinstall Open CRM.");
   process.stderr.write(built ? "The app changed since the last build. Rebuilding…\n" : "Building the app (first run)…\n");
@@ -81,7 +87,10 @@ export async function serveUi(dir: string, options: { port?: number; open?: bool
       if (error.code === "EADDRINUSE" && !options.port && attempt < wanted + 20) server.listen(++attempt, "127.0.0.1");
       else reject(new StoreError("port_in_use", `Port ${attempt} is not available. Pass --port <number>.`));
     });
-    server.on("listening", () => resolve(attempt));
+    server.on("listening", () => {
+      const address = server.address();
+      resolve(address && typeof address !== "string" ? address.port : attempt);
+    });
     server.listen(attempt, "127.0.0.1");
   });
 

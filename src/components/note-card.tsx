@@ -1,8 +1,8 @@
-import { cn, formatDateFull, formatRelative, freshness } from "../lib/utils";
+import { cn, formatDateFull, formatRelative } from "../lib/utils";
 import { sourceMeta } from "../lib/meta";
 import type { Note } from "../types";
 import { Badge } from "./ui/badge";
-import { SentimentMark, FreshnessDot } from "./ui/dot";
+import { SentimentMark } from "./ui/dot";
 import { Tooltip } from "./ui/tooltip";
 import { RedactedChip, useBuildroom } from "./ui/privacy";
 
@@ -19,7 +19,6 @@ export function NoteCard({
   className?: string;
 }) {
   const source = sourceMeta[note.source];
-  const fresh = freshness(note.createdAt, 21);
   const buildroom = useBuildroom();
 
   return (
@@ -47,9 +46,8 @@ export function NoteCard({
         <span className="ml-auto flex items-center gap-1.5 text-[12px] text-faint-foreground">
           {accountName && <span className="truncate">{accountName}</span>}
           {accountName && <span aria-hidden>·</span>}
-          <FreshnessDot value={fresh} />
           <time dateTime={note.createdAt} title={formatDateFull(note.createdAt)} className="font-mono tabular-nums">
-            {formatRelative(note.createdAt)}
+            Captured {formatRelative(note.createdAt)}
           </time>
         </span>
       </div>
@@ -62,6 +60,7 @@ export function NoteCard({
         <>
           <h3 className="mt-2.5 text-h3 text-foreground">{note.title}</h3>
           <p className="mt-1.5 whitespace-pre-line text-body text-muted-foreground">{note.body}</p>
+          <p className="mt-2 text-[12px] text-muted-foreground">Source date: {note.occurredAt ? formatDateFull(note.occurredAt) : "unknown"} · {note.interaction ? "Verified interaction" : "Not verified contact"}</p>
         </>
       )}
     </article>

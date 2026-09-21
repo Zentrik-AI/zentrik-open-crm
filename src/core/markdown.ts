@@ -24,7 +24,7 @@ export const GENERATED_NOTICE =
 
 // Quote scalar YAML values so names with `:`, leading `#`, or brackets stay valid.
 const yq = (value: string) => JSON.stringify(value);
-const day = (iso: string) => iso.slice(0, 10);
+const day = (iso: string | null) => iso?.slice(0, 10) ?? "unknown";
 const tick = (id: string) => `\`${id}\``;
 
 export function accountMarkdown(account: Account, deals: Deal[], tasks: Task[], notes: Note[], notice = false): string {
@@ -40,7 +40,8 @@ export function accountMarkdown(account: Account, deals: Deal[], tasks: Task[], 
     `health: ${account.health}`,
     `fit: ${account.fit}`,
     `tags: [${["crm", ...account.tags].map((tag) => JSON.stringify(tag)).join(", ")}]`,
-    `updated: ${yq(account.lastTouch)}`,
+    `lastInteraction: ${account.lastTouch ? yq(account.lastTouch) : "null"}`,
+    `archived: ${Boolean(account.archivedAt)}`,
     "---",
   ].join("\n");
 
@@ -69,11 +70,11 @@ export function accountMarkdown(account: Account, deals: Deal[], tasks: Task[], 
     lines.push("");
   }
 
-  const openTasks = tasks.filter((task) => task.status === "open");
+  const openTasks = tasks.filter((task) => task.status === "open" || task.status === "waiting");
   if (openTasks.length) {
     lines.push("## Open tasks");
     for (const task of openTasks) {
-      lines.push(`- [ ] ${task.title} (due ${day(task.due)}, ${task.priority}, ${task.owner}) ${tick(task.id)}`);
+      lines.push(`- [ ] ${task.title} (${task.status}, ${task.status === "waiting" ? "review" : "due"} ${day(task.due)}, ${task.priority}, ${task.owner}) ${tick(task.id)}`);
       if (task.reason) lines.push(`  - Why: ${task.reason}`);
       if (task.evidence?.length) lines.push(`  - Evidence: ${task.evidence.map(tick).join(", ")}`);
     }
@@ -85,7 +86,7 @@ export function accountMarkdown(account: Account, deals: Deal[], tasks: Task[], 
     for (const note of notes) {
       lines.push(
         `### ${note.title} ${tick(note.id)}`,
-        `*${noteSourceLabel[note.source]} · ${day(note.createdAt)} · ${note.sentiment}${note.origin ? ` · captured by ${note.origin.name}` : ""}*`,
+        `*${noteSourceLabel[note.source]} · source date ${note.occurredAt ? day(note.occurredAt) : "unknown"} · captured ${day(note.createdAt)} · ${note.interaction ? "verified interaction" : "not verified contact"} · ${note.sentiment}${note.origin ? ` · captured by ${note.origin.name}` : ""}*`,
         `Source reference: ${note.sourceRef || "Not recorded"}`,
         "",
         note.body,
@@ -120,7 +121,7 @@ export function indexMarkdown(workspace: Workspace, slugs: Map<string, string>, 
   lines.push(`# ${workspace.name}`, "", "| Account | Stage | Priority | Owner | Health | Last touch | Id |", "| --- | --- | --- | --- | --- | --- | --- |");
   for (const account of workspace.accounts) {
     const link = `[${account.name.replace(/\|/g, "\\|")}](${layout.accountDir}${slugs.get(account.id)}.md)`;
-    lines.push(`| ${link} | ${account.stage} | ${account.priority} | ${account.owner} | ${account.health} | ${day(account.lastTouch)} | ${tick(account.id)} |`);
+    lines.push(`| ${link} | ${account.stage} | ${account.priority} | ${account.owner} | ${account.health ?? "unknown"} | ${day(account.lastTouch)} | ${tick(account.id)} |`);
   }
   return lines.join("\n") + "\n";
 }

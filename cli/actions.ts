@@ -3,7 +3,7 @@ import { buildBrief, type Brief } from "../src/core/brief.ts";
 import { accountMarkdown, accountRecords, uniqueSlugs } from "../src/core/markdown.ts";
 import { OpError, newChange, pendingProposals, projectPending, resolveProposal, submitChange } from "../src/core/ops.ts";
 import { validateWorkspace } from "../src/core/validate.ts";
-import { readWorkspace, staleViews, updateWorkspace, writeViews } from "./store.ts";
+import { readWorkspace, staleViews, updateWorkspace, repairViews } from "./store.ts";
 
 /**
  * What the `crm` command and the MCP server can do, as plain functions over a
@@ -117,11 +117,11 @@ export interface ChangeResult {
 }
 
 /** Submit one operation. `account` fields may be any account reference. */
-export function change(dir: string, actor: Actor, build: (workspace: Workspace) => Op): ChangeResult {
+export function change(dir: string, actor: Actor, build: (workspace: Workspace) => Op, options: { key?: string; review?: boolean } = {}): ChangeResult {
   return updateWorkspace(dir, ({ workspace }) => {
     // Resolve references against pending work too, so an agent can add a note
     // to an account it proposed a moment ago.
-    const submitted = submitChange(workspace, newChange(build(projectPending(workspace)), actor));
+    const submitted = submitChange(workspace, { ...newChange(build(projectPending(workspace)), actor), ...options });
     const result: ChangeResult =
       submitted.outcome === "applied"
         ? { outcome: "applied", summary: submitted.summary, id: submitted.targetId, recordId: submitted.targetId, next: "Applied and saved." }
@@ -168,9 +168,8 @@ export function activity(dir: string, limit = 20) {
 /** Validate the records and confirm the Markdown views match them. With
  *  `fix`, stale views are regenerated first. */
 export function check(dir: string, fix = false) {
-  const { workspace } = readWorkspace(dir);
+  const { workspace } = fix ? repairViews(dir) : readWorkspace(dir);
   const errors = validateWorkspace(workspace);
-  if (fix && errors.length === 0) writeViews(dir, workspace);
   const stale = staleViews(dir, workspace);
   const warnings: string[] = [];
   for (const task of workspace.tasks) {

@@ -18,7 +18,7 @@ export function NotesView({
   notes: Note[];
   accounts: Account[];
   accountsById: Map<string, Account>;
-  onAddNote: (draft: NoteDraft) => void;
+  onAddNote: (draft: NoteDraft) => boolean;
 }) {
   const [draft, setDraft] = useState<NoteDraft>({
     accountId: accounts[0]?.id ?? "",
@@ -34,8 +34,7 @@ export function NotesView({
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!draft.title.trim() || !draft.body.trim()) return;
-    onAddNote(draft);
-    setDraft((c) => ({ ...c, title: "", body: "", sourceRef: "" }));
+    if (onAddNote(draft)) setDraft((c) => ({ ...c, title: "", body: "", sourceRef: "", occurredAt: "", interaction: false }));
   }
 
   const selectedAccount = accounts.find((account) => account.id === draft.accountId);
@@ -60,7 +59,7 @@ export function NotesView({
               </Select>
             </Field>
             <Field label="Source">
-              <Select value={draft.source} onChange={(e) => set({ source: e.target.value as NoteDraft["source"] })}>
+              <Select value={draft.source} onChange={(e) => set({ source: e.target.value as NoteDraft["source"], interaction: false })}>
                 {noteSources.map((s) => (
                   <option key={s} value={s}>
                     {sourceMeta[s].label}
@@ -68,6 +67,8 @@ export function NotesView({
                 ))}
               </Select>
             </Field>
+            <Field label="Source date" hint="When this happened. Leave unknown if the source has no date."><Input aria-label="Source date" type="date" value={draft.occurredAt ?? ""} onChange={e => set({ occurredAt: e.target.value })} /></Field>
+            {["call", "email", "meeting", "support"].includes(draft.source) && <label className="flex items-center gap-2 text-body-sm"><input type="checkbox" checked={draft.interaction ?? false} onChange={e => set({ interaction: e.target.checked })} />This records an actual interaction with the account</label>}
             {selectedAccount && selectedAccount.contacts.length > 0 && (
               <Field label="Contact" hint="Optional — connect the source to a person.">
                 <Select value={draft.contactId} onChange={(e) => set({ contactId: e.target.value })}>

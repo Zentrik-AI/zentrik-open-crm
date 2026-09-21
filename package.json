@@ -25,20 +25,25 @@
     "zentrik"
   ],
   "bin": {
-    "open-crm": "bin/open-crm.js"
+    "open-crm": "dist/runtime/bin/open-crm.js"
   },
   "files": [
     "bin",
     "cli",
     "src",
     "dist",
+    "docs",
     "README.md",
     "LICENSE",
+    "TRADEMARKS.md",
     "NOTICE"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && npm run build:cli",
+    "build:cli": "tsc --target ES2022 --module NodeNext --moduleResolution NodeNext --moduleDetection force --strict --esModuleInterop --skipLibCheck --allowJs --rewriteRelativeImportExtensions --rootDir . --outDir dist/runtime bin/open-crm.js",
+    "prepack": "npm run build",
+    "test:package": "node scripts/package-smoke.mjs",
     "preview": "vite preview",
     "crm": "node bin/open-crm.js",
     "test": "node --test \"tests/unit/*.test.ts\"",
@@ -61,7 +66,7 @@
     "autoprefixer": "^10.6.1",
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.15",
-    "typescript": "^5.6.3",
+    "typescript": "^5.9.3",
     "vite": "^8.3.0"
   },
   "engines": {

@@ -1,4 +1,4 @@
-import type { Workspace } from "../types";
+import type { Workspace } from "../types.ts";
 
 export const seedWorkspace: Workspace = {
   name: "Open CRM Workspace",

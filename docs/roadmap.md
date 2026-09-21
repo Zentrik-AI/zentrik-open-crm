@@ -8,6 +8,10 @@ workspace operations.
 - Make the CRM useful from a clean checkout, in the browser and on a folder.
 - Keep the agent loop trustworthy: one validated write path, review by default,
   grounded tasks, a visible record of what agents did.
+- Package portable agent setup and opt-in daily/weekly routine contracts.
+- Keep unknown scores, source dates and verified contact distinct; protect
+  human edits from stale proposals and make repeat runs idempotent.
+- Support task maintenance and reversible account archives without losing history.
 - Keep demo data synthetic, realistic, and clearly fictitious.
 - Keep share-safe mode from leaking private account fields.
 - Let local users export feedback bundles and GitHub issue drafts.
@@ -16,7 +20,7 @@ workspace operations.
 
 - Publish the `crm` command to npm so setup is one `npx` line.
 - Add CSV import for accounts and notes.
-- Add editing and archiving for records, as operations.
+- Extend record maintenance to contact and source-note corrections.
 - Add connector contracts for email, calendar, support, GitHub, reviews, and
   usage events. Each lands sources as notes with references.
 - Add hosted direct submission for Tell Open CRM feedback bundles.

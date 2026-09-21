@@ -154,9 +154,9 @@ export function ContactRow({ contact }: { contact: Contact }) {
           <Private redactedLabel="name hidden">{contact.name}</Private>
         </div>
         <div className="mt-0.5 truncate text-[12px] text-muted-foreground">
-          {contact.role} · last seen{" "}
-          <time dateTime={contact.lastSeen} title={formatDateFull(contact.lastSeen)} className="font-mono tabular-nums">
-            {formatRelative(contact.lastSeen)}
+          {contact.role} · {contact.lastSeen ? "last contact " : ""}
+          <time dateTime={contact.lastSeen ?? undefined} title={contact.lastSeen ? formatDateFull(contact.lastSeen) : "No verified contact date"} className="font-mono tabular-nums">
+            {contact.lastSeen ? formatRelative(contact.lastSeen) : "Contact date unknown"}
           </time>
         </div>
       </div>

@@ -2,12 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs, type ParseArgsConfig } from "node:util";
-import type { AccountPatch, AccountStage, Actor, Contact, DealStage, NoteSource, Priority, Sentiment, Workspace } from "../src/types.ts";
+import type { AccountPatch, AccountStage, Actor, Contact, DealStage, NoteSource, Priority, Sentiment, TaskPatch, Workspace } from "../src/types.ts";
 import { createDemoWorkspace } from "../src/core/demo.ts";
 import { OpError } from "../src/core/ops.ts";
 import { normalizeWorkspace, parseWorkspace } from "../src/core/validate.ts";
 import * as actions from "./actions.ts";
-import { StoreError, WORKSPACE_FILE, readWorkspace, resolveWorkspaceDir, writeWorkspace } from "./store.ts";
+import { StoreError, WORKSPACE_FILE, readWorkspace, resolveWorkspaceDir, writeWorkspace, replaceWorkspace, restoreWorkspace, repairViews } from "./store.ts";
+import { agentKitFiles } from "./agent-kit.ts";
 import { agentsMd, claudeMd, cmdWrapper, gitignore, inboxReadme, mcpConfig, playbooks, shWrapper } from "./templates.ts";
 
 const BIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "open-crm.js");
@@ -18,9 +19,10 @@ Usage: crm <command> [options]        (add --json to any command)
 
 Set up
   init <folder> [--name "<name>"] [--demo]   create a workspace folder
-  init <folder> --refresh                    rewrite AGENTS.md, playbooks, and the ./crm wrapper
+  init <folder> --refresh                    refresh wrappers; stage guide updates without replacing edits
   ui [--port 5178] [--no-open]               open the visual CRM on this workspace
   mcp                                        run the MCP server over stdio
+  setup                                      inspect setup and routine configuration (does not schedule)
 
 Read
   status                                     what needs attention, and why
@@ -38,6 +40,10 @@ Write
   task add --title "<t>" [--account <account>] [--due 2026-10-02] [--priority low|medium|high|urgent]
            [--owner "<name>"] [--reason "<why>"] [--evidence <note id>,<note id>]
   task done <task id>        task reopen <task id>
+  task update <id> [--title "..."] [--due DATE] [--owner "..."] [--priority ...] [--status ...] [--reason "..."]
+  task wait <id> --due DATE --reason "review trigger"     waiting is not due outreach
+  task cancel <id> --reason "why"
+  account archive <account> --reason "why"    restore uses the same syntax
   deal add --account <account> --name "<n>" [--value 48000] [--stage lead|qualified|proposal|negotiation] [--close 2026-11-15]
   deal move <deal id> <lead|qualified|proposal|negotiation|won|lost>
   account add --name "<n>" [--domain d] [--segment "<s>"] [--owner "<o>"] [--stage <stage>] [--priority <p>]
@@ -55,11 +61,15 @@ Maintain
   check [--fix]                              validate records; --fix regenerates stale Markdown views
   export [file]                              write a backup of workspace.json
   import <backup.json>                       replace this workspace with a backup (a person's call)
+  restore <backup revision>                  restore a local replacement backup (a person's call)
 
 Options
   -w, --workspace <folder>   workspace to use (default: nearest workspace.json above the current folder)
   --as <name>                name recorded on changes (default: detected from your harness)
   --json                     structured output
+  --key <stable-key>          deduplicate retries across runs; reuse identical payload
+  --review                   require proposal review even in direct mode
+  note add: --occurred-at DATE is the source date; --interaction marks verified contact
 `;
 
 type Flags = Record<string, string | boolean | string[] | undefined>;
@@ -68,6 +78,8 @@ const common = {
   workspace: { type: "string", short: "w" },
   json: { type: "boolean" },
   as: { type: "string" },
+  key: { type: "string" },
+  review: { type: "boolean" },
   help: { type: "boolean", short: "h" },
 } as const;
 
@@ -128,7 +140,8 @@ function emit(flags: Flags, data: unknown, render: () => string) {
   process.stdout.write(flags.json ? `${JSON.stringify(data, null, 2)}\n` : `${render().trimEnd()}\n`);
 }
 
-const day = (iso: string) => iso.slice(0, 10);
+const day = (iso: string | null) => iso?.slice(0, 10) ?? "unknown";
+const writeOptions = (flags: Flags) => ({ key: text(flags, "key"), review: flags.review === true });
 const money = (value: number) => `$${Math.round(value).toLocaleString("en-US")}`;
 
 function renderChange(result: actions.ChangeResult) {
@@ -147,16 +160,24 @@ function writeIfMissing(file: string, content: string, overwrite: boolean, mode?
 
 function scaffold(dir: string, workspace: Workspace, refresh: boolean) {
   const node = process.execPath;
-  writeIfMissing(path.join(dir, "AGENTS.md"), agentsMd(workspace), refresh);
-  writeIfMissing(path.join(dir, "CLAUDE.md"), claudeMd, refresh);
-  for (const [name, content] of Object.entries(playbooks)) writeIfMissing(path.join(dir, "playbooks", name), content, refresh);
+  const managed = { "AGENTS.md": agentsMd(workspace), "CLAUDE.md": claudeMd,
+    ...Object.fromEntries(Object.entries(playbooks).map(([name, content]) => [`playbooks/${name}`, content])), ...agentKitFiles() };
+  for (const [name, content] of Object.entries(managed)) {
+    const file = path.join(dir, name);
+    if (writeIfMissing(file, content, false)) continue;
+    if (refresh && fs.readFileSync(file, "utf8") !== content && name !== "automations/routines.json") {
+      writeIfMissing(path.join(dir, ".open-crm", "kit-updates", name), content, true);
+    }
+  }
   writeIfMissing(path.join(dir, "inbox", "README.md"), inboxReadme, false);
   writeIfMissing(path.join(dir, "drafts", ".gitkeep"), "", false);
   writeIfMissing(path.join(dir, ".gitignore"), gitignore, false);
   writeIfMissing(path.join(dir, "crm"), shWrapper(node, BIN), true, 0o755);
   writeIfMissing(path.join(dir, "crm.cmd"), cmdWrapper(node, BIN), true);
-  writeIfMissing(path.join(dir, ".mcp.json"), mcpConfig("./crm", ["mcp"]), refresh);
-  writeIfMissing(path.join(dir, ".cursor", "mcp.json"), mcpConfig("./crm", ["mcp"]), refresh);
+  const mcpCommand = process.platform === "win32" ? node : "./crm";
+  const mcpArgs = process.platform === "win32" ? [BIN, "--workspace", dir, "mcp"] : ["mcp"];
+  writeIfMissing(path.join(dir, ".mcp.json"), mcpConfig(mcpCommand, mcpArgs), false);
+  writeIfMissing(path.join(dir, ".cursor", "mcp.json"), mcpConfig(mcpCommand, mcpArgs), false);
 }
 
 function demoWorkspace(name?: string): Workspace {
@@ -173,8 +194,8 @@ function init(argv: string[]) {
   if (flags.refresh) {
     const { workspace } = readWorkspace(dir);
     scaffold(dir, workspace, true);
-    writeWorkspace(dir, workspace);
-    return emit(flags, { dir, refreshed: true }, () => `✓ Refreshed the agent files and ./crm wrapper in ${dir}`);
+    repairViews(dir);
+    return emit(flags, { dir, refreshed: true, updates: ".open-crm/kit-updates", preservesUserFiles: true }, () => `✓ Updated ./crm and installed missing agent files in ${dir}. Existing instructions and schedule receipts are preserved. Review any new bundled instructions in .open-crm/kit-updates.`);
   }
   if (fs.existsSync(file)) throw new OpError("exists", `${file} already exists. Use --refresh to update the agent files around it.`);
 
@@ -229,6 +250,14 @@ async function run(argv: string[]) {
     const { flags } = parse(rest, { port: { type: "string" }, "no-open": { type: "boolean" } });
     const { serveUi } = await import("./server.ts");
     return serveUi(resolveWorkspaceDir(text(flags, "workspace")), { port: numberFlag(flags, "port"), open: !flags["no-open"] });
+  }
+
+  if (command === "setup") {
+    const { flags } = parse(rest);
+    const dir = resolveWorkspaceDir(text(flags, "workspace"));
+    const file = path.join(dir, "automations", "routines.json");
+    const configuration = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : null;
+    return emit(flags, { workspace: dir, configuration, instructions: "docs/agent-setup.md", liveScheduleVerified: false }, () => `Read docs/agent-setup.md in ${dir}. Confirm scope and run one manual review. Local configuration: ${configuration?.status ?? "missing: run init --refresh"}. A manifest is not a running scheduler; verify native IDs in the host before claiming active automation.`);
   }
 
   if (command === "status") {
@@ -349,15 +378,25 @@ async function run(argv: string[]) {
     decider(flags);
     const { workspace, errors } = parseWorkspace(fs.readFileSync(path.resolve(pos[0]), "utf8"));
     if (!workspace) throw new OpError("invalid_workspace", `That file is not a valid workspace:\n${errors.slice(0, 12).map((e) => `  - ${e}`).join("\n")}`);
-    writeWorkspace(dir, workspace);
-    return emit(flags, { imported: workspace.name }, () => `✓ Replaced this workspace with ${workspace.name} (${workspace.accounts.length} accounts).`);
+    const baseRev = readWorkspace(dir).rev;
+    const saved = replaceWorkspace(dir, workspace, baseRev);
+    return emit(flags, { imported: workspace.name, backupPath: saved.backupPath }, () => `✓ Replaced this workspace with ${workspace.name} (${workspace.accounts.length} accounts). Previous records: ${saved.backupPath}`);
+  }
+
+  if (command === "restore") {
+    const { flags, rest: pos } = parse(rest, { "approved-by": { type: "string" } });
+    const dir = resolveWorkspaceDir(text(flags, "workspace"));
+    decider(flags);
+    if (!pos[0]) throw new OpError("missing_field", "Provide the revision from .open-crm/backups/<revision>.json.");
+    const saved = restoreWorkspace(dir, pos[0], readWorkspace(dir).rev);
+    return emit(flags, { restored: saved.rev, backupPath: saved.backupPath }, () => `✓ Restored revision ${saved.rev}. Previous records: ${saved.backupPath}`);
   }
 
   /* ---- writes: <noun> <verb> ---- */
   const args = rest.slice(1);
 
   if (command === "note" && sub === "add") {
-    const { flags } = parse(args, { account: { type: "string" }, title: { type: "string" }, body: { type: "string" }, source: { type: "string" }, ref: { type: "string" }, sentiment: { type: "string" }, contact: { type: "string" } });
+    const { flags } = parse(args, { account: { type: "string" }, title: { type: "string" }, body: { type: "string" }, source: { type: "string" }, ref: { type: "string" }, sentiment: { type: "string" }, contact: { type: "string" }, "occurred-at": { type: "string" }, interaction: { type: "boolean" } });
     const dir = resolveWorkspaceDir(text(flags, "workspace"));
     const body = readBody(required(flags, "body"));
     const result = actions.change(dir, detectActor(flags), (workspace) => ({
@@ -369,7 +408,9 @@ async function run(argv: string[]) {
       sourceRef: text(flags, "ref"),
       sentiment: text(flags, "sentiment") as Sentiment | undefined,
       contactId: text(flags, "contact"),
-    }));
+      occurredAt: text(flags, "occurred-at"),
+      interaction: flags.interaction === true,
+    }), writeOptions(flags));
     return emit(flags, result, () => renderChange(result));
   }
 
@@ -384,14 +425,33 @@ async function run(argv: string[]) {
       owner: text(flags, "owner"),
       reason: text(flags, "reason"),
       evidence: text(flags, "evidence")?.split(",").map((id) => id.trim()).filter(Boolean),
-    }));
+    }), writeOptions(flags));
     return emit(flags, result, () => renderChange(result));
   }
 
   if (command === "task" && (sub === "done" || sub === "reopen")) {
     const { flags, rest: pos } = parse(args);
     if (!pos[0]) throw new OpError("missing_field", `Usage: crm task ${sub} <task id>`);
-    const result = actions.change(resolveWorkspaceDir(text(flags, "workspace")), detectActor(flags), () => ({ type: "task.set_status", taskId: pos[0], status: sub === "done" ? "done" : "open" }));
+    const result = actions.change(resolveWorkspaceDir(text(flags, "workspace")), detectActor(flags), () => ({ type: "task.set_status", taskId: pos[0], status: sub === "done" ? "done" : "open" }), writeOptions(flags));
+    return emit(flags, result, () => renderChange(result));
+  }
+
+  if (command === "task" && ["update", "wait", "cancel"].includes(sub)) {
+    const { flags, rest: pos } = parse(args, { title: { type: "string" }, due: { type: "string" }, owner: { type: "string" }, priority: { type: "string" }, reason: { type: "string" }, status: { type: "string" } });
+    if (!pos[0]) throw new OpError("missing_field", "A task id is required.");
+    const patch: TaskPatch = {};
+    for (const key of ["title", "due", "owner", "reason"] as const) if (text(flags, key) !== undefined) patch[key] = text(flags, key);
+    if (text(flags, "priority")) patch.priority = text(flags, "priority") as Priority;
+    if (text(flags, "status")) patch.status = text(flags, "status") as TaskPatch["status"];
+    if (sub === "wait") { patch.status = "waiting"; patch.reason = required(flags, "reason"); patch.due = required(flags, "due"); }
+    if (sub === "cancel") { patch.status = "cancelled"; patch.reason = required(flags, "reason"); }
+    const result = actions.change(resolveWorkspaceDir(text(flags, "workspace")), detectActor(flags), () => ({ type: "task.update", taskId: pos[0], patch }), writeOptions(flags));
+    return emit(flags, result, () => renderChange(result));
+  }
+
+  if (command === "account" && ["archive", "restore"].includes(sub)) {
+    const { flags, rest: pos } = parse(args, { reason: { type: "string" } });
+    const result = actions.change(resolveWorkspaceDir(text(flags, "workspace")), detectActor(flags), workspace => ({ type: "account.archive", accountId: actions.resolveAccount(workspace, pos.join(" ")).id, archived: sub === "archive", reason: required(flags, "reason") }), writeOptions(flags));
     return emit(flags, result, () => renderChange(result));
   }
 
@@ -405,14 +465,14 @@ async function run(argv: string[]) {
       stage: text(flags, "stage") as DealStage | undefined,
       closeDate: text(flags, "close"),
       owner: text(flags, "owner"),
-    }));
+    }), writeOptions(flags));
     return emit(flags, result, () => renderChange(result));
   }
 
   if (command === "deal" && sub === "move") {
     const { flags, rest: pos } = parse(args);
     if (!pos[0] || !pos[1]) throw new OpError("missing_field", "Usage: crm deal move <deal id> <stage>");
-    const result = actions.change(resolveWorkspaceDir(text(flags, "workspace")), detectActor(flags), () => ({ type: "deal.move", dealId: pos[0], stage: pos[1] as DealStage }));
+    const result = actions.change(resolveWorkspaceDir(text(flags, "workspace")), detectActor(flags), () => ({ type: "deal.move", dealId: pos[0], stage: pos[1] as DealStage }), writeOptions(flags));
     return emit(flags, result, () => renderChange(result));
   }
 
@@ -426,7 +486,7 @@ async function run(argv: string[]) {
       owner: text(flags, "owner"),
       stage: text(flags, "stage") as AccountStage | undefined,
       priority: text(flags, "priority") as Priority | undefined,
-    }));
+    }), writeOptions(flags));
     return emit(flags, result, () => renderChange(result));
   }
 
@@ -445,7 +505,7 @@ async function run(argv: string[]) {
     if (list(flags, "need")) patch.needs = list(flags, "need");
     if (list(flags, "risk")) patch.risks = list(flags, "risk");
     if (list(flags, "tag")) patch.tags = list(flags, "tag");
-    const result = actions.change(resolveWorkspaceDir(text(flags, "workspace")), detectActor(flags), (workspace) => ({ type: "account.update", accountId: actions.resolveAccount(workspace, pos.join(" ")).id, patch }));
+    const result = actions.change(resolveWorkspaceDir(text(flags, "workspace")), detectActor(flags), (workspace) => ({ type: "account.update", accountId: actions.resolveAccount(workspace, pos.join(" ")).id, patch }), writeOptions(flags));
     return emit(flags, result, () => renderChange(result));
   }
 
@@ -458,7 +518,7 @@ async function run(argv: string[]) {
       role: required(flags, "role"),
       influence: text(flags, "influence") as Contact["influence"] | undefined,
       email: text(flags, "email"),
-    }));
+    }), writeOptions(flags));
     return emit(flags, result, () => renderChange(result));
   }
 
@@ -470,7 +530,7 @@ export async function main(argv: string[]) {
   // --workspace there); move them behind it so each command parses them.
   const lead: string[] = [];
   while (argv[0]?.startsWith("-") && !["-h", "--help"].includes(argv[0])) {
-    lead.push(...argv.splice(0, ["--workspace", "-w", "--as"].includes(argv[0]) ? 2 : 1));
+    lead.push(...argv.splice(0, ["--workspace", "-w", "--as", "--key"].includes(argv[0]) ? 2 : 1));
   }
   const [command, ...rest] = argv;
   try {

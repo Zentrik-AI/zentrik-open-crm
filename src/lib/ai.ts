@@ -145,7 +145,7 @@ function accountContext(account: Account, notes: Note[], deals: Deal[], tasks: T
 
   return [
     `ACCOUNT: ${account.name} — ${account.segment}`,
-    `Stage: ${account.stage} · Priority: ${account.priority} · Health: ${account.health}/100 · Fit: ${account.fit}/100 · Owner: ${account.owner}`,
+    `Stage: ${account.stage} · Priority: ${account.priority} · Health: ${account.health === null ? "unknown" : `${account.health}/100`} · Fit: ${account.fit === null ? "unknown" : `${account.fit}/100`} · Owner: ${account.owner}`,
     `Needs:\n${account.needs.map((n) => `- ${n}`).join("\n")}`,
     `Risks:\n${account.risks.map((r) => `- ${r}`).join("\n")}`,
     `Open deals:\n${dealBlock}`,

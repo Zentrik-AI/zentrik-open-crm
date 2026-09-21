@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import type { Account, Deal } from "../types";
 import type { DealDraft } from "../lib/drafts";
@@ -29,7 +29,7 @@ export function PipelineView({
   onAdvanceDeal: (id: string) => void;
   onLoseDeal: (id: string) => void;
   onSelectAccount: (id: string) => void;
-  onAddDeal: (draft: DealDraft) => void;
+  onAddDeal: (draft: DealDraft) => boolean;
 }) {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<DealDraft>({
@@ -38,8 +38,11 @@ export function PipelineView({
     value: "",
     stage: "lead",
     closeDate: "",
-    owner: accounts[0]?.owner ?? "",
+    owner: "",
   });
+  useEffect(() => {
+    if (!accounts.some(a => a.id === draft.accountId)) setDraft(current => ({ ...current, accountId: accounts[0]?.id ?? "", owner: "" }));
+  }, [accounts, draft.accountId]);
 
   const weighted = deals
     .filter((d) => isOpenDeal(d.stage))
@@ -50,7 +53,7 @@ export function PipelineView({
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!draft.name.trim() || !draft.accountId) return;
-    onAddDeal(draft);
+    if (!onAddDeal(draft)) return;
     setDraft((c) => ({ ...c, name: "", value: "", closeDate: "" }));
     setAdding(false);
   }

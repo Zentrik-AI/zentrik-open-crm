@@ -47,6 +47,8 @@ export const emptyContactDraft = {
 export type ContactDraft = typeof emptyContactDraft;
 
 export type NoteDraft = {
+  occurredAt?: string;
+  interaction?: boolean;
   accountId: string;
   contactId: string;
   source: NoteSource;

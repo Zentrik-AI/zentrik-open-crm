@@ -1,10 +1,13 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Layers3, Lock, Moon, Search, Sun } from "lucide-react";
 import { createDemoWorkspace, hasStoredWorkspace, loadWorkspace, resetWorkspace, saveWorkspace, touchWorkspace } from "./lib/storage";
-import { loadOnboardingState, saveOnboardingState, type OnboardingMode } from "./lib/onboarding";
+import { loadOnboardingState, saveOnboardingState, type OnboardingMode, type OnboardingState } from "./lib/onboarding";
 import { cn, makeId } from "./lib/utils";
 import { primaryNav, secondaryNav, allNav, type View } from "./lib/nav";
 import { isOpenDeal, pipelineColumns } from "./lib/meta";
+import { newChange, pendingProposals, resolveProposal, submitChange } from "./core/ops.ts";
+import { normalizeWorkspace, parseWorkspace } from "./core/validate.ts";
+import { BackendError, folderBacked, loadFolder, replaceFolderWorkspace, sendChange, sendDecision, watchFolder, type FolderState } from "./lib/backend";
 import {
   emptyAccountDraft,
   emptyContactDraft,
@@ -39,7 +42,7 @@ import {
 import { downloadICS, tasksToICS } from "./lib/ics";
 import { createGitHubIssueDraft, type FeedbackDraft } from "./lib/feedback";
 import { buildAccountAgentHandoff, buildWorkspaceAgentStarterPrompt } from "./lib/agent";
-import type { Account, Deal, DealStage, Note, Task, Workspace } from "./types";
+import type { Account, AgentMode, Change, Op, Workspace } from "./types";
 import { PrivacyProvider } from "./components/ui/privacy";
 import { ToastProvider, useToast } from "./components/ui/toast";
 import { NavItem } from "./components/ui/nav-item";
@@ -56,6 +59,7 @@ import { TasksView } from "./views/TasksView";
 import { NotesView } from "./views/NotesView";
 import { SettingsView, type AiTest } from "./views/SettingsView";
 import { ImproveView } from "./views/ImproveView";
+import { ReviewView } from "./views/ReviewView";
 import { OnboardingView, type WorkspaceSetupDraft } from "./views/OnboardingView";
 import { seedWorkspace } from "./data/seed";
 import type { AiKind } from "./components/ai-panel";
@@ -63,14 +67,19 @@ import type { AiKind } from "./components/ai-panel";
 type AiState = { busy: AiKind | null; result: { kind: AiKind; text: string } | null; copied: boolean; error: string | null };
 const emptyAi: AiState = { busy: null, result: null, copied: false, error: null };
 const DAY = 24 * 60 * 60 * 1000;
-const stageProbability: Record<DealStage, number> = { lead: 20, qualified: 35, proposal: 55, negotiation: 75, won: 100, lost: 0 };
 
-/** Parse a <input type=date> "YYYY-MM-DD" as LOCAL end-of-day, so "due today"
- *  isn't read as overdue for users behind UTC. */
-function endOfDayISO(dateStr: string) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, (m || 1) - 1, d || 1, 23, 59, 59).toISOString();
-}
+/** What the app shows for the instant before a workspace folder has loaded. */
+const blankWorkspace: Workspace = normalizeWorkspace({
+  name: "Open CRM",
+  edition: "Self-Hosted",
+  updatedAt: new Date(0).toISOString(),
+  accounts: [],
+  deals: [],
+  tasks: [],
+  notes: [],
+  ideas: [],
+  changelog: [],
+});
 
 export default function App() {
   return (
@@ -82,9 +91,13 @@ export default function App() {
 
 function AppInner() {
   const toast = useToast();
-  const [workspace, setWorkspace] = useState<Workspace>(() => loadWorkspace());
-  const [onboarding, setOnboarding] = useState(() => loadOnboardingState(hasStoredWorkspace()));
-  const [onboardingOpen, setOnboardingOpen] = useState(() => !loadOnboardingState(hasStoredWorkspace()).completed);
+  const [workspace, setWorkspace] = useState<Workspace>(() => (folderBacked ? blankWorkspace : loadWorkspace()));
+  const [folder, setFolder] = useState<{ ready: boolean; dir?: string; name?: string; error?: string }>({ ready: !folderBacked });
+  const rev = useRef("");
+  const inFlight = useRef(0);
+  const sendQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const [onboarding, setOnboarding] = useState<OnboardingState>(() => (folderBacked ? { completed: true, mode: "existing" } : loadOnboardingState(hasStoredWorkspace())));
+  const [onboardingOpen, setOnboardingOpen] = useState(() => !folderBacked && !loadOnboardingState(hasStoredWorkspace()).completed);
   const [view, setView] = useState<View>("home");
   const [buildroom, setBuildroom] = useState(false);
   const [darkMode, setDarkMode] = useState(() =>
@@ -111,7 +124,83 @@ function AppInner() {
   const [issueDraft, setIssueDraft] = useState<{ title: string; body: string } | null>(null);
   const [issueCopied, setIssueCopied] = useState(false);
 
-  useEffect(() => saveWorkspace(workspace), [workspace]);
+  useEffect(() => {
+    if (!folderBacked) saveWorkspace(workspace);
+  }, [workspace]);
+
+  /* ---- workspace folder: load, stay in sync with what agents write ---- */
+  const pendingSeen = useRef(0);
+  function adopt(state: FolderState) {
+    rev.current = state.rev;
+    setWorkspace(state.workspace);
+    setSelectedAccountId((id) => (state.workspace.accounts.some((a) => a.id === id) ? id : state.workspace.accounts[0]?.id ?? ""));
+    const waiting = pendingProposals(state.workspace);
+    if (waiting.length > pendingSeen.current) {
+      const fresh = waiting.length - pendingSeen.current;
+      toast({ title: `${waiting[0].actor.name} proposed ${fresh === 1 ? "a change" : `${fresh} changes`} · open Review to decide`, tone: "agent" });
+    }
+    pendingSeen.current = waiting.length;
+  }
+  useEffect(() => {
+    if (!folderBacked) return;
+    let live = true;
+    const refresh = () =>
+      loadFolder()
+        .then((state) => {
+          if (!live || inFlight.current > 0) return;
+          const first = rev.current === "";
+          if (first) pendingSeen.current = pendingProposals(state.workspace).length;
+          adopt(state);
+          if (first) {
+            setFolder({ ready: true, dir: state.dir, name: state.folder });
+            setOnboardingOpen(state.workspace.accounts.length === 0);
+          }
+        })
+        .catch((error: Error) => live && setFolder((f) => (f.ready ? f : { ready: false, error: error.message })));
+    void refresh();
+    const stop = watchFolder((next) => next !== rev.current && void refresh());
+    return () => {
+      live = false;
+      stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Send to the folder in order; show the server's records once the queue drains. */
+  function send(request: () => Promise<FolderState>) {
+    inFlight.current += 1;
+    sendQueue.current = sendQueue.current
+      .then(request)
+      .then((state) => {
+        inFlight.current -= 1;
+        if (inFlight.current === 0) adopt(state);
+      })
+      .catch((error: Error) => {
+        inFlight.current -= 1;
+        toast({ title: error.message, tone: "destructive" });
+        if (error instanceof BackendError && error.state) adopt(error.state);
+        else void loadFolder().then(adopt).catch(() => undefined);
+      });
+  }
+
+  /** The one write path for CRM records, shared with the crm command and MCP. */
+  function dispatch(op: Op): Change | null {
+    const change = newChange(op);
+    try {
+      setWorkspace(submitChange(workspace, change).workspace);
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "That change could not be applied.", tone: "destructive" });
+      return null;
+    }
+    if (folderBacked) send(() => sendChange(change));
+    return change;
+  }
+
+  /** Everything that is not a record operation: setup, import, settings, the Improve corner. */
+  function replaceWorkspace(next: Workspace) {
+    setWorkspace(next);
+    if (folderBacked) send(() => replaceFolderWorkspace(next, rev.current));
+  }
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
@@ -138,6 +227,7 @@ function AppInner() {
   }, []);
 
   const accountsById = useMemo(() => new Map(workspace.accounts.map((a) => [a.id, a])), [workspace.accounts]);
+  const notesById = useMemo(() => new Map(workspace.notes.map((n) => [n.id, n])), [workspace.notes]);
   const selectedAccount = accountsById.get(selectedAccountId) ?? workspace.accounts[0];
 
   const counts = useMemo(
@@ -147,6 +237,7 @@ function AppInner() {
       contacts: workspace.accounts.reduce((s, a) => s + a.contacts.length, 0),
       tasks: workspace.tasks.filter((t) => t.status === "open").length,
       notes: workspace.notes.length,
+      review: pendingProposals(workspace).length,
     }),
     [workspace],
   );
@@ -186,14 +277,15 @@ function AppInner() {
   }
 
   function completeOnboarding(mode: OnboardingMode) {
-    setOnboarding(saveOnboardingState(mode));
+    // A folder carries its own state; the browser's memory is per port, not per folder.
+    setOnboarding(folderBacked ? { completed: true, mode } : saveOnboardingState(mode));
     setOnboardingOpen(false);
     setView("home");
   }
 
   function useDemoWorkspace() {
-    const demo = createDemoWorkspace();
-    setWorkspace(demo);
+    const demo = normalizeWorkspace(createDemoWorkspace());
+    replaceWorkspace(demo);
     setSelectedAccountId(demo.accounts[0]?.id ?? "");
     completeOnboarding("demo");
     toast({ title: "Demo workspace ready · all records are synthetic", tone: "accent" });
@@ -243,7 +335,7 @@ function AppInner() {
       ideas: structuredClone(seedWorkspace.ideas),
       changelog: structuredClone(seedWorkspace.changelog),
     };
-    setWorkspace(personal);
+    replaceWorkspace(normalizeWorkspace(personal));
     setSelectedAccountId(accountId);
     completeOnboarding("workspace");
     toast({ title: `Workspace created · ${accountName}`, tone: "success" });
@@ -261,75 +353,50 @@ function AppInner() {
   /* ---- CRM mutations ---- */
   function toggleTask(id: string) {
     const task = workspace.tasks.find((t) => t.id === id);
-    setWorkspace((cur) =>
-      touchWorkspace({
-        ...cur,
-        tasks: cur.tasks.map((t) =>
-          t.id === id
-            ? { ...t, status: t.status === "done" ? "open" : "done", completedAt: t.status === "done" ? undefined : new Date().toISOString() }
-            : t,
-        ),
-      }),
-    );
-    if (task && task.status === "open") toast({ title: `Done · ${task.title}`, tone: "success" });
+    if (!task) return;
+    const done = task.status === "open";
+    if (dispatch({ type: "task.set_status", taskId: id, status: done ? "done" : "open" }) && done) toast({ title: `Done · ${task.title}`, tone: "success" });
   }
 
   function addTask(draft: TaskDraft) {
     if (!draft.title.trim()) return;
-    const account = accountsById.get(draft.accountId);
-    const task: Task = {
-      id: makeId("task"),
-      title: draft.title.trim(),
+    const added = dispatch({
+      type: "task.add",
+      title: draft.title,
       accountId: draft.accountId || undefined,
-      due: draft.due ? endOfDayISO(draft.due) : new Date(Date.now() + 3 * DAY).toISOString(),
-      owner: draft.owner || account?.owner || "Unassigned",
+      due: draft.due || undefined,
+      owner: draft.owner || undefined,
       priority: draft.priority,
-      status: "open",
-      createdAt: new Date().toISOString(),
-    };
-    setWorkspace((cur) => touchWorkspace({ ...cur, tasks: [task, ...cur.tasks] }));
-    toast({ title: "Task added", tone: "signal" });
+    });
+    if (added) toast({ title: "Task added", tone: "signal" });
   }
 
   function addNote(draft: NoteDraft) {
     if (!draft.title.trim() || !draft.body.trim()) return;
-    const note: Note = {
-      id: makeId("note"),
+    const added = dispatch({
+      type: "note.add",
       accountId: draft.accountId,
       contactId: draft.contactId || undefined,
       source: draft.source,
-      title: draft.title.trim(),
-      body: draft.body.trim(),
-      sentiment: "neutral",
-      createdAt: new Date().toISOString(),
-      sourceRef: draft.sourceRef.trim() || "Manual entry",
-    };
-    setWorkspace((cur) =>
-      touchWorkspace({
-        ...cur,
-        notes: [note, ...cur.notes],
-        accounts: cur.accounts.map((a) => (a.id === draft.accountId ? { ...a, lastTouch: note.createdAt } : a)),
-      }),
-    );
-    toast({ title: "Note captured", tone: "signal" });
+      title: draft.title,
+      body: draft.body,
+      sourceRef: draft.sourceRef,
+    });
+    if (added) toast({ title: "Note captured", tone: "signal" });
   }
 
   function addDeal(draft: DealDraft) {
     if (!draft.name.trim() || !draft.accountId) return;
-    const account = accountsById.get(draft.accountId);
-    const deal: Deal = {
-      id: makeId("deal"),
+    const added = dispatch({
+      type: "deal.add",
       accountId: draft.accountId,
-      name: draft.name.trim(),
+      name: draft.name,
       stage: draft.stage,
       value: Number(draft.value) || 0,
-      owner: draft.owner || account?.owner || "Unassigned",
-      closeDate: draft.closeDate ? endOfDayISO(draft.closeDate) : new Date(Date.now() + 30 * DAY).toISOString(),
-      probability: stageProbability[draft.stage],
-      createdAt: new Date().toISOString(),
-    };
-    setWorkspace((cur) => touchWorkspace({ ...cur, deals: [deal, ...cur.deals] }));
-    toast({ title: `Deal added · ${deal.name}`, tone: "account" });
+      owner: draft.owner || undefined,
+      closeDate: draft.closeDate || undefined,
+    });
+    if (added) toast({ title: `Deal added · ${draft.name.trim()}`, tone: "account" });
   }
 
   function advanceDeal(id: string) {
@@ -338,60 +405,33 @@ function AppInner() {
     const i = pipelineColumns.indexOf(deal.stage);
     if (i < 0 || i >= pipelineColumns.length - 1) return;
     const next = pipelineColumns[i + 1];
-    setWorkspace((cur) =>
-      touchWorkspace({
-        ...cur,
-        deals: cur.deals.map((d) => (d.id === id ? { ...d, stage: next, probability: stageProbability[next] } : d)),
-      }),
-    );
-    toast({ title: `${deal.name} → ${next}`, tone: next === "won" ? "success" : "account" });
+    if (dispatch({ type: "deal.move", dealId: id, stage: next })) toast({ title: `${deal.name} → ${next}`, tone: next === "won" ? "success" : "account" });
   }
 
   function loseDeal(id: string) {
     const deal = workspace.deals.find((d) => d.id === id);
     if (!deal) return;
-    setWorkspace((cur) =>
-      touchWorkspace({ ...cur, deals: cur.deals.map((d) => (d.id === id ? { ...d, stage: "lost", probability: 0 } : d)) }),
-    );
-    toast({ title: `${deal.name} marked lost`, tone: "neutral" });
+    if (dispatch({ type: "deal.move", dealId: id, stage: "lost" })) toast({ title: `${deal.name} marked lost`, tone: "neutral" });
   }
 
   function addAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = draftAccount.name.trim();
     if (!name) return;
-    const now = new Date().toISOString();
-    const owner = draftAccount.owner.trim() || "Unassigned";
-    const accountId = makeId("acct");
     const contactName = draftAccount.contactName.trim();
     const contactRole = draftAccount.contactRole.trim();
-    const domain =
-      draftAccount.domain.trim() ||
-      `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "account"}.example`;
-    const account: Account = {
-      id: accountId,
+    const added = dispatch({
+      type: "account.add",
       name,
-      domain,
-      segment: draftAccount.segment.trim() || "New relationship",
+      domain: draftAccount.domain,
+      segment: draftAccount.segment,
+      owner: draftAccount.owner,
       stage: draftAccount.stage,
       priority: draftAccount.priority,
-      arr: 0,
-      health: 70,
-      fit: 70,
-      sourceConfidence: 35,
-      owner,
-      tags: ["new account"],
-      contacts:
-        contactName && contactRole
-          ? [{ id: makeId("contact"), name: contactName, role: contactRole, influence: "champion" as const, lastSeen: now }]
-          : [],
-      needs: ["Needs discovery"],
-      risks: ["No recent note captured yet"],
-      lastTouch: now,
-      createdAt: now,
-    };
-    setWorkspace((cur) => touchWorkspace({ ...cur, accounts: [account, ...cur.accounts] }));
-    setSelectedAccountId(accountId);
+      contact: contactName && contactRole ? { name: contactName, role: contactRole } : undefined,
+    });
+    if (!added) return;
+    setSelectedAccountId(added.recordId);
     setDraftAccount(emptyAccountDraft);
     setAi(emptyAi);
     toast({ title: `Account added · ${name}`, tone: "success" });
@@ -399,20 +439,41 @@ function AppInner() {
 
   function addContact(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const accountId = selectedAccount?.id;
     const name = draftContact.name.trim();
     const role = draftContact.role.trim();
-    if (!accountId || !name || !role || !selectedAccount) return;
-    const now = new Date().toISOString();
-    const contact = { id: makeId("contact"), name, role, influence: draftContact.influence, email: draftContact.email.trim() || undefined, lastSeen: now };
-    setWorkspace((cur) =>
-      touchWorkspace({
-        ...cur,
-        accounts: cur.accounts.map((a) => (a.id === accountId ? { ...a, contacts: [...a.contacts, contact], lastTouch: now } : a)),
-      }),
-    );
+    if (!selectedAccount || !name || !role) return;
+    const added = dispatch({ type: "contact.add", accountId: selectedAccount.id, name, role, influence: draftContact.influence, email: draftContact.email });
+    if (!added) return;
     setDraftContact(emptyContactDraft);
     toast({ title: `Contact added · ${name}`, tone: "account" });
+  }
+
+  /* ---- Review: what agents proposed ---- */
+  function decideProposals(ids: string[], decision: "approve" | "reject") {
+    let next = workspace;
+    const decided: string[] = [];
+    try {
+      for (const id of ids) {
+        next = resolveProposal(next, id, decision, "you").workspace;
+        decided.push(id);
+      }
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "That proposal could not be applied.", tone: "destructive" });
+    }
+    if (decided.length === 0) return;
+    setWorkspace(next);
+    pendingSeen.current = pendingProposals(next).length;
+    if (folderBacked) for (const id of decided) send(() => sendDecision(id, decision));
+    const first = (workspace.proposals ?? []).find((p) => p.id === decided[0]);
+    toast(
+      decision === "reject"
+        ? { title: decided.length === 1 ? "Proposal rejected" : `${decided.length} proposals rejected`, tone: "neutral" }
+        : { title: decided.length === 1 ? `Approved · ${first?.summary ?? ""}` : `Approved ${decided.length} changes`, tone: "success" },
+    );
+  }
+  function setAgentMode(mode: AgentMode) {
+    replaceWorkspace(touchWorkspace({ ...workspace, agentMode: mode }));
+    toast({ title: mode === "review" ? "Agent changes now wait for your review." : "Agent changes now apply directly and are logged.", tone: "agent" });
   }
 
   /* ---- AI ---- */
@@ -525,6 +586,14 @@ function AppInner() {
     const count = downloadCombinedMarkdown(workspace);
     toast({ title: `Downloaded Markdown for ${count} files`, tone: "success" });
   }
+  async function copyText(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: label, tone: "agent" });
+    } catch {
+      toast({ title: "Couldn't copy to the clipboard.", tone: "destructive" });
+    }
+  }
   async function copyWorkspaceAgentPrompt() {
     try {
       await navigator.clipboard.writeText(buildWorkspaceAgentStarterPrompt());
@@ -563,8 +632,9 @@ function AppInner() {
       toast({ title: "Couldn't copy the agent handoff.", tone: "destructive" });
     }
   }
-  function exportTasksICS() {
-    const open = workspace.tasks.filter((t) => t.status === "open");
+  function exportTasksICS(taskIds: string[]) {
+    const selected = new Set(taskIds);
+    const open = workspace.tasks.filter((t) => t.status === "open" && selected.has(t.id));
     downloadICS(tasksToICS(open, accountsById));
     toast({ title: `Exported ${open.length} tasks to calendar (.ics)`, tone: "success" });
   }
@@ -581,19 +651,18 @@ function AppInner() {
     toast({ title: "Workspace exported", tone: "success" });
   }
   async function importWorkspace(file: File, onboardingImport = false) {
-    try {
-      const parsed = JSON.parse(await file.text()) as Workspace;
-      if (!Array.isArray(parsed.accounts)) throw new Error("not a workspace file");
-      setWorkspace(touchWorkspace(parsed));
-      setSelectedAccountId(parsed.accounts[0]?.id ?? "");
-      if (onboardingImport) completeOnboarding("import");
-      toast({ title: "Workspace imported", tone: "success" });
-    } catch {
-      toast({ title: "That file isn't a valid Open CRM workspace.", tone: "destructive" });
+    const { workspace: parsed, errors } = parseWorkspace(await file.text());
+    if (!parsed) {
+      toast({ title: `That file isn't a valid Open CRM workspace. ${errors[0] ?? ""}`.trim(), tone: "destructive" });
+      return;
     }
+    replaceWorkspace(touchWorkspace(parsed));
+    setSelectedAccountId(parsed.accounts[0]?.id ?? "");
+    if (onboardingImport) completeOnboarding("import");
+    toast({ title: "Workspace imported", tone: "success" });
   }
   function handleReset() {
-    const reset = resetWorkspace();
+    const reset = normalizeWorkspace(resetWorkspace());
     setWorkspace(reset);
     setSelectedAccountId(reset.accounts[0]?.id ?? "");
     setAi(emptyAi);
@@ -604,10 +673,10 @@ function AppInner() {
   /* ---- Improve ---- */
   function approveIdea(id: string) {
     const idea = workspace.ideas.find((i) => i.id === id);
-    setWorkspace((cur) =>
+    replaceWorkspace(
       touchWorkspace({
-        ...cur,
-        ideas: cur.ideas.map((i) =>
+        ...workspace,
+        ideas: workspace.ideas.map((i) =>
           i.id === id
             ? { ...i, status: i.status === "candidate" ? "shaping" : i.status === "shaping" ? "queued" : "released", votes: i.votes + 1, confidence: Math.min(99, i.confidence + 3) }
             : i,
@@ -627,7 +696,7 @@ function AppInner() {
       targetRelease: "triage",
       confidence: 60,
     };
-    setWorkspace((cur) => touchWorkspace({ ...cur, ideas: [idea, ...cur.ideas] }));
+    replaceWorkspace(touchWorkspace({ ...workspace, ideas: [idea, ...workspace.ideas] }));
     setIssueDraft(createGitHubIssueDraft(draft));
     setIssueCopied(false);
     toast({ title: "Thanks — added to the roadmap as a candidate.", tone: "idea" });
@@ -659,7 +728,24 @@ function AppInner() {
     : id === "contacts" ? counts.contacts
     : id === "tasks" ? counts.tasks
     : id === "notes" ? counts.notes
+    : id === "review" ? counts.review || undefined
     : undefined;
+
+  if (folderBacked && !folder.ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        {folder.error ? (
+          <div className="max-w-xl space-y-2">
+            <h1 className="font-serif text-h2 text-foreground">This workspace folder could not be opened</h1>
+            <pre className="whitespace-pre-wrap rounded-md border border-border bg-surface-sunken p-3 font-mono text-[12px] leading-5 text-muted-foreground">{folder.error}</pre>
+            <p className="text-body-sm text-muted-foreground">Fix the file, or restore it from a backup, then reload. <code className="font-mono">./crm check</code> lists every problem.</p>
+          </div>
+        ) : (
+          <p className="text-body-sm text-muted-foreground">Opening your workspace…</p>
+        )}
+      </div>
+    );
+  }
 
   if (onboardingOpen) {
     return (
@@ -667,7 +753,9 @@ function AppInner() {
         onCreateWorkspace={createPersonalWorkspace}
         onImport={(file) => void importWorkspace(file, true)}
         onUseDemo={useDemoWorkspace}
-        onClose={onboarding.completed ? () => setOnboardingOpen(false) : undefined}
+        onClose={onboarding.completed && workspace.accounts.length > 0 ? () => setOnboardingOpen(false) : undefined}
+        folderBacked={folderBacked}
+        workspaceName={folderBacked ? workspace.name : undefined}
       />
     );
   }
@@ -688,7 +776,7 @@ function AppInner() {
 
           <nav aria-label="Primary" className="space-y-0.5">
             {primaryNav.map((item) => (
-              <NavItem key={item.id} icon={item.icon} label={item.label} active={view === item.id} count={countFor(item.id)} onClick={() => navigate(item.id)} />
+              <NavItem key={item.id} icon={item.icon} label={item.label} active={view === item.id} count={countFor(item.id)} attention={item.id === "review"} onClick={() => navigate(item.id)} />
             ))}
           </nav>
 
@@ -707,7 +795,9 @@ function AppInner() {
                 Local-first
               </div>
               <p className="text-[11px] leading-4 text-muted-foreground">
-                Your data stays in this browser. AI runs on your own key; sync writes to your own folder.
+                {folderBacked
+                  ? "Your data stays in a folder on this computer, shared with the agents you run there."
+                  : "Your data stays in this browser. AI runs on your own key; sync writes to your own folder."}
               </p>
             </div>
             <div className="border-t border-border px-1 pt-3">
@@ -728,7 +818,9 @@ function AppInner() {
                     <h1 className="truncate font-serif text-[15px] font-medium text-foreground">{workspace.name}</h1>
                     {onboarding.mode === "demo" && <Badge tone="accent">Demo</Badge>}
                   </div>
-                  <p className="truncate text-[11px] text-muted-foreground">{workspace.edition} · local-first</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {workspace.edition} · {folderBacked && folder.name ? `folder ${folder.name}` : "local-first"}
+                  </p>
                 </div>
               </div>
 
@@ -770,6 +862,9 @@ function AppInner() {
                   >
                     <Icon className="h-4 w-4" />
                     {item.label}
+                    {item.id === "review" && counts.review > 0 && (
+                      <span className="rounded-full bg-agent-bg px-1.5 py-px font-mono text-[11px] tabular-nums text-agent-fg">{counts.review}</span>
+                    )}
                     <span className={cn("absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-accent transition-opacity", active ? "opacity-100" : "opacity-0")} aria-hidden />
                   </button>
                 );
@@ -829,10 +924,21 @@ function AppInner() {
               <ContactsView accounts={workspace.accounts} onSelectAccount={selectAccountAndOpen} />
             </div>
             <div data-view="tasks" className={cn(view !== "tasks" && "hidden")}>
-              <TasksView tasks={workspace.tasks} accounts={workspace.accounts} accountsById={accountsById} onToggleTask={toggleTask} onAddTask={addTask} onSelectAccount={selectAccountAndOpen} onExportICS={exportTasksICS} />
+              <TasksView tasks={workspace.tasks} accounts={workspace.accounts} accountsById={accountsById} notesById={notesById} onToggleTask={toggleTask} onAddTask={addTask} onSelectAccount={selectAccountAndOpen} onExportICS={exportTasksICS} />
             </div>
             <div data-view="notes" className={cn(view !== "notes" && "hidden")}>
               <NotesView notes={workspace.notes} accounts={workspace.accounts} accountsById={accountsById} onAddNote={addNote} />
+            </div>
+            <div data-view="review" className={cn(view !== "review" && "hidden")}>
+              <ReviewView
+                workspace={workspace}
+                accountsById={accountsById}
+                folder={folderBacked ? { dir: folder.dir, name: folder.name } : null}
+                onDecide={decideProposals}
+                onSetMode={setAgentMode}
+                onSelectAccount={selectAccountAndOpen}
+                onCopy={copyText}
+              />
             </div>
             <div data-view="settings" className={cn(view !== "settings" && "hidden")}>
               <SettingsView
@@ -851,6 +957,8 @@ function AppInner() {
                 onImport={importWorkspace}
                 onReset={handleReset}
                 onOpenOnboarding={() => setOnboardingOpen(true)}
+                folder={folderBacked ? { dir: folder.dir } : null}
+                onOpenReview={() => navigate("review")}
               />
             </div>
             <div data-view="improve" className={cn(view !== "improve" && "hidden")}>

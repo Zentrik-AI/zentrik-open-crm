@@ -7,12 +7,15 @@ export function NavItem({
   label,
   active,
   count,
+  attention,
   onClick,
 }: {
   icon: LucideIcon;
   label: string;
   active: boolean;
   count?: number;
+  /** Show the count as an agent-violet pill: something is waiting for a decision. */
+  attention?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -40,7 +43,7 @@ export function NavItem({
         <span
           className={cn(
             "ml-auto font-mono text-[11px] tabular-nums",
-            active ? "text-accent-fg" : "text-faint-foreground",
+            attention ? "rounded-full bg-agent-bg px-1.5 py-px text-agent-fg" : active ? "text-accent-fg" : "text-faint-foreground",
           )}
         >
           {count}

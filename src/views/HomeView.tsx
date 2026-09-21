@@ -14,6 +14,7 @@ import { EmptyState } from "../components/ui/empty-state";
 import { Private } from "../components/ui/privacy";
 import { Button } from "../components/ui/button";
 import { onboardingProgress, type OnboardingMode } from "../lib/onboarding";
+import { pendingProposals } from "../core/ops.ts";
 
 export type HomeMetrics = {
   weightedPipeline: number;
@@ -55,6 +56,8 @@ export function HomeView({
     .sort((a, b) => a.due.localeCompare(b.due))
     .slice(0, 6);
   const recentNotes = [...workspace.notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
+  const notesById = new Map(workspace.notes.map((note) => [note.id, note]));
+  const waiting = pendingProposals(workspace);
   const totalTasks = Math.max(1, workspace.tasks.length);
   const totalAccounts = Math.max(1, workspace.accounts.length);
 
@@ -77,6 +80,20 @@ export function HomeView({
             : `${metrics.openTasks} open ${metrics.openTasks === 1 ? "task" : "tasks"}, ${metrics.dueSoon} due soon.`}
         </p>
       </div>
+
+      {waiting.length > 0 && (
+        <section className="flex flex-col gap-3 border-y border-agent/40 bg-agent-bg/25 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-body-sm text-foreground">
+            <span className="text-agent-fg">{waiting.every((p) => p.actor.name === waiting[0].actor.name) ? waiting[0].actor.name : "Your agents"}</span>
+            {waiting.length === 1 ? " proposed a change. " : ` proposed ${waiting.length} changes. `}
+            <span className="text-muted-foreground">Nothing lands until you approve it.</span>
+          </p>
+          <Button variant="agent" size="sm" onClick={() => onNavigate("review")} className="self-start sm:self-auto">
+            Review
+            <ArrowRight />
+          </Button>
+        </section>
+      )}
 
       {onboardingMode === "demo" ? (
         <section className="flex flex-col gap-4 border-y border-accent/40 bg-accent-bg/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -177,6 +194,7 @@ export function HomeView({
                   key={task.id}
                   task={task}
                   accountName={task.accountId ? accountsById.get(task.accountId)?.name : undefined}
+                  notesById={notesById}
                   onToggle={() => onToggleTask(task.id)}
                   onOpenAccount={task.accountId ? () => onSelectAccount(task.accountId!) : undefined}
                 />

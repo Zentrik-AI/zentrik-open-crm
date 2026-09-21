@@ -1,10 +1,12 @@
 import { type ReactNode } from "react";
 import { Check } from "lucide-react";
 import { cn } from "../lib/utils";
-import type { Task } from "../types";
+import type { Note, Task } from "../types";
 import { PriorityBadge } from "./ui/segment-bar";
 import { DueChip } from "./account-bits";
 import { useMounted, useReducedMotion } from "../lib/hooks";
+import { Grounding } from "./grounding";
+import { useBuildroom } from "./ui/privacy";
 
 /** An animated strike that draws through completed text. */
 function StrikeLabel({ children, done }: { children: ReactNode; done: boolean }) {
@@ -32,15 +34,20 @@ function StrikeLabel({ children, done }: { children: ReactNode; done: boolean })
 export function TaskRow({
   task,
   accountName,
+  notesById,
   onToggle,
   onOpenAccount,
 }: {
   task: Task;
   accountName?: string;
+  /** When given, agent-made and cited tasks show what grounds them. */
+  notesById?: Map<string, Note>;
   onToggle: () => void;
   onOpenAccount?: () => void;
 }) {
   const done = task.status === "done";
+  const buildroom = useBuildroom();
+  const showGrounding = notesById && !done && !buildroom && (task.origin || task.evidence?.length || task.reason);
   return (
     <div className="flex items-start gap-3 rounded-lg border border-border bg-surface p-3 transition-colors duration-fast hover:border-border-strong">
       <button
@@ -70,6 +77,13 @@ export function TaskRow({
             ))}
           <span className="text-[12px] text-faint-foreground">{task.owner}</span>
         </div>
+        {showGrounding && (
+          <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            {task.origin && <span className="text-[12px] text-agent-fg">{task.origin.name}</span>}
+            {task.reason && <span className="text-[12px] text-muted-foreground">{task.reason}</span>}
+            <Grounding evidence={task.evidence} notesById={notesById} />
+          </div>
+        )}
       </div>
       <PriorityBadge priority={task.priority} />
     </div>

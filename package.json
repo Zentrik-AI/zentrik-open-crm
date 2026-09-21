@@ -1,9 +1,9 @@
 {
   "name": "zentrik-open-crm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "type": "module",
-  "description": "Open-source, local-first CRM for source-grounded account work and agent-assisted follow-up.",
+  "description": "Open-source, local-first CRM that people and coding agents work together: source-grounded accounts, a crm command and MCP server, and a review gate for every agent change.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -18,12 +18,30 @@
     "open-source",
     "local-first",
     "agentic-crm",
+    "mcp",
+    "claude-code",
+    "codex",
+    "cursor",
     "zentrik"
+  ],
+  "bin": {
+    "open-crm": "bin/open-crm.js"
+  },
+  "files": [
+    "bin",
+    "cli",
+    "src",
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "crm": "node bin/open-crm.js",
+    "test": "node --test \"tests/unit/*.test.ts\"",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },
@@ -35,17 +53,18 @@
     "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.20.3",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^6.1.0",
-    "autoprefixer": "^10.5.4",
-    "postcss": "^8.5.25",
+    "@vitejs/plugin-react": "^6.1.1",
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.28",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3",
-    "vite": "^8.2.2"
+    "vite": "^8.3.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18"
   }
 }

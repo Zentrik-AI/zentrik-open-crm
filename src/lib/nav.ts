@@ -1,4 +1,5 @@
 import {
+  Bot,
   Building2,
   Columns3,
   Contact,
@@ -17,6 +18,7 @@ export type View =
   | "contacts"
   | "tasks"
   | "notes"
+  | "review"
   | "settings"
   | "improve";
 
@@ -30,6 +32,7 @@ export const primaryNav: NavEntry[] = [
   { id: "contacts", label: "Contacts", icon: Contact },
   { id: "tasks", label: "Tasks", icon: ListChecks },
   { id: "notes", label: "Notes", icon: StickyNote },
+  { id: "review", label: "Review", icon: Bot },
 ];
 
 /** Workspace + the product-feedback corner — deliberately de-emphasized. */

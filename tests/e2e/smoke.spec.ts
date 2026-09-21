@@ -1,6 +1,123 @@
 import { expect, test, type Page } from "@playwright/test";
 import { seedWorkspace } from "../../src/data/seed";
 import { readFile } from "node:fs/promises";
+import { newChange, submitChange, applyChange } from "../../src/core/ops.ts";
+
+test("task maintenance separates waiting, cancelled and archived work", async ({ page }) => {
+  await useDemo(page);
+  await page.getByRole("button", { name: /^Tasks(?:\s|$)/ }).first().click();
+  const view = page.locator('[data-view="tasks"]');
+  await view.getByRole("button", {name:/^Edit task:/}).first().click();
+  const form = view.getByRole("form", {name:"Edit task"});
+  await form.getByLabel("Task title").fill("Verify reply before contacting");
+  await form.getByLabel("Task owner").fill("Sam");
+  await form.getByLabel("Task status").selectOption("waiting");
+  await form.getByLabel("Task reason").fill("Review only after a sourced reply");
+  await form.getByRole("button", {name:"Save task"}).click();
+  await expect(view.getByText("Waiting · review dates, not send instructions")).toBeVisible();
+  await view.getByRole("button", {name:"Edit task: Verify reply before contacting"}).click();
+  await expect(page.getByRole("region", {name:"Notifications"}).getByText(/Demo workspace ready/)).toHaveCount(0);
+  await page.screenshot({path:test.info().outputPath("waiting-editor.png"),animations:"disabled"});
+  await form.screenshot({path:test.info().outputPath("waiting-editor-fields.png"),animations:"disabled"});
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await form.getByLabel("Task status").selectOption("cancelled");
+  await form.getByRole("button", {name:"Save task"}).click();
+  await expect(view.getByText("Cancelled", {exact:true})).toBeVisible();
+  await page.getByRole("button", {name:/^Accounts(?:\s|$)/}).first().click();
+  const accounts = page.locator('[data-view="accounts"]');
+  await accounts.getByText("Edit account / archive", {exact:true}).click();
+  await accounts.getByLabel("Archive reason").fill("No current commitment; retain the history");
+  await accounts.getByRole("button", {name:"Archive account",exact:true}).click();
+  await expect(accounts.getByText(/No current commitment; retain the history/)).toBeVisible();
+  await page.screenshot({path:test.info().outputPath("archived-account.png"),animations:"disabled"});
+  if (test.info().project.name === "chromium") {
+    await nav(page,"Pipeline");
+    const pipeline = page.locator('[data-view="pipeline"]');
+    await pipeline.getByRole("button", {name:"New deal",exact:true}).click();
+    const deal = pipeline.locator("form");
+    await expect(deal.getByRole("combobox",{name:"Account",exact:true})).not.toHaveValue(seedWorkspace.accounts[0].id);
+    await deal.getByLabel("Deal name").fill("Visible active-account deal");
+    await deal.getByRole("button", {name:"Add",exact:true}).click();
+    await expect(pipeline.getByText("Visible active-account deal",{exact:true})).toBeVisible();
+    await nav(page,"Accounts");
+  }
+  await accounts.getByText("Edit account / archive", {exact:true}).click();
+  await accounts.getByLabel("Archive reason").fill("New sourced conversation");
+  await accounts.getByRole("button", {name:"Restore account",exact:true}).click();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("zentrik-open-crm.workspace.v2")!));
+  expect(saved.accounts[0].archivedAt).toBeUndefined();
+  expect(saved.tasks.find((t:{title:string}) => t.title === "Verify reply before contacting").completedAt).toBeUndefined();
+});
+
+test("full backup storage requires a downloaded-original confirmation before recovery", async ({ page }) => {
+  test.skip(test.info().project.name !== "chromium", "Desktop recovery failure path.");
+  await page.evaluate(() => localStorage.setItem("zentrik-open-crm.workspace.v2", "{original for recovery"));
+  await page.addInitScript(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value) {
+      if (key.includes(".recovery.")) throw new DOMException("Synthetic full backup storage", "QuotaExceededError");
+      return original.call(this, key, value);
+    };
+  });
+  await page.reload();
+  const file = {name:"backup.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(seedWorkspace))};
+  const input = page.locator('input[type="file"]');
+  await input.setInputFiles(file);
+  await expect(page.getByRole("alert")).toContainText("Recovery did not complete");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", {name:"Download stored original"}).click();
+  const downloaded = await downloadPromise;
+  expect(await readFile((await downloaded.path())!, "utf8")).toBe("{original for recovery");
+  await page.getByRole("checkbox", {name:/I have saved the original/}).check();
+  await input.setInputFiles(file);
+  await expect(page.getByRole("heading", {name:"Open CRM Workspace"})).toBeVisible();
+});
+
+test.describe("local calendar dates", () => {
+  test.use({timezoneId:"America/Los_Angeles"});
+  test("task editor preserves the local day when saving unrelated changes", async ({ page }) => {
+    const fixture = structuredClone(seedWorkspace);
+    fixture.tasks[0].due = "2026-10-03T06:59:59.000Z";
+    fixture.tasks[0].title = "Local date check";
+    await page.evaluate(data => localStorage.setItem("zentrik-open-crm.workspace.v2",JSON.stringify(data)),fixture);
+    await page.reload();
+    await page.getByRole("button", {name:/^Tasks(?:\s|$)/}).first().click();
+    await page.getByRole("button", {name:"Edit task: Local date check"}).click();
+    const form = page.getByRole("form", {name:"Edit task"});
+    await expect(form.getByLabel("Task date")).toHaveValue("2026-10-02");
+    await form.getByLabel("Task owner").fill("Alex");
+    await form.getByRole("button", {name:"Save task"}).click();
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("zentrik-open-crm.workspace.v2")!));
+    expect(stored.tasks[0].due).toBe("2026-10-03T06:59:59.000Z");
+  });
+});
+
+test("corrupt browser records are preserved and recovery import backs up the original", async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem("zentrik-open-crm.workspace.v2", "{broken original"));
+  await page.reload();
+  await expect(page.getByRole("alert").filter({hasText:"Stored workspace is invalid"})).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("zentrik-open-crm.workspace.v2"))).toBe("{broken original");
+  await page.screenshot({path:test.info().outputPath("storage-recovery.png"),animations:"disabled"});
+  await page.locator('input[type="file"][accept="application/json"]').setInputFiles({name:"backup.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(seedWorkspace))});
+  await expect(page.getByRole("heading", {name:"Open CRM Workspace"})).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("zentrik-open-crm.workspace.v2.recovery.1"))).toBe("{broken original");
+});
+
+test("stale proposals expose the conflict and cannot overwrite current ownership", async ({ page }) => {
+  test.skip(test.info().project.name !== "chromium", "Review desktop path.");
+  const request = newChange({type:"account.update",accountId:seedWorkspace.accounts[0].id,patch:{owner:"Sam"}}, {kind:"agent",name:"Example operator"});
+  const pending = submitChange(structuredClone(seedWorkspace),request).workspace;
+  const current = applyChange(pending,newChange({type:"account.update",accountId:seedWorkspace.accounts[0].id,patch:{owner:"Alex"}})).workspace;
+  await page.evaluate(data => localStorage.setItem("zentrik-open-crm.workspace.v2",JSON.stringify(data)),current);
+  await page.reload();
+  await nav(page,"Review");
+  const view = page.locator('[data-view="review"]');
+  await expect(view.getByText(/changed since it was prepared/)).toBeVisible();
+  await expect(view.getByRole("button",{name:"Approve",exact:true})).toBeDisabled();
+  await page.screenshot({path:test.info().outputPath("stale-proposal.png"),animations:"disabled"});
+  await view.getByRole("button",{name:"Reject",exact:true}).click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("zentrik-open-crm.workspace.v2")!).accounts[0].owner)).toBe("Alex");
+});
 
 test("task ownership, completion coverage and calendar export have the same scope", async ({ page }) => {
   const fixture = structuredClone(seedWorkspace);

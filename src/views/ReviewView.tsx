@@ -1,7 +1,7 @@
 import { Bot, Check, Copy, FolderOpen, X } from "lucide-react";
 import type { Account, ActivityEntry, AgentMode, Note, Op, Proposal, Workspace } from "../types";
-import { accountStageLabel, dealStageLabel, noteSourceLabel } from "../core/model.ts";
-import { pendingProposals, projectPending } from "../core/ops.ts";
+import { dealStageLabel, noteSourceLabel } from "../core/model.ts";
+import { pendingProposals, projectPending, proposalApprovalIssue } from "../core/ops.ts";
 import { formatDateFull, formatRelative } from "../lib/utils";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -14,11 +14,13 @@ const SETUP_COMMANDS = ["npm run crm -- init ~/crm", "cd ~/crm && ./crm ui"];
 const kindLabel: Record<Op["type"], string> = {
   "account.add": "New account",
   "account.update": "Account update",
+  "account.archive": "Account archive / restore",
   "contact.add": "New contact",
   "deal.add": "New deal",
   "deal.move": "Deal stage",
   "task.add": "New task",
   "task.set_status": "Task status",
+  "task.update": "Task update",
   "note.add": "New note",
 };
 
@@ -31,9 +33,19 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+const showValue = (value: unknown) => value == null ? "unknown" : Array.isArray(value) ? value.join(" · ") : String(value);
+
+function ComparedValue({ current, proposed }: { current: unknown; proposed: unknown }) {
+  return <><span className="text-muted-foreground">{showValue(current)}</span><span aria-label="changes to"> → </span><span>{showValue(proposed)}</span></>;
+}
+
 /** The substance of a proposed change, in the words a person would use. */
 function ChangeDetail({ op, workspace, notesById }: { op: Op; workspace: Workspace; notesById: Map<string, Note> }) {
   switch (op.type) {
+    case "account.archive":
+      return <p>{op.archived ? "Archive" : "Restore"} account · {op.reason}. History is retained.</p>;
+    case "task.update":
+      return <dl className="space-y-1">{Object.entries(op.patch).map(([key, value]) => <Field key={key} label={key}><ComparedValue current={workspace.tasks.find(t => t.id === op.taskId)?.[key as keyof import("../types").Task]} proposed={value} /></Field>)}</dl>;
     case "note.add":
       return (
         <div className="space-y-2">
@@ -60,7 +72,7 @@ function ChangeDetail({ op, workspace, notesById }: { op: Op; workspace: Workspa
     case "task.set_status":
       return (
         <p className="text-body-sm text-muted-foreground">
-          {op.status === "done" ? "Mark done: " : "Reopen: "}
+          {op.status}:{" "}
           <span className="text-foreground">{workspace.tasks.find((t) => t.id === op.taskId)?.title ?? op.taskId}</span>
         </p>
       );
@@ -91,7 +103,7 @@ function ChangeDetail({ op, workspace, notesById }: { op: Op; workspace: Workspa
         <dl className="space-y-1">
           {Object.entries(op.patch).map(([key, value]) => (
             <Field key={key} label={key}>
-              {key === "stage" ? accountStageLabel[value as keyof typeof accountStageLabel] : Array.isArray(value) ? value.join(" · ") : String(value)}
+              <ComparedValue current={workspace.accounts.find(a => a.id === op.accountId)?.[key as keyof Account]} proposed={value} />
             </Field>
           ))}
         </dl>
@@ -109,7 +121,7 @@ function ChangeDetail({ op, workspace, notesById }: { op: Op; workspace: Workspa
 function accountOf(op: Op, workspace: Workspace): string | undefined {
   if ("accountId" in op && op.accountId) return op.accountId;
   if (op.type === "deal.move") return workspace.deals.find((d) => d.id === op.dealId)?.accountId;
-  if (op.type === "task.set_status") return workspace.tasks.find((t) => t.id === op.taskId)?.accountId;
+  if (op.type === "task.set_status" || op.type === "task.update") return workspace.tasks.find((t) => t.id === op.taskId)?.accountId;
   return undefined;
 }
 
@@ -131,6 +143,7 @@ function ProposalCard({
   const buildroom = useBuildroom();
   const accountId = accountOf(proposal.change.op, workspace);
   const account = accountId ? accountsById.get(accountId) : undefined;
+  const conflict = proposalApprovalIssue(workspace, proposal)?.message;
   return (
     <article className="rounded-lg border border-border bg-surface p-4 transition-colors duration-fast hover:border-border-strong">
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
@@ -155,8 +168,9 @@ function ProposalCard({
         {buildroom ? <RedactedChip label="detail hidden in share-safe view" /> : <ChangeDetail op={proposal.change.op} workspace={workspace} notesById={notesById} />}
       </Well>
 
+      {conflict && <p role="status" className="mt-3 text-body-sm text-destructive">{conflict}</p>}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button variant="primary" size="sm" disabled={buildroom} onClick={() => onDecide([proposal.id], "approve")}>
+        <Button variant="primary" size="sm" disabled={buildroom || Boolean(conflict)} onClick={() => onDecide([proposal.id], "approve")}>
           <Check />
           Approve
         </Button>

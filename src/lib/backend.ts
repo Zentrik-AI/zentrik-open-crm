@@ -20,6 +20,7 @@ export interface FolderState {
   rev: string;
   dir?: string;
   folder?: string;
+  backupPath?: string;
 }
 
 export class BackendError extends Error {
@@ -51,14 +52,22 @@ export const replaceFolderWorkspace = (workspace: Workspace, baseRev: string) =>
   call("/api/workspace", { method: "PUT", body: JSON.stringify({ workspace, baseRev }) });
 
 /** Call `onChange` whenever workspace.json changes on disk. Returns a stop function. */
-export function watchFolder(onChange: (rev: string) => void): () => void {
+export function watchFolder(onChange: (rev: string) => void, options: { onError?: (error: Error) => void; onReady?: () => void } = {}): () => void {
   const events = new EventSource("/api/events");
+  events.onerror = () => options.onError?.(new BackendError("Workspace sync disconnected. Displayed records may be stale; reconnecting."));
   events.onmessage = (event) => {
+    let message: { rev?: unknown; error?: { message?: string } };
     try {
-      onChange((JSON.parse(event.data) as { rev: string }).rev);
-    } catch {
-      /* ignore malformed events */
+      message = JSON.parse(event.data);
+      if (!message || typeof message !== "object") throw new Error("Invalid sync event.");
+      if (message.error) throw new Error(message.error.message || "Workspace sync is stale.");
+      if (typeof message.rev !== "string" || !message.rev) throw new Error("Missing workspace revision in sync event.");
+    } catch (error) {
+      options.onError?.(new BackendError(`Workspace sync is stale or invalid: ${(error as Error).message}`));
+      return;
     }
+    options.onReady?.();
+    onChange(message.rev as string);
   };
-  return () => events.close();
+  return () => { events.onmessage = null; events.onerror = null; events.close(); };
 }

@@ -19,7 +19,7 @@ export function Meter({
   className,
   barClassName,
 }: {
-  value: number;
+  value: number | null;
   tone?: Tone;
   ticks?: boolean;
   weak?: boolean;
@@ -29,7 +29,7 @@ export function Meter({
   className?: string;
   barClassName?: string;
 }) {
-  const pct = clampPct(value);
+  const pct = clampPct(value ?? 0);
   const t = tone ?? thresholdTone(pct);
   const isWeak = weak ?? pct < 40;
   const reduced = useReducedMotion();
@@ -42,7 +42,8 @@ export function Meter({
         className={cn("relative h-1.5 flex-1 overflow-hidden rounded-full bg-surface-sunken", barClassName)}
         role="progressbar"
         aria-label={label}
-        aria-valuenow={pct}
+        aria-valuenow={value === null ? undefined : pct}
+        aria-valuetext={value === null ? "Unknown" : undefined}
         aria-valuemin={0}
         aria-valuemax={100}
       >
@@ -76,7 +77,7 @@ export function Meter({
       </span>
       {display != null && (
         <span className="shrink-0 font-mono text-[12px] font-medium tabular-nums text-foreground">
-          {display}
+          {value === null ? "Unknown" : display}
         </span>
       )}
     </span>

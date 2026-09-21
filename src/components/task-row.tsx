@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { Check } from "lucide-react";
-import { cn } from "../lib/utils";
+import { cn, dateInputValue } from "../lib/utils";
 import type { Note, Task } from "../types";
 import { PriorityBadge } from "./ui/segment-bar";
 import { DueChip } from "./account-bits";
@@ -37,6 +37,7 @@ export function TaskRow({
   notesById,
   onToggle,
   onOpenAccount,
+  onEdit,
 }: {
   task: Task;
   accountName?: string;
@@ -44,6 +45,7 @@ export function TaskRow({
   notesById?: Map<string, Note>;
   onToggle: () => void;
   onOpenAccount?: () => void;
+  onEdit?: () => void;
 }) {
   const done = task.status === "done";
   const buildroom = useBuildroom();
@@ -53,7 +55,7 @@ export function TaskRow({
       <button
         onClick={onToggle}
         aria-pressed={done}
-        aria-label={done ? "Mark not done" : "Mark done"}
+        aria-label={done || task.status === "cancelled" ? "Reopen task" : "Mark done"}
         className={cn(
           "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-[background-color,border-color,transform] duration-fast focus-visible:outline-none focus-visible:focus-ring active:scale-90",
           done ? "border-transparent bg-success text-success-foreground" : "border-border-strong bg-surface hover:border-success",
@@ -66,7 +68,7 @@ export function TaskRow({
           <StrikeLabel done={done}>{task.title}</StrikeLabel>
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <DueChip due={task.due} done={done} />
+          {task.status === "open" || done ? <DueChip due={task.due} done={done} /> : <span className="text-[12px] text-muted-foreground">{task.status}{task.status === "waiting" ? ` · review ${dateInputValue(task.due)}` : ""}</span>}
           {accountName &&
             (onOpenAccount ? (
               <button onClick={onOpenAccount} className="rounded-sm text-[12px] text-muted-foreground hover:text-accent-fg focus-visible:outline-none focus-visible:focus-ring">
@@ -85,7 +87,10 @@ export function TaskRow({
           </div>
         )}
       </div>
-      <PriorityBadge priority={task.priority} />
+      <div className="flex shrink-0 flex-col items-end gap-2">
+        <PriorityBadge priority={task.priority} />
+        {!buildroom && onEdit && <button className="rounded-sm text-[12px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:focus-ring" onClick={onEdit} aria-label={`Edit task: ${task.title}`}>Edit</button>}
+      </div>
     </div>
   );
 }

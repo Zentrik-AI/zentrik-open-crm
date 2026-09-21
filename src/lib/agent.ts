@@ -51,7 +51,7 @@ export function buildAccountAgentHandoff({
     `- Stage: ${account.stage}`,
     `- Priority: ${account.priority}`,
     `- Owner: ${account.owner}`,
-    `- Evidence coverage: ${account.sourceConfidence}%`,
+    `- Recorded source confidence: ${account.sourceConfidence === null ? "unknown" : `${account.sourceConfidence}%`}`,
     `- Needs: ${account.needs.join("; ") || "None recorded"}`,
     `- Risks: ${account.risks.join("; ") || "None recorded"}`,
     "",

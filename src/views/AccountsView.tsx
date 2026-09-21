@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { ClipboardCopy, Plus, UserPlus } from "lucide-react";
-import type { Account, Deal, Note, Task } from "../types";
+import type { Account, AccountPatch, Deal, Note, Task } from "../types";
 import { accountStages, contactInfluences, priorities, type AccountDraft, type ContactDraft } from "../lib/drafts";
 import { stageMeta, isOpenDeal } from "../lib/meta";
 import { humanize } from "../lib/utils";
@@ -24,6 +24,25 @@ import { TaskRow } from "../components/task-row";
 import { NoteCard } from "../components/note-card";
 import { AccountTimeline } from "../components/timeline";
 import { AiPanel, type AiKind } from "../components/ai-panel";
+
+function AccountMaintenance({ account, onUpdate, onArchive }: { account: Account; onUpdate: (patch: AccountPatch) => boolean; onArchive: (archived: boolean, reason: string) => boolean }) {
+  const [name, setName] = useState(account.name);
+  const [owner, setOwner] = useState(account.owner);
+  const [reason, setReason] = useState("");
+  return <details className="rounded-lg border border-border p-3">
+    <summary className="cursor-pointer text-body-sm">Edit account / archive</summary>
+    <form className="mt-3 grid gap-3 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); onUpdate({ name, owner }); }}>
+      <Field label="Account name"><Input aria-label="Account name" required value={name} onChange={e => setName(e.target.value)} /></Field>
+      <Field label="Account owner"><Input aria-label="Account owner" required value={owner} onChange={e => setOwner(e.target.value)} /></Field>
+      <Button type="submit" className="justify-self-start">Save account</Button>
+    </form>
+    <form className="mt-3 flex flex-wrap items-end gap-3 border-t border-border pt-3" onSubmit={e => { e.preventDefault(); if (onArchive(!account.archivedAt, reason)) setReason(""); }}>
+      <Field label="Archive / restore reason" className="min-w-0 flex-1"><Input aria-label="Archive reason" required value={reason} onChange={e => setReason(e.target.value)} /></Field>
+      <Button type="submit">{account.archivedAt ? "Restore account" : "Archive account"}</Button>
+      <p className="w-full text-[12px] text-muted-foreground">History stays available. Archived accounts and their work leave the daily queue; restoring makes unfinished work visible again.</p>
+    </form>
+  </details>;
+}
 
 export interface AiViewState {
   hasKey: boolean;
@@ -58,6 +77,8 @@ export function AccountsView({
   onCopyMarkdown,
   onCopyAgentHandoff,
   onOpenSettings,
+  onUpdateAccount,
+  onArchiveAccount,
 }: {
   accounts: Account[];
   selectedAccount: Account | undefined;
@@ -82,9 +103,12 @@ export function AccountsView({
   onCopyMarkdown: () => void;
   onCopyAgentHandoff: () => void;
   onOpenSettings: () => void;
+  onUpdateAccount: (id: string, patch: AccountPatch) => boolean;
+  onArchiveAccount: (id: string, archived: boolean, reason: string) => boolean;
 }) {
   const buildroom = useBuildroom();
   const [addingAccount, setAddingAccount] = useState(accounts.length === 0);
+  const [includeArchived, setIncludeArchived] = useState(false);
   const acct = selectedAccount;
   const acctDeals = acct ? deals.filter((d) => d.accountId === acct.id) : [];
   const acctTasks = acct ? tasks.filter((t) => t.accountId === acct.id) : [];
@@ -113,7 +137,7 @@ export function AccountsView({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-label uppercase text-muted-foreground">Accounts</span>
-              <span className="font-mono text-[11px] tabular-nums text-faint-foreground">{accounts.length}</span>
+              <span className="font-mono text-[11px] tabular-nums text-faint-foreground">{includeArchived ? `${accounts.length} total` : `${accounts.filter(a => !a.archivedAt).length} active · ${accounts.length} total`}</span>
             </div>
             {!addingAccount && (
               <Button size="sm" variant="ghost" onClick={() => setAddingAccount(true)}>
@@ -122,11 +146,12 @@ export function AccountsView({
               </Button>
             )}
           </div>
+          <label className="flex items-center gap-2 text-body-sm"><input type="checkbox" checked={includeArchived} onChange={e => setIncludeArchived(e.target.checked)} />Include archived accounts</label>
           {accounts.length === 0 ? (
             <EmptyState title="No accounts yet." hint="Add a local account above to get started." />
           ) : (
             <div className="space-y-3">
-              {accounts.map((account) => (
+              {accounts.filter(a => includeArchived || !a.archivedAt).map((account) => (
                 <AccountListCard key={account.id} account={account} selected={acct?.id === account.id} onSelect={() => onSelectAccount(account.id)} />
               ))}
             </div>
@@ -136,11 +161,13 @@ export function AccountsView({
 
       {acct ? (
         <div className="min-w-0 space-y-5">
+          {!buildroom && <AccountMaintenance key={JSON.stringify([acct.id, acct.name, acct.owner, acct.archivedAt])} account={acct} onUpdate={patch => onUpdateAccount(acct.id, patch)} onArchive={(archived, reason) => onArchiveAccount(acct.id, archived, reason)} />}
           <Card>
             <CardHeader className="gap-3 border-b border-border pb-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <CardTitle className="font-serif text-h1">{acct.name}</CardTitle>
+                  {acct.archivedAt && <p className="text-body-sm text-muted-foreground">Archived · <Private>{acct.archiveReason}</Private></p>}
                   <p className="mt-1 text-body-sm text-muted-foreground">
                     <Private redactedLabel="domain hidden">{acct.domain}</Private>
                   </p>
@@ -151,7 +178,7 @@ export function AccountsView({
                   </Badge>
                   <Badge tone="account">{acct.owner}</Badge>
                   <Badge tone="signal" dot>
-                    {acct.sourceConfidence}% evidence
+                    {acct.sourceConfidence === null ? "Evidence confidence unknown" : `${acct.sourceConfidence}% recorded confidence`}
                   </Badge>
                   <Button
                     size="sm"

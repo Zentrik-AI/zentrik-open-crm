@@ -23,9 +23,11 @@ cli/          Node only
 bin/open-crm.js plain JavaScript entry; checks the Node version first
 ```
 
-Node 22.18+ runs the TypeScript sources directly, so there is no CLI build
-step. Core modules import each other with explicit `.ts` extensions for that
-reason.
+In a source checkout, Node 22.18+ runs the TypeScript sources directly. Core
+modules use explicit `.ts` imports. The npm package compiles the CLI to
+`dist/runtime/` because Node does not strip TypeScript under `node_modules`.
+`npm run test:package` verifies the installed CLI and UI without development
+dependencies or install scripts.
 
 ## Two Homes For The Same Workspace
 

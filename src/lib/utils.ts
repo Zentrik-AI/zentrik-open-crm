@@ -31,6 +31,12 @@ export function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+/** Date inputs represent the user's local calendar day, not a UTC slice. */
+export function dateInputValue(value: string) {
+  const date = new Date(value);
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+}
+
 export function formatDateFull(value: string) {
   return new Intl.DateTimeFormat("en", {
     month: "short",

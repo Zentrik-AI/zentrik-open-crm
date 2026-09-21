@@ -34,7 +34,7 @@ export function MetricCard({
           <Icon className="h-[18px] w-[18px]" aria-hidden />
         </span>
       </div>
-      <div className="mt-3 flex min-h-[24px] items-end">{viz}</div>
+      {viz && <div className="mt-3 flex min-h-[24px] items-end">{viz}</div>}
     </Card>
   );
 }

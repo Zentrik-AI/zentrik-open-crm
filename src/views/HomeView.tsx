@@ -77,9 +77,7 @@ export function HomeView({
       {waiting.length > 0 && (
         <section className="flex flex-col gap-3 border-y border-agent/40 bg-agent-bg/25 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-body-sm text-foreground">
-            <span className="text-agent-fg">{waiting.every((p) => p.actor.name === waiting[0].actor.name) ? waiting[0].actor.name : "Your agents"}</span>
-            {waiting.length === 1 ? " proposed a change. " : ` proposed ${waiting.length} changes. `}
-            <span className="text-muted-foreground">Nothing lands until you approve it.</span>
+            <span className="text-agent-fg">{waiting.length}</span> {waiting.length === 1 ? "change" : "changes"} ready for review.
           </p>
           <Button variant="agent" size="sm" onClick={() => onNavigate("review")} className="self-start sm:self-auto">
             Review
@@ -147,7 +145,6 @@ export function HomeView({
               </span>
             </Private>
           }
-          viz={<span className="text-[11px] text-muted-foreground">Current estimate · not historical performance</span>}
         />
         <MetricCard
           label="Deals in play"

@@ -67,6 +67,17 @@ import type { AiKind } from "./components/ai-panel";
 type AiState = { busy: AiKind | null; result: { kind: AiKind; text: string } | null; copied: boolean; error: string | null };
 const emptyAi: AiState = { busy: null, result: null, copied: false, error: null };
 const DAY = 24 * 60 * 60 * 1000;
+const viewTitles: Record<View, string> = {
+  home: "Home",
+  pipeline: "Pipeline",
+  accounts: "Accounts",
+  contacts: "Contacts",
+  tasks: "Tasks",
+  notes: "Notes",
+  review: "Review",
+  settings: "Settings",
+  improve: "Improve",
+};
 
 /** What the app shows for the instant before a workspace folder has loaded. */
 const blankWorkspace: Workspace = normalizeWorkspace({
@@ -212,6 +223,10 @@ function AppInner() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
+  useEffect(() => {
+    const surface = recoveryRequired ? "Recover" : onboardingOpen ? "Set up" : viewTitles[view];
+    document.title = `${surface} · Open CRM`;
+  }, [onboardingOpen, recoveryRequired, view]);
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [view]);
@@ -834,10 +849,7 @@ function AppInner() {
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <Layers3 className="h-[18px] w-[18px]" />
             </span>
-            <div className="leading-tight">
-              <div className="font-serif text-[15px] font-medium text-foreground">Open CRM</div>
-              <div className="text-[11px] text-muted-foreground">Local-first workspace</div>
-            </div>
+            <div className="font-serif text-[15px] font-medium text-foreground">Open CRM</div>
           </div>
 
           <nav aria-label="Primary" className="space-y-0.5">
@@ -881,12 +893,9 @@ function AppInner() {
                 </span>
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
-                    <h1 className="truncate font-serif text-[15px] font-medium text-foreground">{workspace.name}</h1>
+                    <div className="truncate font-serif text-[15px] font-medium text-foreground">{workspace.name}</div>
                     {onboarding.mode === "demo" && <Badge tone="accent">Demo</Badge>}
                   </div>
-                  <p className="truncate text-[11px] text-muted-foreground">
-                    {workspace.edition} · {folderBacked && folder.name ? `folder ${folder.name}` : "local-first"}
-                  </p>
                 </div>
               </div>
 

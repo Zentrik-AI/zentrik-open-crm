@@ -38,7 +38,7 @@ export const primaryNav: NavEntry[] = [
 /** Workspace + the product-feedback corner — deliberately de-emphasized. */
 export const secondaryNav: NavEntry[] = [
   { id: "settings", label: "Settings", icon: Settings },
-  { id: "improve", label: "Improve Open CRM", icon: Lightbulb },
+  { id: "improve", label: "Improve", icon: Lightbulb },
 ];
 
 export const allNav: NavEntry[] = [...primaryNav, ...secondaryNav];

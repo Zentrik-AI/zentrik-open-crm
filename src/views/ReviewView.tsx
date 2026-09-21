@@ -228,17 +228,17 @@ export function ReviewView({
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-          <h1 className="font-serif text-h1 text-foreground">Review</h1>
-          <p className="mt-0.5 text-body-sm text-muted-foreground">
-            {mode === "review" ? "What your agents want to change. Nothing lands until you approve it." : "Your agents change records directly. Everything they do is listed here."}
-          </p>
+        <h1 className="font-serif text-h1 text-foreground">Review</h1>
+        <p className="mt-0.5 text-body-sm text-muted-foreground">
+          {mode === "review" ? "Approve or reject proposed changes." : "Changes apply immediately and stay in the activity log."}
+        </p>
       </div>
 
       {pending.length > 0 ? (
         <section aria-label="Waiting for your review" className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-label uppercase text-muted-foreground">
-              {pending.length} waiting for you
+              {pending.length} waiting
             </div>
             {pending.length > 1 && !buildroom && (
               <Button variant="secondary" size="sm" onClick={() => onDecide(pending.map((p) => p.id), "approve")}>
@@ -256,12 +256,12 @@ export function ReviewView({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bot className="h-4 w-4 text-agent" />
-              {folder ? "Nothing is waiting" : "Work this CRM with an agent"}
+              {folder ? "No changes waiting" : "Connect an agent"}
             </CardTitle>
             <p className="text-body-sm text-muted-foreground">
               {folder
-                ? "Open this workspace folder in Claude Code, Codex, or Cursor. The agent reads AGENTS.md, works through the crm command, and what it proposes appears here as it happens."
-                : "This workspace lives in your browser, which an agent cannot reach. Put it in a folder and Claude Code, Codex, or Cursor can read it, capture notes, and propose next actions for you to approve here."}
+                ? "Agents can propose updates from this workspace folder."
+                : "Sync this workspace to a folder so Codex, Claude, or Cursor can propose updates here."}
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -278,7 +278,7 @@ export function ReviewView({
                   </Button>
                 </Well>
                 <p className="text-[12px] leading-5 text-faint-foreground">
-                  Then ask for the daily review, or drop a transcript in <code className="font-mono text-muted-foreground">inbox/</code> and ask the agent to process it.
+                  Ask for a daily review, or place a transcript in <code className="font-mono text-muted-foreground">inbox/</code>.
                 </p>
               </>
             ) : (
@@ -289,7 +289,7 @@ export function ReviewView({
                     <Copy />
                     Copy commands
                   </Button>
-                  <span className="text-[12px] text-faint-foreground">Run them in your Open CRM checkout, then import a backup from Settings → Local data to bring these records along.</span>
+                  <span className="text-[12px] text-faint-foreground">Run these in the Open CRM checkout, then import the workspace from Settings.</span>
                 </div>
               </>
             )}
@@ -297,15 +297,15 @@ export function ReviewView({
         </Card>
       )}
 
-      <p className="text-[12px] leading-5 text-faint-foreground">
-        {mode === "review" ? "Agent changes wait here for your approval. " : "Agent changes apply directly and are logged below. "}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-[12px] text-faint-foreground">
+        <span>{mode === "review" ? "Review mode · changes wait for approval" : "Direct mode · changes apply immediately"}</span>
         <button
           onClick={() => onSetMode(mode === "review" ? "direct" : "review")}
           className="rounded-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:focus-ring"
         >
-          {mode === "review" ? "Let agents apply changes directly" : "Review each change again"}
+          {mode === "review" ? "Switch to direct mode" : "Switch to review mode"}
         </button>
-      </p>
+      </div>
 
       {activity.length > 0 && (
         <Card>

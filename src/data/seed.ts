@@ -1,7 +1,7 @@
 import type { Workspace } from "../types.ts";
 
 export const seedWorkspace: Workspace = {
-  name: "Open CRM Workspace",
+  name: "Demo workspace",
   edition: "Self-Hosted",
   updatedAt: "2026-06-12T08:00:00.000Z",
   accounts: [

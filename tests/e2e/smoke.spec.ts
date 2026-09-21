@@ -70,7 +70,7 @@ test("full backup storage requires a downloaded-original confirmation before rec
   expect(await readFile((await downloaded.path())!, "utf8")).toBe("{original for recovery");
   await page.getByRole("checkbox", {name:/I have saved the original/}).check();
   await input.setInputFiles(file);
-  await expect(page.getByRole("heading", {name:"Open CRM Workspace"})).toBeVisible();
+  await expect(page.locator("header").getByText("Demo workspace", {exact:true})).toBeVisible();
 });
 
 test.describe("local calendar dates", () => {
@@ -99,7 +99,7 @@ test("corrupt browser records are preserved and recovery import backs up the ori
   expect(await page.evaluate(() => localStorage.getItem("zentrik-open-crm.workspace.v2"))).toBe("{broken original");
   await page.screenshot({path:test.info().outputPath("storage-recovery.png"),animations:"disabled"});
   await page.locator('input[type="file"][accept="application/json"]').setInputFiles({name:"backup.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(seedWorkspace))});
-  await expect(page.getByRole("heading", {name:"Open CRM Workspace"})).toBeVisible();
+  await expect(page.locator("header").getByText("Demo workspace", {exact:true})).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("zentrik-open-crm.workspace.v2.recovery.1"))).toBe("{broken original");
 });
 
@@ -111,6 +111,7 @@ test("stale proposals expose the conflict and cannot overwrite current ownership
   await page.evaluate(data => localStorage.setItem("zentrik-open-crm.workspace.v2",JSON.stringify(data)),current);
   await page.reload();
   await nav(page,"Review");
+  await expect(page).toHaveTitle("Review · Open CRM");
   const view = page.locator('[data-view="review"]');
   await expect(view.getByText(/changed since it was prepared/)).toBeVisible();
   await expect(view.getByRole("button",{name:"Approve",exact:true})).toBeDisabled();
@@ -184,12 +185,14 @@ test("navigates the CRM surfaces and redacts in share-safe mode", async ({ page 
 
   await useDemo(page);
 
-  await expect(page.getByRole("heading", { name: "Open CRM Workspace" })).toBeVisible();
+  await expect(page.locator("header").getByText("Demo workspace", {exact:true})).toBeVisible();
+  await expect(page).toHaveTitle("Home · Open CRM");
   await expect(vw("home").getByText(/5 open tasks, [1-5] due soon/)).toBeVisible();
   await expect(vw("home").getByText("Weighted pipeline")).toBeVisible();
   await expect(vw("home").getByRole("heading", { name: "Today" })).toBeVisible();
 
   await nav(page, "Pipeline");
+  await expect(page).toHaveTitle("Pipeline · Open CRM");
   await expect(vw("pipeline").getByRole("heading", { name: "Pipeline" })).toBeVisible();
   await expect(vw("pipeline").getByText("Open deals")).toBeVisible();
   await expect(vw("pipeline").getByText("Negotiation").first()).toBeVisible();
@@ -206,8 +209,8 @@ test("navigates the CRM surfaces and redacts in share-safe mode", async ({ page 
   await nav(page, "Notes");
   await expect(vw("notes").getByText("Capture note")).toBeVisible();
 
-  await nav(page, "Improve Open CRM");
-  await expect(vw("improve").getByRole("heading", { name: "Help shape the product" })).toBeVisible();
+  await nav(page, "Improve");
+  await expect(vw("improve").getByRole("heading", { name: "Help shape Open CRM" })).toBeVisible();
 
   await nav(page, "Accounts");
   await expect(vw("accounts").getByRole("heading", { name: "Northstar Robotics" })).toBeVisible();
@@ -375,7 +378,7 @@ test("imports an Open CRM backup from first-run setup", async ({ page }) => {
     buffer: Buffer.from(JSON.stringify(imported)),
   });
 
-  await expect(page.getByRole("heading", { name: "Imported workspace" })).toBeVisible();
+  await expect(page.locator("header").getByText("Imported workspace", {exact:true})).toBeVisible();
   await nav(page, "Accounts");
   await expect(page.getByRole("heading", { name: "Imported account" })).toBeVisible();
 });

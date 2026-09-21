@@ -48,9 +48,9 @@ export function ImproveView({
       <section className="rounded-xl border border-idea/30 bg-idea-bg/30 p-4">
         <div className="flex items-center gap-2 text-idea-fg">
           <Lightbulb className="h-4 w-4" />
-          <span className="text-label">Improve Open CRM</span>
+          <span className="text-label">Product feedback</span>
         </div>
-        <h1 className="mt-1.5 font-serif text-h1 text-foreground">Help shape the product</h1>
+        <h1 className="mt-1.5 font-serif text-h1 text-foreground">Help shape Open CRM</h1>
         <p className="mt-1 max-w-2xl text-body text-muted-foreground">
           This area is about evolving the open-source product — it's separate from your CRM. Nothing here touches your
           accounts, deals, or notes. Suggest a change, see what's on the roadmap, and read what shipped.

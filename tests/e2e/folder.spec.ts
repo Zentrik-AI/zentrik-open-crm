@@ -28,7 +28,7 @@ test("an agent's change arrives live, waits for approval, and lands in the folde
   await page.getByRole("button", { name: "Approve", exact: true }).click();
 
   await expect.poll(() => onDisk().notes.some((n: { title: string }) => n.title === "Legal wants a data-flow diagram")).toBe(true);
-  expect(fs.readFileSync(path.join(workspaceDir, "accounts", "northstar-robotics.md"), "utf8")).toContain("Legal wants a data-flow diagram");
+  await expect.poll(() => fs.readFileSync(path.join(workspaceDir, "accounts", "northstar-robotics.md"), "utf8")).toContain("Legal wants a data-flow diagram");
   await expect(page.getByText("approved by you", { exact: false })).toBeVisible();
 });
 

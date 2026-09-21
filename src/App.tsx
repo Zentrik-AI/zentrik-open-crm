@@ -632,8 +632,9 @@ function AppInner() {
       toast({ title: "Couldn't copy the agent handoff.", tone: "destructive" });
     }
   }
-  function exportTasksICS() {
-    const open = workspace.tasks.filter((t) => t.status === "open");
+  function exportTasksICS(taskIds: string[]) {
+    const selected = new Set(taskIds);
+    const open = workspace.tasks.filter((t) => t.status === "open" && selected.has(t.id));
     downloadICS(tasksToICS(open, accountsById));
     toast({ title: `Exported ${open.length} tasks to calendar (.ics)`, tone: "success" });
   }

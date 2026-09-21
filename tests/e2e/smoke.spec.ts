@@ -1,5 +1,49 @@
 import { expect, test, type Page } from "@playwright/test";
 import { seedWorkspace } from "../../src/data/seed";
+import { readFile } from "node:fs/promises";
+
+test("task ownership, completion coverage and calendar export have the same scope", async ({ page }) => {
+  const fixture = structuredClone(seedWorkspace);
+  fixture.accounts[0].owner = "Alex";
+  fixture.accounts[1].owner = "Sam";
+  const base = fixture.tasks[0];
+  fixture.tasks = [
+    {...base, id:"task_alex", title:"Alex review", owner:"Alex", status:"open"},
+    {...base, id:"task_sam", title:"Sam review", owner:"Sam", status:"open"},
+    ...Array.from({length:10}, (_,i) => ({...base, id:`task_done_${i}`, title:`Completed example ${i}`, owner:"Sam", status:"done" as const, completedAt:new Date().toISOString()})),
+  ];
+  await page.evaluate((data) => localStorage.setItem("zentrik-open-crm.workspace.v2", JSON.stringify(data)), fixture);
+  await page.reload();
+  if (test.info().project.name === "mobile-chrome") await page.getByRole("button", {name:"Tasks", exact:true}).click();
+  else await nav(page, "Tasks");
+  const view = page.locator('[data-view="tasks"]');
+  await view.getByLabel("Filter by owner").selectOption("Sam");
+  await expect(view.getByText("Alex review", {exact:true})).toHaveCount(0);
+  await expect(view.getByText("Sam review", {exact:true})).toBeVisible();
+  await expect(view.getByText("8 of 10", {exact:true})).toBeVisible();
+  await view.getByRole("button", {name:"Show all 10 completed tasks"}).click();
+  await expect(view.getByText(/^Completed example /)).toHaveCount(10);
+  const downloadPromise = page.waitForEvent("download");
+  await view.getByRole("button", {name:"Export 1 to calendar"}).click();
+  const download = await downloadPromise;
+  const calendar = await readFile((await download.path())!, "utf8");
+  expect(calendar).toContain("Sam review");
+  expect(calendar).not.toContain("Alex review");
+  expect(calendar).not.toContain("Completed example");
+  await view.getByRole("button", {name:"New task"}).click();
+  const form = view.locator("form");
+  await form.getByLabel("Account", {exact:true}).selectOption(fixture.accounts[1].id);
+  await form.getByLabel("Task", {exact:true}).fill("Selected account ownership");
+  await expect(form.getByRole("textbox", {name:/^Owner/})).toHaveAttribute("placeholder", "Sam");
+  await page.screenshot({path:test.info().outputPath("team-task-form.png"), animations:"disabled"});
+  await form.getByRole("button", {name:"Add",exact:true}).click();
+  await expect(view.getByText("Selected account ownership", {exact:true})).toBeVisible();
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("zentrik-open-crm.workspace.v2")!));
+  expect(stored.tasks.find((task: {title:string}) => task.title === "Selected account ownership").owner).toBe("Sam");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole("button", {name:"Toggle theme"}).click();
+  await page.screenshot({path:test.info().outputPath("team-task-queue-dark.png"), animations:"disabled"});
+});
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");

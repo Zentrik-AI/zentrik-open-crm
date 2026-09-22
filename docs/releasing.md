@@ -38,6 +38,20 @@ recovery. CI keeps synthetic screenshots and traces as the
 - [ ] `LICENSE`, `NOTICE`, `TRADEMARKS.md`, `SECURITY.md`, `CHANGELOG.md`, and
       the contribution guidance are present and consistent.
 
-Tag the release, then publish the package from that tag. Do not rewrite
-published history to hide a mistake: stop the release, rotate anything exposed,
-and fix forward.
+## Publishing
+
+```bash
+git tag -a v1.0.0 -m "Open CRM 1.0" && git push origin v1.0.0
+npm publish            # zentrik-open-crm, public
+```
+
+`prepack` runs the full build, so publish from a clean checkout of the tagged
+commit. `npm publish --dry-run` lists the tarball first.
+
+`open-crm` is reserved as a thin alias package so `npx open-crm init ~/crm`
+works: it carries one dependency on the same version of `zentrik-open-crm` and
+a bin that execs the real one. Publish it after the canonical package, pinned
+to the same version.
+
+Do not rewrite published history to hide a mistake: stop the release, rotate
+anything exposed, and fix forward.

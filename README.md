@@ -7,6 +7,8 @@ local-first CRM where every fact shows its source, agents propose and people
 approve, and what several accounts are saying is handed on as product
 evidence instead of being decided here.
 
+Open CRM is the first open **ARM**: Agent Relationship Management.
+
 [First Use](./docs/first-use.md) ·
 [Agent Operator Guide](./docs/agent-operator-guide.md) ·
 [Workspace Format](./docs/workspace-format.md) ·
@@ -18,6 +20,25 @@ Zentrik Open CRM is built for founders, consultants, agencies, small B2B teams,
 and technical operators who sell, support, and build close to their users. It is
 a CRM you run yourself, on a folder you own, that your coding agent can work
 as well as you can.
+
+## What An ARM Is
+
+A CRM assumes a person does the work and the software keeps the file. An **ARM
+— Agent Relationship Management** — assumes a person and their agents do the
+work together, and the file has to hold up to both. Four things make it one:
+
+1. **One write path.** People and agents change the same records through the
+   same checked operations. No agent-only side channel, no import that skips
+   validation.
+2. **Everything shows its source.** A fact cites the note that says so, or it
+   is drawn as a hunch. An agent that cannot ground a claim has to say so.
+3. **Nothing lands unapproved.** An agent's change is validated, then held as a
+   proposal until a person decides. Direct mode is a choice, and it is logged.
+4. **The records are yours.** A folder you own, in formats you can read,
+   working with whichever agent you use.
+
+Open CRM is the first open one. Anything meeting those four is an ARM too; we
+would rather the category exist than be the only ones in it.
 
 ## Why Open CRM
 

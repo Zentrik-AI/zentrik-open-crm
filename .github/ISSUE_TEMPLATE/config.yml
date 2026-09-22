@@ -1,5 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Ask a question or share how you use it
+    url: https://github.com/Zentrik-AI/zentrik-open-crm/discussions
+    about: Setup help, workflow questions, and what you built. Issues are for defects and concrete requests.
+  - name: Try it in your browser
+    url: https://zentrik-ai.github.io/zentrik-open-crm/
+    about: The browser edition with demo data. Records stay in your own browser storage.
   - name: Feedback and support guide
     url: https://github.com/Zentrik-AI/zentrik-open-crm/blob/main/docs/feedback-and-support.md
     about: Choose a public-safe feedback path. Nothing is submitted automatically.

@@ -74,10 +74,12 @@ local until a public route is ready.
 
 ## Promotion
 
-Use a reviewed pull request for promotion from the integration branch to the
-production branch. Re-run the checks against the exact release commit, review
-the final package, and create a release tag only after the public-safety, legal,
-security-reporting, and hosted-integration checks are complete.
+Use a reviewed pull request into the protected production branch. Re-run the
+checks against the exact release commit, review the final package, and create a
+release tag only after the public-safety, legal, and security-reporting checks
+are complete. Hosted-integration checks apply only when a hosted destination is
+included in the release; the local product and manual GitHub handoff do not
+depend on one.
 
 Do not rewrite published history to hide a mistake. If sensitive material ever
 enters history, stop publication, rotate affected credentials, and create a

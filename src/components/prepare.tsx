@@ -5,7 +5,7 @@ import { sourceMeta } from "../lib/meta";
 import { cn, formatDate, formatRelative } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { RedactedChip, useBuildroom } from "./ui/privacy";
+import { RedactedChip, useShareSafe } from "./ui/privacy";
 
 /**
  * Before you talk to them. Three things, computed from the records: what was
@@ -13,7 +13,7 @@ import { RedactedChip, useBuildroom } from "./ui/privacy";
  * the gaps in our knowledge make worth asking.
  */
 export function PrepareCard({ memory, onTrace, onCopyBrief }: { memory: AccountMemory; onTrace: (id: string) => void; onCopyBrief: () => void }) {
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
   const { since, commitments, questions } = memory;
   const commitmentsAll = [...commitments.ours, ...commitments.theirs];
   const empty = since.notes.length === 0 && since.tasksDone.length === 0 && commitmentsAll.length === 0 && questions.length === 0;
@@ -39,7 +39,7 @@ export function PrepareCard({ memory, onTrace, onCopyBrief }: { memory: AccountM
             )}
           </p>
         </div>
-        <Button size="sm" variant="secondary" onClick={onCopyBrief} disabled={buildroom} title={buildroom ? "Switch to Private view to copy the brief" : "Copy the brief as Markdown"}>
+        <Button size="sm" variant="secondary" onClick={onCopyBrief} disabled={shareSafe} title={shareSafe ? "Switch to Private view to copy the brief" : "Copy the brief as Markdown"}>
           <Copy />
           Copy brief
         </Button>
@@ -61,7 +61,7 @@ export function PrepareCard({ memory, onTrace, onCopyBrief }: { memory: AccountM
                       <li key={note.id} className="flex items-start gap-2 text-body-sm">
                         <Icon className="mt-[3px] h-3.5 w-3.5 shrink-0 text-signal" aria-hidden />
                         <button onClick={() => onTrace(note.id)} className="min-w-0 rounded-sm text-left text-foreground hover:text-accent-fg focus-visible:outline-none focus-visible:focus-ring">
-                          {buildroom ? <RedactedChip label="note hidden" /> : note.title}
+                          {shareSafe ? <RedactedChip label="note hidden" /> : note.title}
                           <span className="ml-1.5 font-mono text-[11px] tabular-nums text-faint-foreground">{formatDate(noteDate(note))}</span>
                         </button>
                       </li>
@@ -86,7 +86,7 @@ export function PrepareCard({ memory, onTrace, onCopyBrief }: { memory: AccountM
                     <li key={g.claim.id} className="text-body-sm">
                       <button onClick={() => onTrace(g.claim.id)} className="rounded-sm text-left focus-visible:outline-none focus-visible:focus-ring">
                         <span className={cn("mr-1.5 font-medium", g.claim.owner === "them" ? "text-account-fg" : "text-accent-fg")}>{g.claim.owner === "them" ? "They" : "We"}</span>
-                        {buildroom ? <RedactedChip label="commitment hidden" /> : <span className="text-foreground">{g.claim.text}</span>}
+                        {shareSafe ? <RedactedChip label="commitment hidden" /> : <span className="text-foreground">{g.claim.text}</span>}
                         {g.claim.due && (
                           <span className={cn("ml-1.5 font-mono text-[11px] tabular-nums", g.overdue ? "text-destructive-fg" : "text-faint-foreground")}>
                             {g.overdue ? `was due ${formatRelative(g.claim.due)}` : `by ${formatDate(g.claim.due)}`}
@@ -111,7 +111,7 @@ export function PrepareCard({ memory, onTrace, onCopyBrief }: { memory: AccountM
                       <div className="min-w-0">
                         {q.recordId ? (
                           <button onClick={() => onTrace(q.recordId!)} className="rounded-sm text-left text-foreground hover:text-accent-fg focus-visible:outline-none focus-visible:focus-ring">
-                            {buildroom ? <RedactedChip label="question hidden" /> : q.text}
+                            {shareSafe ? <RedactedChip label="question hidden" /> : q.text}
                           </button>
                         ) : (
                           <span className="text-foreground">{q.text}</span>

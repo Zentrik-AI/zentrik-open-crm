@@ -12,7 +12,7 @@ import { Badge } from "../components/ui/badge";
 import { Ring } from "../components/ui/ring";
 import { Meter } from "../components/ui/meter";
 import { EmptyState } from "../components/ui/empty-state";
-import { Private, useBuildroom } from "../components/ui/privacy";
+import { Private, useShareSafe } from "../components/ui/privacy";
 import { AccountListCard, ArrValue, StageRail } from "../components/account-bits";
 import { KnowledgeList } from "../components/claims";
 import { CommitteeMap } from "../components/committee";
@@ -114,7 +114,7 @@ export function AccountsView({
   onTrace: (id: string) => void;
   onCopyBrief: () => void;
 }) {
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
   const [addingAccount, setAddingAccount] = useState(accounts.length === 0);
   const [includeArchived, setIncludeArchived] = useState(false);
   const acct = selectedAccount;
@@ -192,8 +192,8 @@ export function AccountsView({
                     variant="ghost"
                     className="h-7"
                     onClick={onCopyMarkdown}
-                    disabled={buildroom}
-                    title={buildroom ? "Switch to Private view before copying account data" : undefined}
+                    disabled={shareSafe}
+                    title={shareSafe ? "Switch to Private view before copying account data" : undefined}
                   >
                     <ClipboardCopy />
                     Copy as Markdown
@@ -284,7 +284,7 @@ export function AccountsView({
               </div>
 
               <AiPanel
-                shareSafe={buildroom}
+                shareSafe={shareSafe}
                 hasKey={ai.hasKey}
                 modelLabel={ai.modelLabel}
                 noteCount={acctNotes.length}
@@ -300,7 +300,7 @@ export function AccountsView({
                 onCopyAgentHandoff={onCopyAgentHandoff}
               />
 
-              {!buildroom && <AccountMaintenance key={JSON.stringify([acct.id, acct.name, acct.owner, acct.archivedAt])} account={acct} onUpdate={patch => onUpdateAccount(acct.id, patch)} onArchive={(archived, reason) => onArchiveAccount(acct.id, archived, reason)} />}
+              {!shareSafe && <AccountMaintenance key={JSON.stringify([acct.id, acct.name, acct.owner, acct.archivedAt])} account={acct} onUpdate={patch => onUpdateAccount(acct.id, patch)} onArchive={(archived, reason) => onArchiveAccount(acct.id, archived, reason)} />}
             </CardContent>
           </Card>
         </div>

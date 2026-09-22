@@ -17,7 +17,6 @@ import type {
   ClaimKind,
   Contact,
   DealStage,
-  IdeaStatus,
   NoteSource,
   Priority,
   Sentiment,
@@ -30,7 +29,7 @@ export type Tone =
   | "signal"
   | "account"
   | "agent"
-  | "idea"
+  | "highlight"
   | "success"
   | "warning"
   | "destructive";
@@ -44,7 +43,7 @@ export const stageMeta: Record<
   researching: { label: "Researching", tone: "signal", railIndex: 0 },
   active: { label: "Active", tone: "account", railIndex: 1 },
   expanding: { label: "Expanding", tone: "success", railIndex: 2 },
-  renewing: { label: "Renewing", tone: "idea", railIndex: 3 },
+  renewing: { label: "Renewing", tone: "highlight", railIndex: 3 },
   at_risk: { label: "At risk", tone: "destructive", railIndex: null },
 };
 
@@ -132,18 +131,9 @@ export const claimKindOrder: ClaimKind[] = ["need", "goal", "objection", "risk",
 
 export const influenceMeta: Record<Contact["influence"], { label: string; tone: Tone }> = {
   economic: { label: "Economic", tone: "success" },
-  champion: { label: "Champion", tone: "idea" },
+  champion: { label: "Champion", tone: "highlight" },
   technical: { label: "Technical", tone: "signal" },
   user: { label: "User", tone: "neutral" },
-};
-
-/* ---- Improve: idea status ---------------------------------------------- */
-
-export const ideaStatusMeta: Record<IdeaStatus, { label: string; tone: Tone }> = {
-  candidate: { label: "Candidate", tone: "neutral" },
-  shaping: { label: "Shaping", tone: "signal" },
-  queued: { label: "Queued", tone: "accent" },
-  released: { label: "Released", tone: "success" },
 };
 
 /* ---- Thresholds --------------------------------------------------------- */

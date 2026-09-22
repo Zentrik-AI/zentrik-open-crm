@@ -7,7 +7,7 @@ import { Button } from "../components/ui/button";
 import { Field, Input, Select } from "../components/ui/field";
 import { TaskRow } from "../components/task-row";
 import { EmptyState } from "../components/ui/empty-state";
-import { useBuildroom } from "../components/ui/privacy";
+import { useShareSafe } from "../components/ui/privacy";
 import { dateInputValue } from "../lib/utils";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -36,7 +36,7 @@ export function TasksView({
   onTrace: (id: string) => void;
 }) {
   const [adding, setAdding] = useState(false);
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
   const [owner, setOwner] = useState(() => { try { return sessionStorage.getItem("open-crm.task-owner") || ""; } catch { return ""; } });
   const [editing, setEditing] = useState<string | null>(null);
   const [showAllDone, setShowAllDone] = useState(false);
@@ -112,7 +112,7 @@ export function TasksView({
         </Select>
       </Field>
 
-      {adding && !buildroom && (
+      {adding && !shareSafe && (
         <Card className="animate-settle">
           <CardContent className="pt-4">
             <form className="grid items-start gap-3 sm:grid-cols-2" onSubmit={submit}>
@@ -174,7 +174,7 @@ export function TasksView({
                     onOpenAccount={task.accountId ? () => onSelectAccount(task.accountId!) : undefined}
                     onEdit={() => setEditing(editing === task.id ? null : task.id)}
                   />
-                  {!buildroom && editing === task.id && <TaskEditor key={JSON.stringify(task)} task={task} onSave={patch => { if (!Object.keys(patch).length || onUpdateTask(task.id, patch)) setEditing(null); }} onCancel={() => setEditing(null)} />}
+                  {!shareSafe && editing === task.id && <TaskEditor key={JSON.stringify(task)} task={task} onSave={patch => { if (!Object.keys(patch).length || onUpdateTask(task.id, patch)) setEditing(null); }} onCancel={() => setEditing(null)} />}
                   </div>
                 ))}
               </div>

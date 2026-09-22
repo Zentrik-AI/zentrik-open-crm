@@ -26,7 +26,7 @@ const config = {
         signal: { DEFAULT: token("signal"), bg: token("signal-bg"), fg: token("signal-fg") },
         account: { DEFAULT: token("account"), bg: token("account-bg"), fg: token("account-fg") },
         agent: { DEFAULT: token("agent"), bg: token("agent-bg"), fg: token("agent-fg") },
-        idea: { DEFAULT: token("idea"), bg: token("idea-bg"), fg: token("idea-fg") },
+        highlight: { DEFAULT: token("highlight"), bg: token("highlight-bg"), fg: token("highlight-fg") },
         success: {
           DEFAULT: token("success"),
           bg: token("success-bg"),

@@ -8,7 +8,7 @@ const ringColor: Record<Tone, string> = {
   signal: "hsl(var(--signal))",
   account: "hsl(var(--account))",
   agent: "hsl(var(--agent))",
-  idea: "hsl(var(--idea))",
+  highlight: "hsl(var(--highlight))",
   success: "hsl(var(--success))",
   warning: "hsl(var(--warning))",
   destructive: "hsl(var(--destructive))",
@@ -30,7 +30,7 @@ export function Monogram({
   name: string;
   tone?: Tone;
   size?: keyof typeof sizes;
-  /** In Buildroom mode the initials must not be computed or painted. */
+  /** In share-safe mode the initials must not be computed or painted. */
   redacted?: boolean;
   className?: string;
 }) {

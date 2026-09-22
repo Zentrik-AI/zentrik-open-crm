@@ -172,15 +172,4 @@ export const seedWorkspace: Workspace = {
     { id: "claim_meridian_trail", accountId: "acct_meridian", kind: "risk", text: "Procurement needs an exportable audit trail before the renewal signs", evidence: ["note_meridian_meeting"], contactId: "contact_dana", status: "active", createdAt: "2026-06-09T13:15:00.000Z" },
     { id: "claim_meridian_clear", accountId: "acct_meridian", kind: "commitment", text: "Clear the audit-trail export with the security team", evidence: ["note_meridian_meeting"], contactId: "contact_dana", status: "active", createdAt: "2026-06-09T13:15:00.000Z", owner: "them", due: "2026-06-30T23:59:59.000Z" },
   ],
-  ideas: [
-    { id: "idea_local_first", title: "Local-first workspace with hosted upgrade path", problem: "Teams want to start privately, then move to a hosted workspace only when convenience outweighs control.", status: "shaping", votes: 9, targetRelease: "v0.2", confidence: 82 },
-    { id: "idea_pipeline_forecast", title: "Weighted pipeline forecast on the deal board", problem: "A real CRM should roll deals up to a weighted forecast and flag slipping close dates.", status: "queued", votes: 13, targetRelease: "v0.2", confidence: 88 },
-    { id: "idea_wiki_sync", title: "Two-way sync with your personal wiki", problem: "Account memory should live alongside the rest of your notes — sync accounts and notes to Obsidian/Notion.", status: "shaping", votes: 11, targetRelease: "v0.3", confidence: 80 },
-    { id: "idea_source_grounding", title: "Source-grounded agent drafts", problem: "Agent-written follow-ups should expose the evidence they used before a human sends anything.", status: "candidate", votes: 6, targetRelease: "triage", confidence: 72 },
-  ],
-  changelog: [
-    { id: "log_v01", date: "2026-05-28T08:00:00.000Z", title: "First local CRM workspace", summary: "Accounts, deals, tasks, and source-grounded notes in a local-first workspace with a safe export path.", tags: ["accounts", "deals", "local-first"] },
-    { id: "log_ai", date: "2026-06-02T08:00:00.000Z", title: "Bring-your-own-key AI assist", summary: "Account briefs and follow-up drafts now run on your own Anthropic key, grounded in that account's notes.", tags: ["ai", "byo-key"] },
-    { id: "log_sync", date: "2026-06-09T08:00:00.000Z", title: "Markdown vault sync", summary: "Export accounts and notes as Markdown into an Obsidian-style vault so the CRM works with the rest of your system.", tags: ["sync", "obsidian"] },
-  ],
 };

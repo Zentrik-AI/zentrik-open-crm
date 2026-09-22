@@ -7,7 +7,7 @@ import { toneSolidBg } from "../lib/tone";
 import { cn, formatRelative } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Field, Input, Select } from "./ui/field";
-import { RedactedChip, useBuildroom } from "./ui/privacy";
+import { RedactedChip, useShareSafe } from "./ui/privacy";
 import { Grounding } from "./grounding";
 
 type ClaimAdd = Extract<Op, { type: "claim.add" }>;
@@ -24,11 +24,11 @@ function ClaimRow({
   onTrace: (id: string) => void;
   onResolve: (id: string, reason: string) => boolean;
 }) {
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
   const meta = claimKindMeta[g.claim.kind];
   const [resolving, setResolving] = useState(false);
   const [reason, setReason] = useState("");
-  const hidden = buildroom && meta.sensitive;
+  const hidden = shareSafe && meta.sensitive;
   return (
     <li className="group flex gap-2.5 rounded-md border border-border bg-surface p-3 transition-colors duration-fast hover:border-border-strong">
       <span className={cn("mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full", toneSolidBg[meta.tone])} aria-hidden />
@@ -206,7 +206,7 @@ export function KnowledgeList({
   onAdd: (op: ClaimAdd) => boolean;
   onResolve: (id: string, reason: string) => boolean;
 }) {
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
   const [adding, setAdding] = useState(false);
   const groups = claimKindOrder.map((kind) => ({ kind, items: memory.byKind[kind] })).filter((g) => g.items.length > 0);
   return (
@@ -219,7 +219,7 @@ export function KnowledgeList({
             {memory.counts.stale ? ` · ${memory.counts.stale} stale` : ""}
           </span>
         </div>
-        {!adding && !buildroom && (
+        {!adding && !shareSafe && (
           <Button size="sm" variant="ghost" onClick={() => setAdding(true)}>
             <Plus />
             Record

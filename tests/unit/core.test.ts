@@ -30,17 +30,17 @@ test("approval replays the exact change and records who decided", () => {
   const change = newChange({ type: "note.add", accountId: "acct_harbor", title: "Sync failed", body: "Third time.", source: "support", sourceRef: "ticket 212" }, agent);
   const proposed = submitChange(demo(), change);
   assert.equal(proposed.outcome, "proposed");
-  const { workspace, proposal } = resolveProposal(proposed.workspace, pendingProposals(proposed.workspace)[0].id, "approve", "Jorge");
+  const { workspace, proposal } = resolveProposal(proposed.workspace, pendingProposals(proposed.workspace)[0].id, "approve", "Rowan");
   assert.equal(proposal.status, "applied");
   assert.equal(workspace.notes[0].id, change.recordId);
   assert.deepEqual(workspace.notes[0].origin, agent);
-  assert.match(workspace.activity![0].summary, /approved by Jorge/);
-  assert.throws(() => resolveProposal(workspace, proposal.id, "approve", "Jorge"), OpError);
+  assert.match(workspace.activity![0].summary, /approved by Rowan/);
+  assert.throws(() => resolveProposal(workspace, proposal.id, "approve", "Rowan"), OpError);
 });
 
 test("rejection changes no record", () => {
   const proposed = submitChange(demo(), newChange({ type: "deal.move", dealId: "deal_northstar_pilot", stage: "won" }, agent));
-  const { workspace } = resolveProposal(proposed.workspace, pendingProposals(proposed.workspace)[0].id, "reject", "Jorge");
+  const { workspace } = resolveProposal(proposed.workspace, pendingProposals(proposed.workspace)[0].id, "reject", "Rowan");
   assert.equal(workspace.deals.find((d) => d.id === "deal_northstar_pilot")!.stage, "proposal");
   assert.equal(pendingProposals(workspace).length, 0);
 });
@@ -62,7 +62,7 @@ test("invalid changes are refused before anything is stored", () => {
 test("a stale proposal fails loudly instead of corrupting records", () => {
   const proposed = submitChange(demo(), newChange({ type: "task.set_status", taskId: "task_northstar_security", status: "done" }, agent));
   const without = { ...proposed.workspace, tasks: proposed.workspace.tasks.filter((t) => t.id !== "task_northstar_security") };
-  assert.throws(() => resolveProposal(without, pendingProposals(without)[0].id, "approve", "Jorge"), /changed since it was prepared/);
+  assert.throws(() => resolveProposal(without, pendingProposals(without)[0].id, "approve", "Rowan"), /changed since it was prepared/);
 });
 
 test("date-only due dates mean the end of that local day", () => {
@@ -117,8 +117,8 @@ test("an agent can build on its own pending work, and approval keeps the order h
   assert.equal(second.outcome, "proposed");
 
   const [taskProposal, noteProposal] = pendingProposals(second.workspace);
-  assert.throws(() => resolveProposal(second.workspace, taskProposal.id, "approve", "Jorge"), /builds on another proposal/, "the task cannot land before its evidence");
-  const afterNote = resolveProposal(second.workspace, noteProposal.id, "approve", "Jorge").workspace;
-  const done = resolveProposal(afterNote, taskProposal.id, "approve", "Jorge").workspace;
+  assert.throws(() => resolveProposal(second.workspace, taskProposal.id, "approve", "Rowan"), /builds on another proposal/, "the task cannot land before its evidence");
+  const afterNote = resolveProposal(second.workspace, noteProposal.id, "approve", "Rowan").workspace;
+  const done = resolveProposal(afterNote, taskProposal.id, "approve", "Rowan").workspace;
   assert.deepEqual(done.tasks[0].evidence, [note.recordId]);
 });

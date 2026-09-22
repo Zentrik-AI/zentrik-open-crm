@@ -155,28 +155,6 @@ export interface Claim {
   origin?: Actor;
 }
 
-/* ---- Improve Open CRM (product-feedback layer — not the user's CRM data) -- */
-
-export type IdeaStatus = "candidate" | "shaping" | "queued" | "released";
-
-export interface Idea {
-  id: string;
-  title: string;
-  problem: string;
-  status: IdeaStatus;
-  votes: number;
-  targetRelease: string;
-  confidence: number;
-}
-
-export interface ChangelogEntry {
-  id: string;
-  date: string;
-  title: string;
-  summary: string;
-  tags: string[];
-}
-
 /* ---- Operations: the one write path shared by the app, the CLI, and MCP --- */
 
 export type AccountPatch = Partial<
@@ -309,7 +287,4 @@ export interface Workspace {
   /** What we know about each account. Missing in workspaces written before
    *  claims existed; `needs` and `risks` on accounts are derived from these. */
   claims?: Claim[];
-  /** Product-feedback layer, surfaced only under "Improve Open CRM". */
-  ideas: Idea[];
-  changelog: ChangelogEntry[];
 }

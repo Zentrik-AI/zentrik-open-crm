@@ -6,7 +6,7 @@ import { formatDateFull, formatRelative } from "../lib/utils";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, Well } from "../components/ui/card";
-import { RedactedChip, useBuildroom } from "../components/ui/privacy";
+import { RedactedChip, useShareSafe } from "../components/ui/privacy";
 import { Grounding } from "../components/grounding";
 
 const SETUP_COMMANDS = ["npm run crm -- init ~/crm", "cd ~/crm && ./crm ui"];
@@ -170,7 +170,7 @@ function ProposalCard({
   onDecide: (ids: string[], decision: "approve" | "reject") => void;
   onSelectAccount: (id: string) => void;
 }) {
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
   const accountId = accountOf(proposal.change.op, workspace);
   const account = accountId ? accountsById.get(accountId) : undefined;
   const conflict = proposalApprovalIssue(workspace, proposal)?.message;
@@ -181,7 +181,7 @@ function ProposalCard({
           {proposal.actor.name}
         </Badge>
         <span className="text-body-sm text-foreground">{kindLabel[proposal.change.op.type]}</span>
-        {account && !buildroom && (
+        {account && !shareSafe && (
           <button
             onClick={() => onSelectAccount(account.id)}
             className="rounded-sm text-body-sm text-muted-foreground hover:text-accent-fg focus-visible:outline-none focus-visible:focus-ring"
@@ -195,34 +195,34 @@ function ProposalCard({
       </div>
 
       <Well className="mt-3">
-        {buildroom ? <RedactedChip label="detail hidden in share-safe view" /> : <ChangeDetail op={proposal.change.op} workspace={workspace} notesById={notesById} />}
+        {shareSafe ? <RedactedChip label="detail hidden in share-safe view" /> : <ChangeDetail op={proposal.change.op} workspace={workspace} notesById={notesById} />}
       </Well>
 
       {conflict && <p role="status" className="mt-3 text-body-sm text-destructive">{conflict}</p>}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button variant="primary" size="sm" disabled={buildroom || Boolean(conflict)} onClick={() => onDecide([proposal.id], "approve")}>
+        <Button variant="primary" size="sm" disabled={shareSafe || Boolean(conflict)} onClick={() => onDecide([proposal.id], "approve")}>
           <Check />
           Approve
         </Button>
-        <Button variant="ghost" size="sm" disabled={buildroom} onClick={() => onDecide([proposal.id], "reject")}>
+        <Button variant="ghost" size="sm" disabled={shareSafe} onClick={() => onDecide([proposal.id], "reject")}>
           <X />
           Reject
         </Button>
-        {buildroom && <span className="text-[12px] text-faint-foreground">Switch to Private to decide.</span>}
+        {shareSafe && <span className="text-[12px] text-faint-foreground">Switch to Private to decide.</span>}
       </div>
     </article>
   );
 }
 
 function ActivityRow({ entry }: { entry: ActivityEntry }) {
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
   return (
     <li className="flex items-baseline gap-3 py-2 text-body-sm">
       <time dateTime={entry.at} title={formatDateFull(entry.at)} className="w-10 shrink-0 font-mono text-[12px] tabular-nums text-faint-foreground">
         {formatRelative(entry.at)}
       </time>
       <span className="shrink-0 text-agent-fg">{entry.actor.name}</span>
-      <span className="min-w-0 text-muted-foreground">{buildroom ? "Changed a record" : entry.summary}</span>
+      <span className="min-w-0 text-muted-foreground">{shareSafe ? "Changed a record" : entry.summary}</span>
     </li>
   );
 }
@@ -253,7 +253,7 @@ export function ReviewView({
   const mode = workspace.agentMode ?? "review";
   const activity = workspace.activity ?? [];
   const open = folder?.dir ? `cd ${folder.dir}` : "";
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -270,7 +270,7 @@ export function ReviewView({
             <div className="text-label uppercase text-muted-foreground">
               {pending.length} waiting
             </div>
-            {pending.length > 1 && !buildroom && (
+            {pending.length > 1 && !shareSafe && (
               <Button variant="secondary" size="sm" onClick={() => onDecide(pending.map((p) => p.id), "approve")}>
                 <Check />
                 Approve all

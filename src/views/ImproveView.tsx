@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Copy, Download, ExternalLink, Github } from "lucide-react";
-import type { Idea } from "../types";
 import {
   GITHUB_ISSUES_URL, createGitHubIssueDraft, createPublicFeedbackBundle,
   feedbackKinds, readFeedbackDraft, saveFeedbackDraft, deleteFeedbackDraft, type FeedbackDraft,
@@ -10,9 +9,7 @@ import { Button } from "../components/ui/button";
 import { Field, Input, Select, Textarea } from "../components/ui/field";
 import { brand } from "../lib/brand";
 
-export function ImproveView({ ideas }: {
-  ideas: Idea[];
-}) {
+export function ImproveView() {
   const [initial] = useState(() => {
     try { return { draft: readFeedbackDraft(window.localStorage), error: "" }; }
     catch { return { draft: null, error: "The saved feedback draft could not be read. Saving will replace the previous feedback draft." }; }
@@ -40,7 +37,7 @@ export function ImproveView({ ideas }: {
     event.preventDefault();
     try {
       saveFeedbackDraft(window.localStorage, draft);
-      setMessage("Draft saved in this browser. Nothing was sent to Zentrik or GitHub.");
+      setMessage("Draft saved in this browser. Nothing was sent anywhere.");
     } catch {
       setMessage("Could not save in this browser. Keep this view open and copy your text before leaving.");
     }
@@ -136,13 +133,8 @@ export function ImproveView({ ideas }: {
           </CardContent>
         </Card>
       </div>
-      <p role="status" aria-live="polite" className="text-body-sm text-muted-foreground">{message || "Zentrik delivery is not connected. Nothing is sent automatically."}</p>
+      <p role="status" aria-live="polite" className="text-body-sm text-muted-foreground">{message || "Nothing is sent automatically. You choose what to share and when."}</p>
 
-      <details className="border-t border-border pt-4">
-        <summary className="cursor-pointer text-body-sm text-muted-foreground">Local workspace ideas ({ideas.length})</summary>
-        <p className="mb-3 mt-3 text-body-sm text-muted-foreground">These may include demo records. They are not a shared roadmap or release commitments.</p>
-        {ideas.length ? <div className="grid gap-4 sm:grid-cols-2">{ideas.map((idea) => <Card key={idea.id}><CardHeader><CardTitle className="break-words">{idea.title}</CardTitle></CardHeader><CardContent><p className="whitespace-pre-wrap break-words text-body-sm text-muted-foreground">{idea.problem}</p></CardContent></Card>)}</div> : <p className="text-body-sm text-muted-foreground">No local workspace ideas.</p>}
-      </details>
     </div>
   );
 }

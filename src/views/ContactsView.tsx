@@ -5,7 +5,7 @@ import { influenceMeta } from "../lib/meta";
 import { formatRelative } from "../lib/utils";
 import { Badge } from "../components/ui/badge";
 import { Monogram } from "../components/ui/monogram";
-import { Private, useBuildroom } from "../components/ui/privacy";
+import { Private, useShareSafe } from "../components/ui/privacy";
 import { EmptyState } from "../components/ui/empty-state";
 
 export function ContactsView({
@@ -18,7 +18,7 @@ export function ContactsView({
   onTrace: (id: string) => void;
 }) {
   const [q, setQ] = useState("");
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
 
   const people = useMemo(
     () =>
@@ -63,7 +63,7 @@ export function ContactsView({
             return (
               <div key={contact.id} className="rounded-lg border border-border bg-card p-4">
                 <div className="flex items-start gap-3">
-                  <Monogram name={contact.name} tone={meta.tone} redacted={buildroom} size="md" />
+                  <Monogram name={contact.name} tone={meta.tone} redacted={shareSafe} size="md" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-h3 text-foreground">
                       <Private redactedLabel="name hidden">{contact.name}</Private>

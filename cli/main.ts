@@ -228,8 +228,6 @@ function init(argv: string[]) {
         deals: [],
         tasks: [],
         notes: [],
-        ideas: [],
-        changelog: [],
       });
   fs.mkdirSync(dir, { recursive: true });
   writeWorkspace(dir, workspace);

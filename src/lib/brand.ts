@@ -1,7 +1,6 @@
 /**
  * The product's name, in one place. Everything user-facing reads it from here,
  * so a rename is a one-line change plus the repository and package names.
- * See docs/naming.md for the current decision.
  */
 export const brand = {
   /** Short name used in the app chrome and commands. */

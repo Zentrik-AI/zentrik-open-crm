@@ -34,9 +34,9 @@
     --agent: 262 44% 46%;
     --agent-bg: 262 44% 93%;
     --agent-fg: 262 52% 34%;
-    --idea: 24 68% 44%;
-    --idea-bg: 28 62% 91%;
-    --idea-fg: 24 72% 30%;
+    --highlight: 24 68% 44%;
+    --highlight-bg: 28 62% 91%;
+    --highlight-fg: 24 72% 30%;
     --success: 158 50% 32%;
     --success-bg: 158 42% 89%;
     --success-fg: 158 58% 22%;
@@ -128,9 +128,9 @@
     --agent: 258 58% 72%;
     --agent-bg: 262 36% 22%;
     --agent-fg: 258 52% 84%;
-    --idea: 26 76% 64%;
-    --idea-bg: 26 50% 20%;
-    --idea-fg: 28 70% 80%;
+    --highlight: 26 76% 64%;
+    --highlight-bg: 26 50% 20%;
+    --highlight-fg: 28 70% 80%;
     --success: 158 50% 54%;
     --success-bg: 158 42% 17%;
     --success-fg: 158 46% 78%;

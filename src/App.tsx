@@ -91,8 +91,6 @@ const blankWorkspace: Workspace = normalizeWorkspace({
   deals: [],
   tasks: [],
   notes: [],
-  ideas: [],
-  changelog: [],
 });
 
 export default function App() {
@@ -117,7 +115,7 @@ function AppInner() {
   const [onboarding, setOnboarding] = useState<OnboardingState>(() => (folderBacked ? { completed: true, mode: "existing" } : loadOnboardingState(hasStoredWorkspace())));
   const [onboardingOpen, setOnboardingOpen] = useState(() => !folderBacked && !loadOnboardingState(hasStoredWorkspace()).completed);
   const [view, setView] = useState<View>("home");
-  const [buildroom, setBuildroom] = useState(false);
+  const [shareSafe, setShareSafe] = useState(false);
   const [darkMode, setDarkMode] = useState(() =>
     typeof window !== "undefined" && window.matchMedia
       ? window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -374,17 +372,15 @@ function AppInner() {
       deals: [],
       tasks: [],
       notes: [],
-      ideas: structuredClone(seedWorkspace.ideas),
-      changelog: structuredClone(seedWorkspace.changelog),
     };
     replaceWorkspace(normalizeWorkspace(personal));
     setSelectedAccountId(accountId);
     completeOnboarding("workspace");
     toast({ title: `Workspace created · ${accountName}`, tone: "success" });
   }
-  function toggleBuildroom() {
-    const next = !buildroom;
-    setBuildroom(next);
+  function toggleShareSafe() {
+    const next = !shareSafe;
+    setShareSafe(next);
     toast(
       next
         ? { title: "Share-safe view — private fields are hidden and agent/data-copy actions are paused.", tone: "accent", icon: Eye }
@@ -812,7 +808,7 @@ function AppInner() {
   }
 
   return (
-    <PrivacyProvider buildroom={buildroom}>
+    <PrivacyProvider shareSafe={shareSafe}>
       <div className="app-grid bg-background">
         <aside className="sticky top-0 hidden h-screen flex-col border-r border-border bg-surface/60 px-3.5 py-5 lg:flex">
           <div className="mb-7 flex items-center gap-2.5 px-1.5">
@@ -878,9 +874,9 @@ function AppInner() {
               <Button size="icon" variant="ghost" onClick={() => setPaletteOpen(true)} className="h-9 w-9 sm:hidden" aria-label="Search">
                 <Search />
               </Button>
-              <Button size="sm" variant={buildroom ? "accent" : "secondary"} onClick={toggleBuildroom}>
-                {buildroom ? <Eye /> : <Lock />}
-                {buildroom ? "Share-safe" : "Private"}
+              <Button size="sm" variant={shareSafe ? "accent" : "secondary"} onClick={toggleShareSafe}>
+                {shareSafe ? <Eye /> : <Lock />}
+                {shareSafe ? "Share-safe" : "Private"}
               </Button>
               <Button size="icon" variant="ghost" onClick={() => setDarkMode((v) => !v)} aria-label="Toggle theme" className="h-9 w-9">
                 {darkMode ? <Sun /> : <Moon />}
@@ -1024,7 +1020,7 @@ function AppInner() {
               />
             </div>
             <div data-view="improve" className={cn(view !== "improve" && "hidden")}>
-              <ImproveView ideas={workspace.ideas} />
+              <ImproveView />
             </div>
           </div>
         </main>
@@ -1039,10 +1035,10 @@ function AppInner() {
         deals={workspace.deals}
         notes={workspace.notes}
         tasks={workspace.tasks}
-        buildroom={buildroom}
+        shareSafe={shareSafe}
         onNavigate={navigate}
         onSelectAccount={selectAccountAndOpen}
-        onTogglePrivacy={toggleBuildroom}
+        onTogglePrivacy={toggleShareSafe}
       />
     </PrivacyProvider>
   );

@@ -52,9 +52,9 @@ test("an agent's write is held, a person's approval applies it, and the views fo
   assert.equal(refused.status, 3);
   assert.match(refused.err, /person's decision/);
 
-  assert.equal(crm(dir, "approve", proposal.id, "--approved-by", "Jorge").status, 0);
+  assert.equal(crm(dir, "approve", proposal.id, "--approved-by", "Rowan").status, 0);
   assert.match(fs.readFileSync(path.join(dir, "accounts", "northstar-robotics.md"), "utf8"), /Send the diagram/);
-  assert.match(crm(dir, "log").out, /approved by Jorge/);
+  assert.match(crm(dir, "log").out, /approved by Rowan/);
   assert.equal(crm(dir, "check").status, 0);
 });
 
@@ -150,7 +150,7 @@ test("brief, claims, why and lint read the memory; claim writes go through revie
 
   const added = JSON.parse(crm(dir, "claim", "add", "--account", "northstar", "--kind", "objection", "--text", "Needs a data-flow diagram before the steering meeting", "--evidence", "note_northstar_call", "--json").out);
   assert.equal(added.outcome, "proposed");
-  assert.equal(crm(dir, "approve", added.id, "--approved-by", "Jorge").status, 0);
+  assert.equal(crm(dir, "approve", added.id, "--approved-by", "Rowan").status, 0);
   assert.match(crm(dir, "claims", "--account", "northstar").out, /data-flow diagram/);
   const resolved = JSON.parse(crm(dir, "claim", "resolve", added.recordId, "--reason", "Diagram was sent", "--now", "Legal has the diagram", "--json").out);
   assert.equal(resolved.outcome, "proposed");
@@ -178,7 +178,7 @@ test("patterns, signals export, and sources close the loop from inbox to product
   assert.equal(kept.existed, false);
   assert.match(crm(dir, "sources").out, /cal-9/);
   const note = JSON.parse(crm(dir, "note", "add", "--account", "northstar", "--source", "call", "--ref", `source:${kept.source.id}`, "--title", "Legal wants a diagram", "--body", "From the call.", "--json").out);
-  assert.equal(crm(dir, "approve", note.id, "--approved-by", "Jorge").status, 0);
+  assert.equal(crm(dir, "approve", note.id, "--approved-by", "Rowan").status, 0);
   assert.match(crm(dir, "why", note.recordId).out, new RegExp(kept.source.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(crm(dir, "why", "contact_eli").out, /Head of Revenue Operations/);
 });

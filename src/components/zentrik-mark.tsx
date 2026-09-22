@@ -18,7 +18,7 @@ function Spark({ className }: { className?: string }) {
 }
 
 /**
- * "Evolved with Zentrik" attribution. Quiet by default; on hover the spark turns,
+ * "Made by Zentrik" attribution. Quiet by default; on hover the spark turns,
  * the wordmark inks in, and the grounding underline draws beneath it. Links out to
  * zentrik.ai. Use `tone="muted"` in chrome, `tone="prominent"` for a section credit.
  */
@@ -34,7 +34,7 @@ export function ZentrikMark({
       href="https://zentrik.ai"
       target="_blank"
       rel="noreferrer"
-      aria-label="Evolved with Zentrik — opens zentrik.ai"
+      aria-label="Made by Zentrik — opens zentrik.ai"
       className={cn(
         "group inline-flex items-center gap-1.5 rounded-md outline-none transition-opacity duration-base ease-out focus-visible:focus-ring",
         tone === "muted" ? "opacity-80 hover:opacity-100" : "",
@@ -48,7 +48,7 @@ export function ZentrikMark({
           tone === "prominent" ? "text-body-sm" : "text-[11px]",
         )}
       >
-        <span className={tone === "prominent" ? "text-muted-foreground" : "text-faint-foreground"}>Evolved with </span>
+        <span className={tone === "prominent" ? "text-muted-foreground" : "text-faint-foreground"}>Made by </span>
         <span className="relative font-medium text-muted-foreground transition-colors duration-fast group-hover:text-foreground">
           Zentrik
           {/* grounding underline draws on hover */}

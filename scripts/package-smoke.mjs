@@ -54,7 +54,6 @@ try {
     for (const dependency of Object.keys(manifest.dependencies)) assert.ok(notices.includes(`${dependency}@`), `notices missing ${dependency}`);
     assert.match(notices, /SIL OPEN FONT LICENSE/);
   }
-  assert.match(run(process.execPath, [path.join(pkg, "dist/runtime/scripts/import-reviewed-feedback.mjs"), "--help"], install), /Dry-run is the default/);
   const readme = fs.readFileSync(path.join(pkg, "README.md"), "utf8");
   for (const match of readme.matchAll(/\]\((\.\/[^)#]+)(?:#[^)]*)?\)/g)) {
     assert.ok(fs.existsSync(path.resolve(pkg, match[1])), `README target missing from package: ${match[1]}`);

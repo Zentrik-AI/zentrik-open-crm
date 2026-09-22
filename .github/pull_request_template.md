@@ -4,7 +4,7 @@
 ## User workflow improved
 
 
-## Data, privacy, or Buildroom impact
+## Data and privacy impact
 
 - [ ] No data-handling impact
 - [ ] Touches public mode, exports, fixtures, source grounding, or agent prompts

@@ -28,22 +28,11 @@ browser's local storage. Use Settings → Local data to export a JSON backup.
 
 ## Environment
 
-Copy `.env.example` to `.env.local` when adding local settings.
-
-Never commit `.env.local`, real API keys, connector credentials, or private
+The app needs no environment variables. Keep any local settings in an untracked
+`.env.local`, and never commit API keys, connector credentials, or private
 workspace URLs.
-
-## Hosted Edition
-
-Zentrik Open CRM Cloud should preserve the same product contract:
-
-- users can understand where recommendations came from
-- humans approve customer-facing work
-- public Buildroom data is explicitly separated from private CRM data
-- exports remain possible
 
 ## Development and release
 
 Contributors work from feature branches based on `main` and open reviewed pull
-requests back to `main`. See [Pre-production and release](./preproduction-and-release.md)
-for the repository workflow.
+requests back to `main`. See [Releasing](./releasing.md) for the checks.

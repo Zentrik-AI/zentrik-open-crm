@@ -1,7 +1,7 @@
 # Privacy Boundaries
 
-This repository is intended to become public. Treat it as public from the first
-commit.
+This repository is public. Anything committed here is published, including
+anything that only survives in history.
 
 ## Allowed
 

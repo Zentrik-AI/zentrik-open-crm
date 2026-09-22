@@ -9,7 +9,6 @@ Zentrik AI reserves rights in the following names, marks, and visual assets:
 
 - Zentrik
 - Zentrik Open CRM
-- Open CRM Buildroom
 - Zentrik Open CRM logos, wordmarks, icons, and product marks
 - confusingly similar names or marks
 

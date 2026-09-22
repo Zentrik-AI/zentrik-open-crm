@@ -32,7 +32,7 @@ offers a one-way Markdown snapshot for agents.
 - an agent works the same records through a checked command
 - nothing an agent proposes lands until a person approves it
 - grounded work looks different from a hunch
-- product feedback can become public-safe ideas in Open CRM Buildroom
+- account work stays here; what several accounts say can be handed to Zentrik
 
 ## What To Avoid In The First Session
 
@@ -42,7 +42,7 @@ offers a one-way Markdown snapshot for agents.
 - hiding what an agent will read or infer
 - letting an agent's change land unreviewed in a new workspace
 - implying that the browser-only snapshot is two-way
-- exposing private account data in public Buildroom mode
+- exposing private account data in the share-safe view
 
 ## Contribution Standard
 

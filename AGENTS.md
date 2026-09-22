@@ -25,12 +25,12 @@ workspace.
 ## Product Direction
 
 Build a real CRM, not a marketing shell. The first screen should be usable for
-account work: accounts, signals, next actions, source confidence, ideas, and
-agent tasks.
+account work: accounts, what we know and what grounds it, next actions, and what
+agents are waiting on.
 
-The product should feel source-grounded, human-centered, agent-assisted, and
-designed for teams that want a self-managed CRM they can run locally or use
-through a hosted edition.
+The product should feel source-grounded, human-centered, and agent-assisted, for
+teams that want a CRM they run themselves. Account work belongs here; deciding
+what to build from that evidence belongs in Zentrik.
 
 ## Engineering Defaults
 
@@ -75,10 +75,8 @@ through a hosted edition.
 - `main` is the protected production branch. Start feature branches from
   `origin/main` and open pull requests against `main`; never push feature work
   to it directly.
-- Use the shared Zentrik worktree command and the repository profile in
-  `.zentrik/worktree.json` for durable worktrees. Do not create ad hoc durable
-  worktrees or choose random ports.
-- Run `npm run typecheck`, `npm test`, `npm run build`, and `npm run test:e2e`
-  (with `OPEN_CRM_PORT` set to the worktree's port) before opening a pull
-  request. A passing local build is not a substitute for the protected `main`
-  review.
+- Work a feature in its own checkout or worktree. Set `OPEN_CRM_PORT` when a
+  second checkout needs its own dev-server and test port.
+- Run `npm run typecheck`, `npm test`, `npm run build`, `npm run test:package`,
+  and `npm run test:e2e` before opening a pull request. A passing local build is
+  not a substitute for the checks on `main`.

@@ -35,7 +35,7 @@ Apache 2.0 unless a different written arrangement is made before inclusion.
 
 Third-party runtime licenses are recorded in
 [`THIRD_PARTY_NOTICES.txt`](../THIRD_PARTY_NOTICES.txt). Run the dependency and
-notice checks described in [Release readiness](./release-readiness.md) when
+notice checks described in [Releasing](./releasing.md) when
 adding a package or changing its version.
 
 This document is informational and is not legal advice. Review trademark,

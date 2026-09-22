@@ -1,27 +1,23 @@
 # Zentrik Open CRM
 
-![Zentrik Open CRM product hero](./assets/brand/open-crm-hero.png)
+![An Open CRM account: the brief before a conversation, what we know with the note behind each claim, and who decides](./assets/brand/open-crm-hero.png)
 
 **Relationship management for people and their agents.** An open-source,
 local-first CRM where every fact shows its source, agents propose and people
 approve, and what several accounts are saying is handed on as product
 evidence instead of being decided here.
 
-[Product Intent](./docs/product-intent.md) ·
 [First Use](./docs/first-use.md) ·
 [Agent Operator Guide](./docs/agent-operator-guide.md) ·
-[Feedback And Support](./docs/feedback-and-support.md) ·
-[Roadmap](./docs/roadmap.md) ·
-[Brand Archetype](./docs/brand-archetype.md) ·
-[Licensing And IP](./docs/licensing-and-ip.md) ·
+[Workspace Format](./docs/workspace-format.md) ·
 [Self-Hosting](./docs/self-hosting.md) ·
+[Roadmap](./docs/roadmap.md) ·
 [Contributing](./CONTRIBUTING.md)
 
 Zentrik Open CRM is built for founders, consultants, agencies, small B2B teams,
 and technical operators who sell, support, and build close to their users. It is
-useful as a CRM on day one, and it also shows a larger product loop: users
-submit feedback, signals become product evidence, agents prepare work, humans
-review decisions, and releases are checked against outcomes.
+a CRM you run yourself, on a folder you own, that your coding agent can work
+as well as you can.
 
 ## Why Open CRM
 
@@ -29,8 +25,8 @@ Most lightweight CRMs are easy to start but weak at remembering why an account
 matters. Most powerful CRMs become expensive administration systems. Open CRM is
 the middle path for small technical teams:
 
-- account memory stays tied to calls, emails, support notes, reviews, usage,
-  GitHub, and market signals
+- account memory stays tied to the calls, emails, support notes, and reviews
+  that produced it
 - next actions show the source that caused the recommendation
 - Claude Code, Codex, and Cursor work the same records you do, through a
   checked command and an MCP server, and you approve what they change
@@ -142,14 +138,13 @@ for who this is built for and the moments it is built around.
 - `crm` command and MCP server over the same workspace folder
 - Private and share-safe views, JSON backup, calendar export
 - Optional in-app AI with your own Anthropic key
-- Improve: local feedback drafts and reviewed public handoffs, separate from CRM data
+- Improve: local feedback about Open CRM itself, kept separate from your CRM data
 
 ## Development And Release Flow
 
-`main` is the protected production branch. Feature branches should start from
-`origin/main` and open pull requests into `main`; the same checks run for every
-pull request and production update. See [Pre-production and release](./docs/preproduction-and-release.md)
-for the complete workflow.
+`main` is the protected branch. Feature branches start from `origin/main` and
+open pull requests into `main`; the same checks run for every pull request. See
+[Releasing](./docs/releasing.md) for the checks and the pre-tag review.
 
 ## Validate Changes
 
@@ -168,10 +163,10 @@ temporary install after the check; dependency installation needs npm registry ac
 
 ## Current Version
 
-0.2 is a Vite React app with two homes for its data: browser local storage, or
-a workspace folder served on loopback by `crm ui`. The repository includes
-synthetic demo data only. It has no production API keys or private customer
-records.
+1.0 is a Vite React app with two homes for its data: browser local storage, or a
+workspace folder served on loopback by `crm ui`. The repository carries
+synthetic demo data only — no API keys, no customer records. See
+[CHANGELOG.md](./CHANGELOG.md).
 
 ## Repository Guardrails
 
@@ -194,38 +189,30 @@ proprietary platform code. See [NOTICE](./NOTICE),
 [Trademark Policy](./TRADEMARKS.md), and
 [Licensing And IP](./docs/licensing-and-ip.md).
 
-## Core Docs
+## Docs
 
-- [Product Intent](./docs/product-intent.md)
-- [Product Narrative](./docs/product-narrative.md)
-- [Outward Ecosystem](./docs/outward-ecosystem.md)
-- [Brand Archetype](./docs/brand-archetype.md)
-- [First Use](./docs/first-use.md)
-- [Self-Evolving Loop](./docs/self-evolving-loop.md)
-- [Feedback And Support](./docs/feedback-and-support.md)
-- [Release QA](./docs/release-qa.md)
-- [Licensing And IP](./docs/licensing-and-ip.md)
-- [Public Release Checklist](./docs/public-release-checklist.md)
-- [Roadmap](./docs/roadmap.md)
-- [Architecture](./docs/architecture.md)
-- [Personas and Flows](./docs/personas-and-flows.md)
-- [Naming](./docs/naming.md)
-- [Agent Operator Guide](./docs/agent-operator-guide.md)
-- [Workspace Format](./docs/workspace-format.md)
-- [Codex Operator Guide](./docs/codex-operator-guide.md)
-- [Self-Hosting](./docs/self-hosting.md)
-- [Privacy Boundaries](./docs/privacy-boundaries.md)
-- [Public Brand Assets](./assets/brand/README.md)
+**Using it:** [First Use](./docs/first-use.md) ·
+[Personas and Flows](./docs/personas-and-flows.md) ·
+[Review a team's tasks](./docs/team-task-review.md) ·
+[Self-Hosting](./docs/self-hosting.md)
+
+**Working it with agents:** [Agent Operator Guide](./docs/agent-operator-guide.md) ·
+[Agent Setup](./docs/agent-setup.md) · [Agent Routines](./docs/agent-routines.md) ·
+[Workspace Format](./docs/workspace-format.md)
+
+**How it is built:** [Architecture](./docs/architecture.md) ·
+[Design System](./docs/design-system.md) ·
+[Account work here, product work in Zentrik](./docs/product-work.md) ·
+[Roadmap](./docs/roadmap.md)
+
+**Boundaries:** [Privacy Boundaries](./docs/privacy-boundaries.md) ·
+[Feedback and Support](./docs/feedback-and-support.md) ·
+[Licensing and IP](./docs/licensing-and-ip.md) · [Releasing](./docs/releasing.md)
 
 ## Product Feedback
 
-Use **Improve** to save a local draft, review its public content, and export a
-feedback bundle or prepare a GitHub issue. Nothing is submitted automatically.
-
-**Open CRM Buildroom** is planned, not a working public submission channel yet.
-Its [instance manifest](./portal/open-crm-buildroom.instance.json) is a proposal;
-public login and moderation must be verified before it is enabled. See the
-[Zentrik feedback loop](./docs/self-evolving-loop.md) for the reviewed handoff.
-
-Use [Feedback And Support](./docs/feedback-and-support.md) to choose the right
-channel. Keep customer records and security reports out of public feedback.
+**Improve** saves a local draft and, when you choose to share it, prepares a
+public-safe bundle or a GitHub issue that you submit yourself. It never reads
+your CRM records and nothing is sent automatically. See
+[Feedback and support](./docs/feedback-and-support.md), and keep customer
+records and security reports out of public issues.

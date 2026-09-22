@@ -22,6 +22,7 @@ export function TasksView({
   onSelectAccount,
   onExportICS,
   onUpdateTask,
+  onTrace,
 }: {
   notesById: Map<string, Note>;
   tasks: Task[];
@@ -32,6 +33,7 @@ export function TasksView({
   onSelectAccount: (id: string) => void;
   onExportICS: (taskIds: string[]) => void;
   onUpdateTask: (id: string, patch: TaskPatch) => boolean;
+  onTrace: (id: string) => void;
 }) {
   const [adding, setAdding] = useState(false);
   const buildroom = useBuildroom();
@@ -167,6 +169,7 @@ export function TasksView({
                     task={task}
                     accountName={task.accountId ? accountsById.get(task.accountId)?.name : undefined}
                     notesById={notesById}
+                    onTrace={onTrace}
                     onToggle={() => onToggleTask(task.id)}
                     onOpenAccount={task.accountId ? () => onSelectAccount(task.accountId!) : undefined}
                     onEdit={() => setEditing(editing === task.id ? null : task.id)}

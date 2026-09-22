@@ -1,4 +1,4 @@
-import type { AccountStage, Contact, DealStage, NoteSource, Priority, Sentiment } from "../types.ts";
+import type { AccountStage, ClaimKind, ClaimStatus, Contact, DealStage, NoteSource, Priority, Sentiment } from "../types.ts";
 
 /**
  * The vocabulary of the CRM, free of any UI or Node dependency so the app, the
@@ -69,6 +69,22 @@ export const noteSourceLabel: Record<NoteSource, string> = {
   market: "Market",
 };
 
+export const claimKinds: ClaimKind[] = ["need", "risk", "goal", "objection", "commitment", "fact"];
+
+export const claimStatuses: ClaimStatus[] = ["active", "resolved", "superseded"];
+
+export const claimKindLabel: Record<ClaimKind, { singular: string; plural: string }> = {
+  need: { singular: "Need", plural: "Needs" },
+  risk: { singular: "Risk", plural: "Risks" },
+  goal: { singular: "Goal", plural: "Goals" },
+  objection: { singular: "Objection", plural: "Objections" },
+  commitment: { singular: "Commitment", plural: "Commitments" },
+  fact: { singular: "Fact", plural: "Facts" },
+};
+
+/** Evidence older than this is worth re-checking before it is relied on. */
+export const STALE_EVIDENCE_DAYS = 45;
+
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Reject calendar rollover and ambiguous locale-dependent date strings. */
@@ -78,6 +94,17 @@ export function isValidDate(value: unknown): value is string {
   if (!match || !Number.isFinite(Date.parse(value))) return false;
   const day = new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00Z`);
   return day.getUTCFullYear() === Number(match[1]) && day.getUTCMonth() + 1 === Number(match[2]) && day.getUTCDate() === Number(match[3]);
+}
+
+/** A short id derived from its parts, so the same input always names the same
+ *  record. Used where a record is created by a rule rather than by a person. */
+export function stableId(prefix: string, ...parts: string[]) {
+  let hash = 2166136261;
+  for (const char of parts.join("\u0000")) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return `${prefix}_${hash.toString(36).padStart(7, "0").slice(0, 8)}`;
 }
 
 export function makeId(prefix: string) {

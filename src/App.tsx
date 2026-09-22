@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Layers3, Lock, Moon, Search, Sun } from "lucide-react";
 import { createDemoWorkspace, getStorageIssue, getStoredWorkspaceText, hasStoredWorkspace, loadWorkspace, recoverWorkspace, saveWorkspace, touchWorkspace } from "./lib/storage";
 import { loadOnboardingState, saveOnboardingState, type OnboardingMode, type OnboardingState } from "./lib/onboarding";
@@ -7,6 +7,8 @@ import { primaryNav, secondaryNav, allNav, type View } from "./lib/nav";
 import { isOpenDeal, pipelineColumns } from "./lib/meta";
 import { newChange, pendingProposals, resolveProposal, submitChange } from "./core/ops.ts";
 import { normalizeWorkspace, parseWorkspace } from "./core/validate.ts";
+import { accountMemory, briefMarkdown, trace as traceRecord } from "./core/memory.ts";
+import { TraceSheet } from "./components/trace";
 import { BackendError, folderBacked, loadFolder, replaceFolderWorkspace, sendChange, sendDecision, watchFolder, type FolderState } from "./lib/backend";
 import {
   emptyAccountDraft,
@@ -248,6 +250,10 @@ function AppInner() {
   const accountsById = useMemo(() => new Map(workspace.accounts.map((a) => [a.id, a])), [workspace.accounts]);
   const notesById = useMemo(() => new Map(workspace.notes.map((n) => [n.id, n])), [workspace.notes]);
   const selectedAccount = accountsById.get(selectedAccountId) ?? workspace.accounts[0];
+  const selectedMemory = useMemo(() => (selectedAccount ? accountMemory(workspace, selectedAccount.id) : null), [workspace, selectedAccount]);
+  const [traceId, setTraceId] = useState<string | null>(null);
+  const traceData = useMemo(() => (traceId ? traceRecord(workspace, traceId) : null), [workspace, traceId]);
+  const closeTrace = useCallback(() => setTraceId(null), []);
 
   const counts = useMemo(
     () => ({
@@ -641,6 +647,7 @@ function AppInner() {
       workspace.deals.filter((d) => d.accountId === selectedAccount.id),
       workspace.tasks.filter((t) => t.accountId === selectedAccount.id),
       workspace.notes.filter((n) => n.accountId === selectedAccount.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      (workspace.claims ?? []).filter((c) => c.accountId === selectedAccount.id),
     );
     try {
       await navigator.clipboard.writeText(md);
@@ -915,6 +922,7 @@ function AppInner() {
                 onNavigate={navigate}
                 onSelectAccount={selectAccountAndOpen}
                 onToggleTask={toggleTask}
+                onTrace={setTraceId}
               />
             </div>
             <div data-view="pipeline" className={cn(view !== "pipeline" && "hidden")}>
@@ -922,6 +930,19 @@ function AppInner() {
             </div>
             <div data-view="accounts" className={cn(view !== "accounts" && "hidden")}>
               <AccountsView
+                memory={selectedMemory}
+                onAddClaim={(op) => {
+                  const added = dispatch(op);
+                  if (added) toast({ title: op.evidence?.length ? "Recorded, with its evidence" : "Recorded as a hunch · cite a note when you have one", tone: "signal" });
+                  return Boolean(added);
+                }}
+                onResolveClaim={(claimId, reason) => {
+                  const done = dispatch({ type: "claim.resolve", claimId, reason });
+                  if (done) toast({ title: "Resolved · kept in the account's history", tone: "neutral" });
+                  return Boolean(done);
+                }}
+                onTrace={setTraceId}
+                onCopyBrief={() => selectedMemory && void copyText(briefMarkdown(selectedMemory), "Brief copied · paste it anywhere")}
                 onUpdateAccount={(accountId, patch) => Boolean(dispatch({ type: "account.update", accountId, patch }))}
                 onArchiveAccount={(accountId, archived, reason) => Boolean(dispatch({ type: "account.archive", accountId, archived, reason }))}
                 accounts={workspace.accounts}
@@ -953,7 +974,7 @@ function AppInner() {
               <ContactsView accounts={workspace.accounts} onSelectAccount={selectAccountAndOpen} />
             </div>
             <div data-view="tasks" className={cn(view !== "tasks" && "hidden")}>
-              <TasksView tasks={workspace.tasks} accounts={workspace.accounts} accountsById={accountsById} notesById={notesById} onToggleTask={toggleTask} onAddTask={addTask} onUpdateTask={(taskId, patch) => Boolean(dispatch({ type: "task.update", taskId, patch }))} onSelectAccount={selectAccountAndOpen} onExportICS={exportTasksICS} />
+              <TasksView tasks={workspace.tasks} accounts={workspace.accounts} accountsById={accountsById} notesById={notesById} onToggleTask={toggleTask} onAddTask={addTask} onUpdateTask={(taskId, patch) => Boolean(dispatch({ type: "task.update", taskId, patch }))} onSelectAccount={selectAccountAndOpen} onExportICS={exportTasksICS} onTrace={setTraceId} />
             </div>
             <div data-view="notes" className={cn(view !== "notes" && "hidden")}>
               <NotesView notes={workspace.notes} accounts={workspace.accounts} accountsById={accountsById} onAddNote={addNote} />
@@ -996,6 +1017,8 @@ function AppInner() {
           </div>
         </main>
       </div>
+
+      <TraceSheet trace={traceData} onClose={closeTrace} onNavigate={setTraceId} />
 
       <CommandPalette
         open={paletteOpen}

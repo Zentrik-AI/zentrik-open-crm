@@ -42,3 +42,23 @@ test("a person's change in the app is what the agent reads next", async ({ page 
   await expect.poll(() => crm("tasks", "--json")).toContain("Call Eli about the pilot scope");
   expect(crm("check")).toContain("Records are valid");
 });
+
+test("an agent records what it learned; a person approves it and sees it grounded", async ({ page }) => {
+  await page.goto("/");
+  const out = crm("claim", "add", "--account", "northstar", "--kind", "objection", "--text", "Procurement wants a signed DPA before the pilot", "--evidence", "note_northstar_call", "--contact", "contact_eli", "--json");
+  const result = JSON.parse(out);
+  expect(result.outcome).toBe("proposed");
+
+  await page.locator("aside").getByRole("button", { name: /Review/ }).click();
+  const review = page.locator('[data-view="review"]');
+  await expect(review.getByText("New fact")).toBeVisible();
+  await expect(review.getByText("Procurement wants a signed DPA before the pilot")).toBeVisible();
+  await expect(review.getByText(/grounded in “Pilot call/)).toBeVisible();
+  await review.getByRole("button", { name: "Approve", exact: true }).click();
+
+  await expect.poll(() => onDisk().claims.some((c: { text: string; origin?: { name: string } }) => c.text.startsWith("Procurement wants") && c.origin?.name === "test-agent")).toBe(true);
+  await page.locator("aside").getByRole("button", { name: /Accounts/ }).click();
+  const knowledge = page.getByRole("region", { name: "What we know" });
+  await expect(knowledge.getByText("Procurement wants a signed DPA before the pilot")).toBeVisible();
+  expect(crm("brief", "northstar")).toContain("Procurement wants a signed DPA");
+});

@@ -53,17 +53,29 @@ Then ask for work in plain language:
 ## The Loop
 
 1. **The agent reads.** `./crm status` ranks what needs attention and says why.
-   `./crm show <account>` prints one account with every record id.
+   `./crm brief <account>` is the page to read before a conversation: what
+   changed since the last real contact, what we know and how well, who decides,
+   what to ask. `./crm show <account>` prints every record with its id.
 2. **The agent captures.** New information becomes a note with its source and a
    reference you could follow back: `./crm note add --source call --ref "inbox/northstar-0917.txt" …`
-3. **The agent proposes.** Next actions cite their evidence:
+3. **The agent records what it learned.** A note is what was said; a claim is
+   what we now know. `./crm claim add --kind objection --text "…" --evidence note_k3x9a2bd`.
+   One idea per claim: a need, a risk, a goal, an objection, a commitment
+   (whose, by when), or a fact. When something stops being true, it is resolved
+   with a reason and what is true now, never edited in place.
+4. **The agent proposes.** Next actions cite their evidence:
    `./crm task add … --reason "…" --evidence note_k3x9a2bd`
-4. **You decide.** Each change appears in the app under **Review** the moment it
+5. **You decide.** Each change appears in the app under **Review** the moment it
    is proposed, with the agent's name, the substance of the change, and what
    grounds it. Approve or reject.
-5. **The record shows its grounding.** An approved task carries the agent's
-   name, its reason, and a solid underline naming the notes behind it. A task
-   with no evidence gets a dashed underline: a hunch.
+6. **The record shows its grounding.** An approved task or claim carries the
+   agent's name and a solid underline naming the notes behind it. One with no
+   evidence gets a dashed underline: a hunch. Click either to open the trace:
+   source, what we took from it, what it led to. `./crm why <id>` is the same
+   answer in text.
+7. **The memory gets audited.** `./crm lint` lists hunches, stale evidence,
+   overdue commitments, and accounts with no one who signs off. Those are the
+   questions for the next conversation, not facts to fill in.
 
 ## Review Mode And Direct Mode
 

@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { ClipboardCopy, Plus, UserPlus } from "lucide-react";
-import type { Account, AccountPatch, Deal, Note, Task } from "../types";
-import { accountStages, contactInfluences, priorities, type AccountDraft, type ContactDraft } from "../lib/drafts";
+import { ClipboardCopy, Plus } from "lucide-react";
+import type { Account, AccountPatch, Deal, Note, Op, Task } from "../types";
+import type { AccountMemory } from "../core/memory";
+import { accountStages, priorities, type AccountDraft, type ContactDraft } from "../lib/drafts";
 import { stageMeta, isOpenDeal } from "../lib/meta";
 import { humanize } from "../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -12,13 +13,10 @@ import { Ring } from "../components/ui/ring";
 import { Meter } from "../components/ui/meter";
 import { EmptyState } from "../components/ui/empty-state";
 import { Private, useBuildroom } from "../components/ui/privacy";
-import {
-  AccountListCard,
-  ArrValue,
-  ContactRow,
-  InfoList,
-  StageRail,
-} from "../components/account-bits";
+import { AccountListCard, ArrValue, StageRail } from "../components/account-bits";
+import { KnowledgeList } from "../components/claims";
+import { CommitteeMap } from "../components/committee";
+import { PrepareCard } from "../components/prepare";
 import { DealCard } from "../components/deal-card";
 import { TaskRow } from "../components/task-row";
 import { NoteCard } from "../components/note-card";
@@ -79,6 +77,11 @@ export function AccountsView({
   onOpenSettings,
   onUpdateAccount,
   onArchiveAccount,
+  memory,
+  onAddClaim,
+  onResolveClaim,
+  onTrace,
+  onCopyBrief,
 }: {
   accounts: Account[];
   selectedAccount: Account | undefined;
@@ -105,6 +108,11 @@ export function AccountsView({
   onOpenSettings: () => void;
   onUpdateAccount: (id: string, patch: AccountPatch) => boolean;
   onArchiveAccount: (id: string, archived: boolean, reason: string) => boolean;
+  memory: AccountMemory | null;
+  onAddClaim: (op: Extract<Op, { type: "claim.add" }>) => boolean;
+  onResolveClaim: (claimId: string, reason: string) => boolean;
+  onTrace: (id: string) => void;
+  onCopyBrief: () => void;
 }) {
   const buildroom = useBuildroom();
   const [addingAccount, setAddingAccount] = useState(accounts.length === 0);
@@ -225,32 +233,11 @@ export function AccountsView({
                 </div>
               </div>
 
-              {!buildroom && <AccountMaintenance key={JSON.stringify([acct.id, acct.name, acct.owner, acct.archivedAt])} account={acct} onUpdate={patch => onUpdateAccount(acct.id, patch)} onArchive={(archived, reason) => onArchiveAccount(acct.id, archived, reason)} />}
+              {memory && <PrepareCard memory={memory} onTrace={onTrace} onCopyBrief={onCopyBrief} />}
 
-              <AiPanel
-                shareSafe={buildroom}
-                hasKey={ai.hasKey}
-                modelLabel={ai.modelLabel}
-                noteCount={acctNotes.length}
-                busy={ai.busy}
-                result={ai.result}
-                copied={ai.copied}
-                error={ai.error}
-                onGenerate={onAiGenerate}
-                onAsk={onAiAsk}
-                onCopy={onAiCopy}
-                onClear={onAiClear}
-                onOpenSettings={onOpenSettings}
-                onCopyAgentHandoff={onCopyAgentHandoff}
-              />
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                <InfoList title="Needs" items={acct.needs} tone="success" grounded />
-                {buildroom ? (
-                  <InfoList title="Risks" items={["Risk notes are hidden in share-safe view"]} tone="warning" grounded={false} />
-                ) : (
-                  <InfoList title="Risks" items={acct.risks} tone="warning" grounded={false} />
-                )}
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+                {memory && <KnowledgeList memory={memory} notes={acctNotes} notesById={notesById} onTrace={onTrace} onAdd={onAddClaim} onResolve={(id, reason) => onResolveClaim(id, reason)} />}
+                {memory && <CommitteeMap lanes={memory.committee} draftContact={draftContact} setDraftContact={setDraftContact} onAddContact={onAddContact} />}
               </div>
 
               {acctDeals.length > 0 && (
@@ -264,14 +251,12 @@ export function AccountsView({
                 </div>
               )}
 
-              <ContactsPanel account={acct} draftContact={draftContact} setDraftContact={setDraftContact} onAddContact={onAddContact} />
-
               {acctTasks.length > 0 && (
                 <div>
                   <div className="mb-2 text-label uppercase text-muted-foreground">Tasks</div>
                   <div className="space-y-2.5">
                     {acctTasks.map((task) => (
-                      <TaskRow key={task.id} task={task} notesById={notesById} onToggle={() => onToggleTask(task.id)} />
+                      <TaskRow key={task.id} task={task} notesById={notesById} onTrace={onTrace} onToggle={() => onToggleTask(task.id)} />
                     ))}
                   </div>
                 </div>
@@ -297,6 +282,25 @@ export function AccountsView({
                   )}
                 </div>
               </div>
+
+              <AiPanel
+                shareSafe={buildroom}
+                hasKey={ai.hasKey}
+                modelLabel={ai.modelLabel}
+                noteCount={acctNotes.length}
+                busy={ai.busy}
+                result={ai.result}
+                copied={ai.copied}
+                error={ai.error}
+                onGenerate={onAiGenerate}
+                onAsk={onAiAsk}
+                onCopy={onAiCopy}
+                onClear={onAiClear}
+                onOpenSettings={onOpenSettings}
+                onCopyAgentHandoff={onCopyAgentHandoff}
+              />
+
+              {!buildroom && <AccountMaintenance key={JSON.stringify([acct.id, acct.name, acct.owner, acct.archivedAt])} account={acct} onUpdate={patch => onUpdateAccount(acct.id, patch)} onArchive={(archived, reason) => onArchiveAccount(acct.id, archived, reason)} />}
             </CardContent>
           </Card>
         </div>
@@ -385,55 +389,5 @@ function AccountSetupCard({
         </form>
       </CardContent>
     </Card>
-  );
-}
-
-function ContactsPanel({
-  account,
-  draftContact,
-  setDraftContact,
-  onAddContact,
-}: {
-  account: Account;
-  draftContact: ContactDraft;
-  setDraftContact: React.Dispatch<React.SetStateAction<ContactDraft>>;
-  onAddContact: (e: FormEvent<HTMLFormElement>) => void;
-}) {
-  const set = (patch: Partial<ContactDraft>) => setDraftContact((c) => ({ ...c, ...patch }));
-  return (
-    <div className="min-w-0 rounded-lg border border-border bg-surface p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="text-label uppercase text-muted-foreground">Contacts</div>
-        <Badge tone="neutral">{account.contacts.length} people</Badge>
-      </div>
-      <div className="mt-3 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2">
-        {account.contacts.length === 0 ? (
-          <div className="rounded-md border border-dashed border-border p-3 text-body-sm text-muted-foreground">No contacts yet.</div>
-        ) : (
-          account.contacts.map((contact) => <ContactRow key={contact.id} contact={contact} />)
-        )}
-      </div>
-      <form className="mt-4 grid items-end gap-3 lg:grid-cols-[1fr_1fr_150px_auto]" onSubmit={onAddContact}>
-        <Field label="Name">
-          <Input value={draftContact.name} onChange={(e) => set({ name: e.target.value })} placeholder="New contact" />
-        </Field>
-        <Field label="Role">
-          <Input value={draftContact.role} onChange={(e) => set({ role: e.target.value })} placeholder="Operations lead" />
-        </Field>
-        <Field label="Influence">
-          <Select value={draftContact.influence} onChange={(e) => set({ influence: e.target.value as ContactDraft["influence"] })}>
-            {contactInfluences.map((i) => (
-              <option key={i} value={i}>
-                {i}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Button type="submit" variant="secondary">
-          <UserPlus />
-          Add
-        </Button>
-      </form>
-    </div>
   );
 }

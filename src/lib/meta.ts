@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type {
   AccountStage,
+  ClaimKind,
   Contact,
   DealStage,
   IdeaStatus,
@@ -112,6 +113,20 @@ export const sentimentMeta: Record<Sentiment, { label: string; tone: Tone; glyph
   negative: { label: "Negative", tone: "destructive", glyph: "▼" },
   neutral: { label: "Neutral", tone: "neutral", glyph: "–" },
 };
+
+/* ---- Claims: what we know, by kind ------------------------------------- */
+
+export const claimKindMeta: Record<ClaimKind, { label: string; plural: string; tone: Tone; sensitive: boolean }> = {
+  need: { label: "Need", plural: "Needs", tone: "success", sensitive: false },
+  goal: { label: "Goal", plural: "Goals", tone: "accent", sensitive: false },
+  objection: { label: "Objection", plural: "Objections", tone: "warning", sensitive: true },
+  risk: { label: "Risk", plural: "Risks", tone: "destructive", sensitive: true },
+  commitment: { label: "Commitment", plural: "Commitments", tone: "account", sensitive: true },
+  fact: { label: "Fact", plural: "Facts", tone: "neutral", sensitive: false },
+};
+
+/** Display order: what they want first, then what stands in the way. */
+export const claimKindOrder: ClaimKind[] = ["need", "goal", "objection", "risk", "commitment", "fact"];
 
 /* ---- Contacts: influence (rings never use agent-violet — that's AI only) - */
 

@@ -15,10 +15,16 @@ else in the folder is either generated from it or written for the agent.
 | `deals[]` | Deal with `accountId`, stage, value, probability, close date. |
 | `tasks[]` | Task with due date, priority, owner, optional `accountId`, `reason`, `evidence[]` (note ids), `origin`. |
 | `notes[]` | Source note with `source`, `sourceRef`, sentiment, optional `contactId`, `origin`. |
+| `claims[]` | What we know: `kind` (need, risk, goal, objection, commitment, fact), `text`, `evidence[]` (note ids), optional `contactId`, `status` (active, resolved, superseded), `resolvedReason`, `supersededBy`; commitments carry `owner` (us/them) and `due`. |
 | `proposals[]` | Agent changes: the stored operation, a summary, status, who resolved it. |
 | `activity[]` | The last 200 agent actions and decisions. |
 | `receipts` | Stable-key retry receipts, retained when resolved proposal history is trimmed. |
 | `ideas[]`, `changelog[]` | The Improve Open CRM corner. Not CRM data. |
+
+`needs` and `risks` on an account are derived from its active claims of those
+kinds and kept for older readers. A workspace written before claims existed
+gets one claim per string on first read, with no evidence, so it shows as a
+hunch until someone cites a note.
 
 `origin` is set only on records an agent created: `{ "kind": "agent", "name": "claude-code" }`.
 
@@ -43,10 +49,21 @@ current records before anything is stored.
 | `task.set_status` | `crm task done <task id>` / `crm task reopen <task id>` | `crm_set_task_status` |
 | `task.update` | `crm task update <id> …` / `wait` / `cancel` | `crm_update_task` |
 | `note.add` | `crm note add --account … --source … --ref … --title … --body …` | `crm_add_note` |
+| `claim.add` | `crm claim add --account … --kind … --text … --evidence <note id>` | `crm_add_claim` |
+| `claim.resolve` | `crm claim resolve <claim id> --reason … [--now "…" --evidence …]` | `crm_resolve_claim` |
 
 Read tools: `crm status`, `accounts`, `show`, `search`, `tasks`, `proposals`,
 `log`, and their MCP equivalents `crm_status`, `crm_list_accounts`,
 `crm_show_account`, `crm_search`, `crm_list_tasks`, `crm_list_proposals`.
+
+Memory tools, computed from the records ([`src/core/memory.ts`](../src/core/memory.ts)):
+
+| Command | MCP tool | Answers |
+| --- | --- | --- |
+| `crm brief <account>` | `crm_brief` | What changed since the last verified contact, what we know by kind with evidence and age, commitments, who decides and which roles are missing, what to ask. |
+| `crm claims [--account] [--all]` | `crm_list_claims` | Each claim with grounding, contact, age, and whether it is stale or overdue. |
+| `crm why <id>` | `crm_why` | A task, claim, or note: the sources upstream and what rests on it downstream. |
+| `crm lint [--account]` | `crm_lint` | Hunches, evidence older than 45 days, overdue commitments, accounts with no one who signs off, contacts never seen, notes without a reference. |
 
 A change is an operation plus the id of the record it creates, a timestamp, and
 the actor. Applying a change is deterministic, which is what lets a proposal be

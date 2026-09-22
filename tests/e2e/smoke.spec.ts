@@ -322,10 +322,10 @@ test("creates a local account + contact + note that persist, then resets", async
   await expect(page.getByText("atlas-foundry.example")).toBeVisible();
 
   // Add a second contact via the account's contacts panel
-  const contactForm = page.locator("form", { has: page.getByLabel("Influence") });
+  const contactForm = page.locator("form", { has: page.getByLabel("Part in the decision") });
   await contactForm.getByLabel("Name", { exact: true }).fill("Noah Reed");
   await contactForm.getByLabel("Role", { exact: true }).fill("Technical evaluator");
-  await contactForm.getByLabel("Influence").selectOption("technical");
+  await contactForm.getByLabel("Part in the decision").selectOption("technical");
   await contactForm.getByRole("button", { name: "Add", exact: true }).click();
   await expect(page.getByText("Noah Reed").first()).toBeVisible();
 
@@ -441,4 +441,50 @@ test("imports an Open CRM backup from first-run setup", async ({ page }) => {
   await expect(page.locator("header").getByText("Imported workspace", {exact:true})).toBeVisible();
   await nav(page, "Accounts");
   await expect(page.getByRole("heading", { name: "Imported account" })).toBeVisible();
+});
+
+test("an account shows what we know, who decides, what to ask, and why each line exists", async ({ page }) => {
+  test.skip(test.info().project.name !== "chromium", "Account memory runs in the desktop project.");
+  await useDemo(page);
+  await nav(page, "Accounts");
+  await expect(page.getByRole("heading", { name: "Northstar Robotics" })).toBeVisible();
+
+  // Prepare: an overdue commitment becomes the first question.
+  await expect(page.getByText("Before you talk to them")).toBeVisible();
+  await expect(page.getByText(/Did we send the local-first security explainer/)).toBeVisible();
+  await expect(page.getByText("Who approves the budget and signs?").first()).toBeVisible();
+
+  // What we know: grouped, grounded, with the person who said it.
+  const knowledge = page.getByRole("region", { name: "What we know" });
+  await expect(knowledge.getByText("Legal blocks a broad rollout", { exact: false })).toBeVisible();
+  await expect(knowledge.getByText("Objections")).toBeVisible();
+
+  // Who decides: empty lanes are questions, not blanks.
+  const committee = page.getByRole("region", { name: "Who decides" });
+  await expect(committee.getByText("Eli Moreno")).toBeVisible();
+  await expect(committee.getByText("No one recorded.").first()).toBeVisible();
+
+  // The trace opens from the grounding underline and closes on Escape.
+  await knowledge.getByRole("button", { name: /grounded in “Pilot call/ }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Why this exists" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("Pilot call: local data control is the buying gate")).toBeVisible();
+  await expect(dialog.getByText("Call summary", { exact: false })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+
+  // Recording without a note is honest about being a hunch.
+  await knowledge.getByRole("button", { name: "Record" }).click();
+  await page.getByPlaceholder("Legal needs a data-flow diagram before the pilot").fill("They want a data-flow diagram before the steering meeting");
+  await knowledge.getByRole("button", { name: "Record", exact: true }).last().click();
+  await expect(page.getByText("Recorded as a hunch", { exact: false })).toBeVisible();
+  await expect(knowledge.getByText("They want a data-flow diagram before the steering meeting")).toBeVisible();
+  await expect(knowledge.getByText("1 hunch", { exact: false })).toBeVisible();
+
+  // Share-safe hides risks, objections, and commitments but keeps needs.
+  await page.getByRole("button", { name: "Private" }).click();
+  await expect(knowledge.getByText("Legal blocks a broad rollout", { exact: false })).toHaveCount(0);
+  await expect(knowledge.getByText("objection hidden in share-safe view").first()).toBeVisible();
+  await expect(knowledge.getByText("Follow-ups that cite calls, notes, and open product gaps")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy brief" })).toBeDisabled();
 });

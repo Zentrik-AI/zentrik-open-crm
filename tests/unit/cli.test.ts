@@ -134,3 +134,26 @@ test("the local API answers only its own page", async () => {
   api.close();
   server.close();
 });
+
+test("brief, claims, why and lint read the memory; claim writes go through review", () => {
+  const dir = makeWorkspace();
+  const brief = crm(dir, "brief", "northstar");
+  assert.equal(brief.status, 0, brief.err);
+  assert.match(brief.out, /## Who decides/);
+  assert.match(brief.out, /## Ask/);
+  const claims = JSON.parse(crm(dir, "claims", "--account", "harbor", "--json").out);
+  assert.ok(claims.some((c: { grounded: boolean }) => !c.grounded));
+  assert.match(crm(dir, "why", "claim_northstar_legal").out, /Rests on:/);
+  assert.match(crm(dir, "why", "claim_harbor_inbox").out, /hunch/);
+  assert.equal(crm(dir, "why", "nope").status, 2);
+  assert.match(crm(dir, "lint").out, /worth acting on/);
+
+  const added = JSON.parse(crm(dir, "claim", "add", "--account", "northstar", "--kind", "objection", "--text", "Needs a data-flow diagram before the steering meeting", "--evidence", "note_northstar_call", "--json").out);
+  assert.equal(added.outcome, "proposed");
+  assert.equal(crm(dir, "approve", added.id, "--approved-by", "Jorge").status, 0);
+  assert.match(crm(dir, "claims", "--account", "northstar").out, /data-flow diagram/);
+  const resolved = JSON.parse(crm(dir, "claim", "resolve", added.recordId, "--reason", "Diagram was sent", "--now", "Legal has the diagram", "--json").out);
+  assert.equal(resolved.outcome, "proposed");
+  assert.match(crm(dir, "claim", "resolve", "claim_missing", "--reason", "x").err, /No claim/);
+  assert.equal(crm(dir, "check").status, 0);
+});

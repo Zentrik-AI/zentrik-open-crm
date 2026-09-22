@@ -1,6 +1,6 @@
 import { Bot, Check, Copy, FolderOpen, X } from "lucide-react";
 import type { Account, ActivityEntry, AgentMode, Note, Op, Proposal, Workspace } from "../types";
-import { dealStageLabel, noteSourceLabel } from "../core/model.ts";
+import { claimKindLabel, dealStageLabel, noteSourceLabel } from "../core/model.ts";
 import { pendingProposals, projectPending, proposalApprovalIssue } from "../core/ops.ts";
 import { formatDateFull, formatRelative } from "../lib/utils";
 import { Badge } from "../components/ui/badge";
@@ -22,6 +22,8 @@ const kindLabel: Record<Op["type"], string> = {
   "task.set_status": "Task status",
   "task.update": "Task update",
   "note.add": "New note",
+  "claim.add": "New fact",
+  "claim.resolve": "Fact resolved",
 };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -46,6 +48,33 @@ function ChangeDetail({ op, workspace, notesById }: { op: Op; workspace: Workspa
       return <p>{op.archived ? "Archive" : "Restore"} account · {op.reason}. History is retained.</p>;
     case "task.update":
       return <dl className="space-y-1">{Object.entries(op.patch).map(([key, value]) => <Field key={key} label={key}><ComparedValue current={workspace.tasks.find(t => t.id === op.taskId)?.[key as keyof import("../types").Task]} proposed={value} /></Field>)}</dl>;
+    case "claim.add":
+      return (
+        <div className="space-y-2">
+          <div className="text-body font-medium text-foreground">{op.text}</div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-faint-foreground">
+            <span>{claimKindLabel[op.kind].singular}{op.kind === "commitment" && op.owner ? ` · ${op.owner === "them" ? "theirs" : "ours"}` : ""}{op.due ? ` · by ${op.due.slice(0, 10)}` : ""}</span>
+            <Grounding evidence={op.evidence} notesById={notesById} />
+          </div>
+        </div>
+      );
+    case "claim.resolve": {
+      const current = workspace.claims?.find((c) => c.id === op.claimId);
+      return (
+        <div className="space-y-2">
+          <p className="text-body-sm text-muted-foreground">
+            No longer true: <span className="text-foreground">{current?.text ?? op.claimId}</span>
+          </p>
+          <p className="text-body-sm text-muted-foreground">{op.reason}</p>
+          {op.replacement && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="text-body font-medium text-foreground">Now: {op.replacement.text}</span>
+              <Grounding evidence={op.replacement.evidence} notesById={notesById} />
+            </div>
+          )}
+        </div>
+      );
+    }
     case "note.add":
       return (
         <div className="space-y-2">
@@ -122,6 +151,7 @@ function accountOf(op: Op, workspace: Workspace): string | undefined {
   if ("accountId" in op && op.accountId) return op.accountId;
   if (op.type === "deal.move") return workspace.deals.find((d) => d.id === op.dealId)?.accountId;
   if (op.type === "task.set_status" || op.type === "task.update") return workspace.tasks.find((t) => t.id === op.taskId)?.accountId;
+  if (op.type === "claim.resolve") return workspace.claims?.find((c) => c.id === op.claimId)?.accountId;
   return undefined;
 }
 

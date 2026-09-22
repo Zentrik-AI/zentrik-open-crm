@@ -29,6 +29,13 @@ export function createDemoWorkspace(): Workspace {
     completedAt: task.completedAt ? atDay(-2 - index) : undefined,
   }));
   demo.notes = demo.notes.map((note, index) => ({ ...note, createdAt: atDay(noteOffsets[index] ?? -10) }));
+  // Commitments: ours is a day overdue so the brief has something to ask about;
+  // theirs are still ahead.
+  demo.claims = (demo.claims ?? []).map((claim, index) => ({
+    ...claim,
+    createdAt: atDay(-2 - (index % 9)),
+    due: claim.due ? atDay(claim.owner === "them" ? 6 + (index % 3) * 4 : -1, 23) : undefined,
+  }));
   demo.changelog = demo.changelog.map((entry, index) => ({ ...entry, date: atDay(-90 + index * 30) }));
   return demo;
 }

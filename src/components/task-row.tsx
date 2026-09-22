@@ -35,6 +35,7 @@ export function TaskRow({
   task,
   accountName,
   notesById,
+  onTrace,
   onToggle,
   onOpenAccount,
   onEdit,
@@ -43,6 +44,8 @@ export function TaskRow({
   accountName?: string;
   /** When given, agent-made and cited tasks show what grounds them. */
   notesById?: Map<string, Note>;
+  /** Opens the evidence trace for this task. */
+  onTrace?: (id: string) => void;
   onToggle: () => void;
   onOpenAccount?: () => void;
   onEdit?: () => void;
@@ -83,7 +86,7 @@ export function TaskRow({
           <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
             {task.origin && <span className="text-[12px] text-agent-fg">{task.origin.name}</span>}
             {task.reason && <span className="text-[12px] text-muted-foreground">{task.reason}</span>}
-            <Grounding evidence={task.evidence} notesById={notesById} />
+            <Grounding evidence={task.evidence} notesById={notesById} onClick={onTrace ? () => onTrace(task.id) : undefined} />
           </div>
         )}
       </div>

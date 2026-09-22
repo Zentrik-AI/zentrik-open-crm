@@ -1,9 +1,9 @@
 # Security
 
 Do not report vulnerabilities by opening public issues with sensitive details.
-Use GitHub private vulnerability reporting when it is available for this
-repository. If private reporting is unavailable, contact a maintainer privately
-before sharing exploit details.
+Use [GitHub private vulnerability reporting](https://github.com/Zentrik-AI/zentrik-open-crm/security/advisories/new)
+for sensitive issues. If the private form is unavailable, contact a maintainer
+privately before sharing exploit details.
 
 ## Supported Versions
 

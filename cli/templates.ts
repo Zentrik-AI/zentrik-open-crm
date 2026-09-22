@@ -247,10 +247,13 @@ neither should you. Send sources.
 3. If a ${brand.maker} MCP is connected: \`./crm export --signals --pattern <id> --json\`
    prints the bundle. For each entry in \`sources\`, call the ${brand.maker} tool
    \`signals_ingest_evidence\` with \`text\`, \`name\`, \`signalType\`,
-   \`occurredAt\`, \`sourceLinks\`, and the entry's \`sourceKey\` and
-   \`externalId\` unchanged, so a retry updates the same signal instead of
-   duplicating it. Use \`participantPolicy: "match_existing"\`. Put the account
-   name in \`additionalContext\`. Report the signal ids it returns.
+   \`occurredAt\`, \`additionalContext\`, \`sourceLinks\` (only when present),
+   \`participants\`, and the entry's \`sourceKey\` and \`externalId\` unchanged,
+   so a retry updates the same signal instead of duplicating it. Use
+   \`participantPolicy: "match_existing"\`. Pass \`accountExternalId\` only if
+   that account already exists in ${brand.maker} under the same id; otherwise
+   leave it out, the account name is in \`additionalContext\`. Report the
+   signal ids it returns.
 4. Otherwise: \`./crm export --signals --pattern <id>\` writes a folder of one
    Markdown file per source plus \`bundle.json\`. Tell the person where it is;
    they import it in ${brand.maker} (${brand.productWorkUrl}).

@@ -1,5 +1,5 @@
 import type { Account, Claim, ClaimKind, Note, Workspace } from "../types.ts";
-import { claimKindLabel, stableId } from "./model.ts";
+import { claimKindLabel, noteSourceLabel, stableId } from "./model.ts";
 import { noteDate } from "./memory.ts";
 
 /**
@@ -128,7 +128,12 @@ export interface SignalSource {
   name: string;
   text: string;
   occurredAt?: string;
-  sourceLinks: Array<{ label: string }>;
+  /** The system it came from, for the receiving side's provenance. */
+  providerType: "open-crm";
+  /** Only real links; a written reference goes into additionalContext instead. */
+  sourceLinks: Array<{ url: string; name: string }>;
+  /** Account and source reference in words, since the receiving side has its own account ids. */
+  additionalContext: string;
   account: { externalId: string; name: string; domain?: string };
   participants: Array<{ name: string; role: string; email?: string; affiliation: "external" }>;
   /** The claims this note grounds, so the reviewer sees why it was sent. */
@@ -162,6 +167,8 @@ export function signalsBundle(
   const sources: SignalSource[] = notes.map((note) => {
     const account = workspace.accounts.find((a) => a.id === note.accountId) as Account;
     const contact = account.contacts.find((c) => c.id === note.contactId);
+    const ref = note.sourceRef && note.sourceRef !== "Manual entry" ? note.sourceRef : undefined;
+    const isUrl = ref !== undefined && /^https?:\/\/\S+$/i.test(ref);
     return {
       sourceKey: `open-crm.${slug}`,
       externalId: note.id,
@@ -169,7 +176,9 @@ export function signalsBundle(
       name: note.title,
       text: note.body,
       occurredAt: note.occurredAt,
-      sourceLinks: note.sourceRef && note.sourceRef !== "Manual entry" ? [{ label: note.sourceRef }] : [],
+      providerType: "open-crm",
+      sourceLinks: isUrl ? [{ url: ref, name: note.title }] : [],
+      additionalContext: [`Account: ${account.name}${shareSafe || !account.domain ? "" : ` (${account.domain})`}`, ref && !isUrl ? `Source reference: ${ref}` : undefined, `Recorded in ${options.product ?? "Open CRM"} as a ${noteSourceLabel[note.source].toLowerCase()} note.`].filter(Boolean).join(" "),
       account: { externalId: account.id, name: account.name, domain: shareSafe ? undefined : account.domain },
       participants: contact ? [{ name: shareSafe ? contact.role : contact.name, role: contact.role, email: shareSafe ? undefined : contact.email, affiliation: "external" }] : [],
       supports: (workspace.claims ?? []).filter((c) => c.status === "active" && c.evidence.includes(note.id)).map((c) => ({ kind: c.kind, text: c.text })),
@@ -197,7 +206,8 @@ export function signalsMarkdown(bundle: SignalsBundle): Array<{ path: string; co
       `account: ${q(s.account.name)}`,
       `type: ${s.signalType}`,
       `occurredAt: ${s.occurredAt ? q(s.occurredAt) : "null"}`,
-      `source: ${s.sourceLinks[0] ? q(s.sourceLinks[0].label) : "null"}`,
+      `source: ${s.sourceLinks[0] ? q(s.sourceLinks[0].url) : "null"}`,
+      `context: ${q(s.additionalContext)}`,
       `participants: [${s.participants.map((p) => q(`${p.name} (${p.role})`)).join(", ")}]`,
       "---",
       "",

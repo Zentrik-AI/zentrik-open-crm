@@ -121,8 +121,12 @@ terms; an agent reading the claims may see groups it missed.
 `crm export --signals [--pattern <id> | --account <account>] [--share-safe]`
 writes `exports/signals-<date>/`: `bundle.json` (`open-crm-signals.v1`) and
 one Markdown file per source. Each source carries the note's text, title,
-signal type (mapped from the note source), date, source reference, account,
-participant, and the claims it supported. Share-safe replaces people with
+signal type (mapped from the note source), date, `providerType: "open-crm"`,
+`sourceLinks` when the reference is a URL (otherwise the reference goes into
+`additionalContext` with the account name), the account, the participant, and
+the claims it supported. Field names follow the public
+[Zentrik Signals API](https://zentrik.ai/docs/api/signals), so an entry can be
+passed to it as is. Share-safe replaces people with
 their roles and drops emails and domains. The bundle carries sources, not the
 pattern's conclusions; the receiving product tool draws its own.
 

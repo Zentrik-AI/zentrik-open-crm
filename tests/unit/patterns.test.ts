@@ -54,11 +54,18 @@ test("the signals bundle carries sources with what they supported, and share-saf
   assert.equal(northstar.participants[0].name, "Eli Moreno");
   assert.ok(northstar.supports.some((c) => c.kind === "objection"));
   assert.ok(northstar.account.domain);
+  assert.deepEqual(northstar.sourceLinks, [], "a written reference is not a link");
+  assert.match(northstar.additionalContext, /Account: Northstar Robotics \(northstar-robotics\.invalid\)/);
+  assert.match(northstar.additionalContext, /Source reference: Call summary/);
+  assert.equal(northstar.providerType, "open-crm");
+  const linked = { ...workspace, notes: workspace.notes.map((n) => (n.id === "note_northstar_call" ? { ...n, sourceRef: "https://calls.example/rec/42" } : n)) };
+  assert.deepEqual(signalsBundle(linked, { pattern }).sources.find((s) => s.externalId === "note_northstar_call")!.sourceLinks, [{ url: "https://calls.example/rec/42", name: "Pilot call: local data control is the buying gate" }]);
 
   const safe = signalsBundle(workspace, { pattern, shareSafe: true });
   assert.equal(safe.sources[0].participants[0].name, safe.sources[0].participants[0].role);
   assert.equal(safe.sources[0].participants[0].email, undefined);
   assert.equal(safe.sources[0].account.domain, undefined);
+  assert.doesNotMatch(safe.sources[0].additionalContext, /invalid/);
   assert.equal(safe.pattern?.label, pattern.label);
 
   const files = signalsMarkdown(bundle);

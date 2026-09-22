@@ -171,12 +171,11 @@ directly without the rest of the repository tests.
 
 ## Portal boundary
 
-`portal/README.md` describes `https://open-crm.ideas.zentrik.ai` as the **expected**
+`portal/README.md` describes `https://open-crm.ideas.zentrik.ai` as a proposed
 Buildroom host. The portal JSON is a setup manifest, not a live API contract.
-On 21 September 2026, the host returned an HTML shell with HTTP 200, but a fresh
-browser displayed **Portal unavailable / Portal not found**. Improve therefore
-does not present it as a working destination. The importer does not provision
-or repair a portal.
+Improve does not present it as a working destination until the hosted service has
+been provisioned and verified. The importer does not provision or repair a
+portal.
 
 GitHub is a manual public handoff to the repository's documented issue route.
 Sensitive support needs a separately verified private channel. This form does

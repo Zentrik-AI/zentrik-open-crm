@@ -49,9 +49,9 @@ and the server's request checks.
 ## Feedback Bundles
 
 Tell Open CRM produces an `open-crm-feedback.v1` bundle for local and
-self-hosted users. It is a portable envelope that can be imported into Zentrik,
-copied into GitHub, or sent through support. It is not a second persistence
-model.
+self-hosted users. It is a portable envelope that can be copied into GitHub or
+passed through an optional, maintainer-operated product-evidence adapter. It is
+not a second persistence model.
 
 ## Future Service Boundary
 

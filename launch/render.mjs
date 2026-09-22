@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import path from "node:path";
 
-const url = process.env.LAUNCH_URL || "http://127.0.0.1:5203/launch/index.html";
+const url = process.env.LAUNCH_URL || "http://127.0.0.1:5177/launch/index.html";
 const out = path.resolve(process.env.LAUNCH_OUTPUT || "tmp/launch");
 const fps = 30,
   duration = 41,
@@ -200,8 +200,8 @@ await writeFile(
       music: "Original synthesized instrumental, source in launch/render.mjs",
       fixture:
         "Synthetic Northstar Robotics; illustrative external-agent workflow",
-      state: "Internal launch candidate; not published",
-      naming: "Ozarm title is a candidate, not a product rename",
+      state: "Illustrative review cut",
+      naming: "Ozarm is shown as a naming study, not a product rename",
       connection: "Local feedback handoff. No connected delivery claimed.",
     },
     null,

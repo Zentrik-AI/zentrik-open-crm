@@ -160,8 +160,9 @@ export function signalsBundle(
   options: { pattern?: Pattern; accountId?: string; shareSafe?: boolean; product?: string; now?: Date } = {},
 ): SignalsBundle {
   const shareSafe = options.shareSafe === true;
+  // A pattern is a snapshot; read its notes from the workspace as they are now.
   const notes = options.pattern
-    ? options.pattern.notes
+    ? options.pattern.notes.map((n) => workspace.notes.find((x) => x.id === n.id) ?? n)
     : workspace.notes.filter((n) => !options.accountId || n.accountId === options.accountId).sort((a, b) => noteDate(b).localeCompare(noteDate(a)));
   const slug = workspace.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "workspace";
   const sources: SignalSource[] = notes.map((note) => {

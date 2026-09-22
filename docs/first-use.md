@@ -21,6 +21,8 @@ checkout should let someone understand the product loop in one sitting.
 9. Open the Book: every account by stage, each with the one thing worth
    noticing, and what several accounts are saying. When that becomes product
    work, hand the sources to Zentrik from there.
+10. Switch Accounts to **Table** when the question is a comparison: sort by
+    value, last verified contact, grounding, or what is due next.
 
 The browser-only edition covers steps 2 to 5 with no folder and offers a
 one-way Markdown snapshot for agents. Run it with `npm run dev`, or open the

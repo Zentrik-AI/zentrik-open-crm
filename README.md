@@ -16,6 +16,10 @@ Open CRM is the first open **ARM**: Agent Relationship Management.
 **[Try it in your browser →](https://zentrik-ai.github.io/zentrik-open-crm/)**
 Demo data, no sign-up; whatever you type stays in your own browser storage.
 
+We built this for ourselves. Open CRM carries the way we run our own accounts
+at Zentrik, the same operating model we depend on every day, published as its
+own product rather than described in a blog post.
+
 [First Use](./docs/first-use.md) ·
 [Agent Operator Guide](./docs/agent-operator-guide.md) ·
 [Workspace Format](./docs/workspace-format.md) ·
@@ -59,7 +63,10 @@ the middle path for small technical teams:
 - Claude Code, Codex, and Cursor work the same records you do, through a
   checked command and an MCP server, and you approve what they change
 - your data is a folder on your computer: readable, diffable, yours
-- users can prepare public feedback without sharing their CRM records
+- private by design, and yours to change: the model is small enough to read in
+  an afternoon, so you can shape it to how you understand your customers
+- sorted tables when you want to compare accounts, and the brief, the trace,
+  and the Book when a table is the wrong shape for the question
 
 ## Quick Start
 
@@ -163,6 +170,7 @@ for who this is built for and the moments it is built around.
 - Book: every account by stage with the one thing worth noticing; what several accounts are saying
 - Pipeline, Accounts, Contacts, Tasks, and Notes with source references
 - Accounts: what we know with its evidence, who decides, and the brief before a conversation
+- Table: every account on one grid, sorted by value, last contact, grounding, or what is due
 - Review: approve or reject what agents proposed, and see what they did
 - Trace: from any task, claim, or note, the chain from source to action
 - `crm` command and MCP server over the same workspace folder

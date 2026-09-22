@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from "react";
-import { ClipboardCopy, Plus } from "lucide-react";
-import type { Account, AccountPatch, Deal, Note, Op, Task } from "../types";
+import { ClipboardCopy, LayoutGrid, Plus, Rows3 } from "lucide-react";
+import type { Account, AccountPatch, Deal, Note, Op, Task, Workspace } from "../types";
 import type { AccountMemory } from "../core/memory";
 import { accountStages, priorities, type AccountDraft, type ContactDraft } from "../lib/drafts";
 import { stageMeta, isOpenDeal } from "../lib/meta";
-import { humanize } from "../lib/utils";
+import { cn, humanize } from "../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Field, Input, Select } from "../components/ui/field";
@@ -22,6 +22,7 @@ import { TaskRow } from "../components/task-row";
 import { NoteCard } from "../components/note-card";
 import { AccountTimeline } from "../components/timeline";
 import { AiPanel, type AiKind } from "../components/ai-panel";
+import { AccountTable } from "../components/account-table";
 
 function AccountMaintenance({ account, onUpdate, onArchive }: { account: Account; onUpdate: (patch: AccountPatch) => boolean; onArchive: (archived: boolean, reason: string) => boolean }) {
   const [name, setName] = useState(account.name);
@@ -52,6 +53,7 @@ export interface AiViewState {
 }
 
 export function AccountsView({
+  workspace,
   accounts,
   selectedAccount,
   deals,
@@ -113,10 +115,13 @@ export function AccountsView({
   onResolveClaim: (claimId: string, reason: string) => boolean;
   onTrace: (id: string) => void;
   onCopyBrief: () => void;
+  workspace: Workspace;
 }) {
   const shareSafe = useShareSafe();
   const [addingAccount, setAddingAccount] = useState(accounts.length === 0);
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [layout, setLayout] = useState<"list" | "table">("list");
+  const visible = accounts.filter((a) => includeArchived || !a.archivedAt);
   const acct = selectedAccount;
   const acctDeals = acct ? deals.filter((d) => d.accountId === acct.id) : [];
   const acctTasks = acct ? tasks.filter((t) => t.accountId === acct.id) : [];
@@ -126,8 +131,15 @@ export function AccountsView({
   const notesById = new Map(notes.map((n) => [n.id, n]));
   const openPipeline = acctDeals.filter((d) => isOpenDeal(d.stage)).reduce((s, d) => s + d.value, 0);
 
+  const archivedToggle = (
+    <label className="flex items-center gap-2 text-body-sm">
+      <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
+      Include archived accounts
+    </label>
+  );
+
   return (
-    <div className="grid min-w-0 gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]">
+    <div className={cn("min-w-0", layout === "list" && "grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]")}>
       <h1 className="sr-only">Accounts</h1>
       <div className="min-w-0 space-y-4">
         {addingAccount && (
@@ -142,24 +154,47 @@ export function AccountsView({
           />
         )}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="text-label uppercase text-muted-foreground">Accounts</span>
               <span className="font-mono text-[11px] tabular-nums text-faint-foreground">{includeArchived ? `${accounts.length} total` : `${accounts.filter(a => !a.archivedAt).length} active · ${accounts.length} total`}</span>
             </div>
-            {!addingAccount && (
-              <Button size="sm" variant="ghost" onClick={() => setAddingAccount(true)}>
-                <Plus />
-                New
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7"
+                aria-pressed={layout === "table"}
+                onClick={() => setLayout(layout === "table" ? "list" : "table")}
+                title={layout === "table" ? "Back to the list and the open account" : "Compare every account on one grid"}
+              >
+                {layout === "table" ? <Rows3 /> : <LayoutGrid />}
+                {layout === "table" ? "List" : "Table"}
               </Button>
-            )}
+              {!addingAccount && (
+                <Button size="sm" variant="ghost" onClick={() => setAddingAccount(true)}>
+                  <Plus />
+                  New
+                </Button>
+              )}
+            </div>
           </div>
-          <label className="flex items-center gap-2 text-body-sm"><input type="checkbox" checked={includeArchived} onChange={e => setIncludeArchived(e.target.checked)} />Include archived accounts</label>
+          {archivedToggle}
           {accounts.length === 0 ? (
             <EmptyState title="No accounts yet." hint="Add a local account above to get started." />
+          ) : layout === "table" ? (
+            <AccountTable
+              workspace={workspace}
+              accounts={visible.map((a) => a.id)}
+              selectedId={acct?.id}
+              onOpen={(id) => {
+                onSelectAccount(id);
+                setLayout("list");
+              }}
+            />
           ) : (
             <div className="space-y-3">
-              {accounts.filter(a => includeArchived || !a.archivedAt).map((account) => (
+              {visible.map((account) => (
                 <AccountListCard key={account.id} account={account} selected={acct?.id === account.id} onSelect={() => onSelectAccount(account.id)} />
               ))}
             </div>
@@ -167,7 +202,7 @@ export function AccountsView({
         </div>
       </div>
 
-      {acct ? (
+      {layout === "table" ? null : acct ? (
         <div className="min-w-0 space-y-5">
           <Card>
             <CardHeader className="gap-3 border-b border-border pb-4">

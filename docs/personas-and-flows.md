@@ -36,7 +36,8 @@ page; when a change does not serve one of these flows, it is probably bloat.
    in order, nothing landing until a person decides.
 6. **Weekly.** The Book and `crm lint`: every account by stage with the one
    thing worth noticing; where the memory is thin, which commitments slipped,
-   which accounts have no one who signs off.
+   which accounts have no one who signs off. When the question is a comparison
+   rather than a judgement, Accounts has a sorted table of the same records.
 7. **When it becomes product work.** The Book's patterns show what several
    accounts are saying. The handoff to Zentrik carries the sources; the
    decision is made there, not here.
@@ -48,6 +49,7 @@ page; when a change does not serve one of these flows, it is probably bloat.
 | Home | The one overdue thing, and whether an agent is waiting on you |
 | Book | The lane with the most accounts needing something, and what several accounts are saying |
 | Account | What changed since you last spoke, and the question to lead with |
+| Table | The column you came to compare, with unknowns at the bottom |
 | What we know | Which lines are grounded and which are hunches |
 | Who decides | Which lane is empty |
 | Review | What the change is and what grounds it, then Approve |

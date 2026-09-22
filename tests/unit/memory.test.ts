@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createDemoWorkspace } from "../../src/core/demo.ts";
 import { seedWorkspace } from "../../src/data/seed.ts";
-import { accountMemory, briefMarkdown, lintWorkspace, trace } from "../../src/core/memory.ts";
+import { accountMemory, accountRows, briefMarkdown, lintWorkspace, sortAccountRows, trace } from "../../src/core/memory.ts";
 import { applyChange, newChange, pendingProposals, resolveProposal, submitChange } from "../../src/core/ops.ts";
 import { normalizeWorkspace, parseWorkspace, validateWorkspace } from "../../src/core/validate.ts";
 import { buildViewFiles, workspaceLayout } from "../../src/core/markdown.ts";
+import { accountStages } from "../../src/core/model.ts";
 import type { Actor, Op, Workspace } from "../../src/types.ts";
 
 const agent: Actor = { kind: "agent", name: "test-agent" };
@@ -151,4 +152,41 @@ test("a claims list survives a round trip through the parser", () => {
   const broken = demo();
   broken.claims![0].evidence = ["note_missing"];
   assert.ok(validateWorkspace(broken).some((e) => e.includes("claims[0].evidence")));
+});
+
+test("the table carries value, grounding and the soonest open date per account", () => {
+  const workspace = demo();
+  const rows = accountRows(workspace, now);
+  assert.equal(rows.length, workspace.accounts.length);
+  for (const row of rows) {
+    const open = workspace.deals.filter((d) => d.accountId === row.account.id && d.stage !== "won" && d.stage !== "lost");
+    assert.equal(row.value, row.account.arr + open.reduce((s, d) => s + d.value, 0), "value is recorded plus open pipeline");
+    const claims = (workspace.claims ?? []).filter((c) => c.accountId === row.account.id && c.status === "active");
+    assert.equal(row.claims, claims.length);
+    assert.equal(row.grounded, claims.filter((c) => c.evidence.length > 0).length);
+    assert.equal(row.groundedRatio, claims.length ? row.grounded / claims.length : null, "no claims means no ratio, not zero");
+    const dates = [
+      ...workspace.tasks.filter((t) => t.accountId === row.account.id && t.status === "open").map((t) => t.due),
+      ...claims.filter((c) => c.kind === "commitment" && c.owner === "us" && c.due).map((c) => c.due!),
+    ].sort();
+    assert.equal(row.nextDue, dates[0] ?? null, "the soonest open task or commitment we owe");
+    assert.equal(row.overdue, dates.filter((d) => Date.parse(d) < now.getTime()).length);
+  }
+});
+
+test("sorting never promotes an account we know nothing about", () => {
+  const workspace = demo();
+  const unknown = structuredClone(workspace) as Workspace;
+  unknown.accounts[0] = { ...unknown.accounts[0], lastTouch: null };
+  const rows = accountRows(unknown, now);
+  for (const direction of ["asc", "desc"] as const) {
+    const sorted = sortAccountRows(rows, "lastTouch", direction);
+    assert.equal(sorted.at(-1)?.account.id, unknown.accounts[0].id, `unknown contact stays last when ${direction}`);
+  }
+  const byValue = sortAccountRows(rows, "value", "desc").map((r) => r.value);
+  assert.deepEqual(byValue, [...byValue].sort((a, b) => b - a), "value sorts high to low");
+  const byName = sortAccountRows(rows, "name", "asc").map((r) => r.account.name);
+  assert.deepEqual(byName, [...byName].sort((a, b) => a.localeCompare(b)));
+  const stages = sortAccountRows(rows, "stage", "asc").map((r) => r.account.stage);
+  assert.deepEqual(stages, [...stages].sort((a, b) => accountStages.indexOf(a) - accountStages.indexOf(b)), "stage sorts by lifecycle, not alphabet");
 });

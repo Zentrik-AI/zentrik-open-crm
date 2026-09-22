@@ -938,6 +938,7 @@ function AppInner() {
             </div>
             <div data-view="accounts" className={cn(view !== "accounts" && "hidden")}>
               <AccountsView
+                workspace={workspace}
                 memory={selectedMemory}
                 onAddClaim={(op) => {
                   const added = dispatch(op);

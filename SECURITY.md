@@ -1,9 +1,9 @@
 # Security
 
 Do not report vulnerabilities by opening public issues with sensitive details.
-Use GitHub private vulnerability reporting once it is enabled for this
-repository. If private reporting is not available yet, contact a maintainer
-privately before sharing exploit details.
+Use GitHub private vulnerability reporting when it is available for this
+repository. If private reporting is unavailable, contact a maintainer privately
+before sharing exploit details.
 
 ## Supported Versions
 
@@ -24,13 +24,11 @@ Never commit:
 The `.gitignore` blocks common private-data folders, but contributors and agents
 are responsible for reviewing staged changes before committing.
 
-## Public Release Gate
+## Release safety
 
-Keep the repository private until the public-release checklist has been
-completed, including history review, secret scanning, trademark review,
-dependency license review, and private vulnerability reporting setup.
-
-See [Public Release Checklist](./docs/public-release-checklist.md).
+Before each release, review the [Public Release Checklist](./docs/public-release-checklist.md),
+run the documented checks, and confirm that the release contains only synthetic
+fixtures and public-safe documentation.
 
 ## Sensitive Issue Triage
 

@@ -22,8 +22,10 @@ checkout should let someone understand the product loop in one sitting.
    noticing, and what several accounts are saying. When that becomes product
    work, hand the sources to Zentrik from there.
 
-The browser-only edition (`npm run dev`) covers steps 2 to 5 with no folder and
-offers a one-way Markdown snapshot for agents.
+The browser-only edition covers steps 2 to 5 with no folder and offers a
+one-way Markdown snapshot for agents. Run it with `npm run dev`, or open the
+[hosted demo](https://zentrik-ai.github.io/zentrik-open-crm/), which is the same
+build with records kept in that visitor's own browser storage.
 
 ## What A New User Should Learn
 

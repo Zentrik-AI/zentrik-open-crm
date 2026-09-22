@@ -17,6 +17,11 @@ npm run test:package  # pack, install without dev dependencies, check CLI/MCP/UI
 npm run test:e2e      # browser edition and the agent-to-Review loop on a folder
 ```
 
+Pushing to `main` redeploys the [hosted demo](https://zentrik-ai.github.io/zentrik-open-crm/)
+from `.github/workflows/demo.yml`, built with `OPEN_CRM_BASE` set to the project
+path. It is the browser edition: no server, no records anywhere but the
+visitor's own browser.
+
 The browser suite covers first use, account work, claims and the brief, review,
 task ownership, responsive layout, theme contrast, feedback export, and storage
 recovery. CI keeps synthetic screenshots and traces as the

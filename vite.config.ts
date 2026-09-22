@@ -19,6 +19,9 @@ function workspaceFolder(): Plugin | null {
 }
 
 export default defineConfig({
+  // The package and `crm ui` serve the app at the root. A project page on a
+  // subpath (the hosted demo) sets OPEN_CRM_BASE to that prefix.
+  base: process.env.OPEN_CRM_BASE || "/",
   plugins: [react(), workspaceFolder()],
   server: {
     host: "127.0.0.1",

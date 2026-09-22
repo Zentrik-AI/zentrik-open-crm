@@ -9,6 +9,9 @@ evidence instead of being decided here.
 
 Open CRM is the first open **ARM**: Agent Relationship Management.
 
+**[Try it in your browser →](https://zentrik-ai.github.io/zentrik-open-crm/)**
+Demo data, no sign-up; whatever you type stays in your own browser storage.
+
 [First Use](./docs/first-use.md) ·
 [Agent Operator Guide](./docs/agent-operator-guide.md) ·
 [Workspace Format](./docs/workspace-format.md) ·
@@ -86,9 +89,11 @@ reads the accounts that need attention, and proposes next actions that cite the
 notes behind them. Each proposal appears in the app under **Review** as it
 happens. Nothing changes until you approve it.
 
-Just looking? `npm run dev` opens the browser-only edition at
-[http://127.0.0.1:5177](http://127.0.0.1:5177) with no setup. It keeps data in
-local storage and can export a one-way Markdown snapshot for an agent to read.
+Just looking? The [hosted demo](https://zentrik-ai.github.io/zentrik-open-crm/)
+is the same browser edition, or run it yourself with `npm run dev` at
+[http://127.0.0.1:5177](http://127.0.0.1:5177). Either way it keeps data in that
+browser's local storage and can export a one-way Markdown snapshot for an agent
+to read.
 
 ## How People And Agents Share A Workspace
 

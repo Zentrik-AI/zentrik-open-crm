@@ -37,6 +37,7 @@ Notable user-facing changes, newest first.
   empty lane is drawn as the question to ask.
 - Generated Markdown views list what we know with evidence ids.
 - Add `docs/personas-and-flows.md`.
+- Publish a hosted demo of the browser edition, redeployed from `main`.
 - Name the category: Open CRM is the first open ARM, Agent Relationship
   Management, defined in the README by what makes a system one.
 - Adopt the Contributor Covenant 2.1 with a reporting address, align the issue

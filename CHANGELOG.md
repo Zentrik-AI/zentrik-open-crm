@@ -6,6 +6,22 @@ This project follows a lightweight changelog until the first tagged release.
 
 ## Unreleased
 
+- Add claims: what we know about an account as typed facts (needs, risks,
+  goals, objections, commitments, facts), each citing the notes that say so.
+  Legacy needs and risks migrate on first read and stay derived from claims.
+- Add the account memory: what changed since the last verified contact, what
+  each side owes, who decides and which roles are missing, and the questions
+  worth asking. Shown on the account as *Before you talk to them*, and as
+  `crm brief` / `crm_brief` for agents.
+- Add the evidence trace: from any task, claim, or note, the chain from source
+  to action, opened from the grounding underline or `crm why`.
+- Add `crm lint` / `crm_lint`: hunches, stale evidence, overdue commitments,
+  missing economic buyers and champions, contacts never seen.
+- Replace the contacts list on an account with a buying-committee map; an
+  empty lane is drawn as the question to ask.
+- Generated Markdown views list what we know with evidence ids.
+- Add `docs/personas-and-flows.md`.
+
 ## 0.2.0
 
 - Add workspace folders: `crm init` creates a folder whose `workspace.json` is

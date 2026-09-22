@@ -72,16 +72,13 @@ through a hosted edition.
 
 ## Branch And Sandbox Workflow
 
-- Treat `develop` as the pre-production integration branch and start new work
-  from `origin/develop`.
-- Open feature pull requests against `develop`. Keep `main` for reviewed
-  production promotion from `develop`.
+- `main` is the protected production branch. Start feature branches from
+  `origin/main` and open pull requests against `main`; never push feature work
+  to it directly.
 - Use the shared Zentrik worktree command and the repository profile in
   `.zentrik/worktree.json` for durable worktrees. Do not create ad hoc durable
   worktrees or choose random ports.
-- The persistent sandbox runs the current `develop` checkout. Before reviewing
-  it, fetch `origin/develop` and fast-forward the sandbox only when its working
-  tree is clean.
-- Run `npm run typecheck`, `npm test`, `npm run build`, and `npm run test:e2e` before
-  proposing production promotion. Do not treat a passing local build as a
-  substitute for the protected `main` review.
+- Run `npm run typecheck`, `npm test`, `npm run build`, and `npm run test:e2e`
+  (with `OPEN_CRM_PORT` set to the worktree's port) before opening a pull
+  request. A passing local build is not a substitute for the protected `main`
+  review.

@@ -4,12 +4,33 @@ import { Tooltip } from "./ui/tooltip";
 
 /**
  * The grounding underline. A solid rule means the work cites source notes; a
- * dashed rule means it is a hunch. Hovering names the notes behind it.
+ * dashed rule means it is a hunch. Hovering names the notes behind it; with
+ * `onClick`, clicking opens the full trace.
  */
-export function Grounding({ evidence, notesById, className }: { evidence?: string[]; notesById: Map<string, Note>; className?: string }) {
+export function Grounding({
+  evidence,
+  notesById,
+  className,
+  onClick,
+}: {
+  evidence?: string[];
+  notesById: Map<string, Note>;
+  className?: string;
+  onClick?: () => void;
+}) {
   const notes = (evidence ?? []).map((id) => notesById.get(id)).filter((note): note is Note => Boolean(note));
+  const Tag = onClick ? "button" : "span";
+  const shared = cn(
+    "pb-px text-[12px]",
+    onClick && "rounded-sm text-left focus-visible:outline-none focus-visible:focus-ring",
+    className,
+  );
   if (notes.length === 0) {
-    return <span className={cn("border-b border-dashed border-border-strong pb-px text-[12px] text-faint-foreground", className)}>a hunch · no source cited</span>;
+    return (
+      <Tag type={onClick ? "button" : undefined} onClick={onClick} className={cn(shared, "border-b border-dashed border-border-strong text-faint-foreground", onClick && "hover:text-foreground")}>
+        a hunch · no source cited
+      </Tag>
+    );
   }
   return (
     <Tooltip
@@ -20,12 +41,13 @@ export function Grounding({ evidence, notesById, className }: { evidence?: strin
               {note.title} <span className="font-mono text-faint-foreground">· {note.sourceRef || "no reference"}</span>
             </span>
           ))}
+          {onClick && <span className="block pt-1 text-faint-foreground">Click to see the full trace</span>}
         </span>
       }
     >
-      <span className={cn("border-b border-accent pb-px text-[12px] text-accent-fg", className)}>
+      <Tag type={onClick ? "button" : undefined} onClick={onClick} className={cn(shared, "border-b border-accent text-accent-fg", onClick && "hover:border-b-2")}>
         grounded in {notes.length === 1 ? `“${notes[0].title}”` : `${notes.length} notes`}
-      </span>
+      </Tag>
     </Tooltip>
   );
 }

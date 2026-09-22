@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs, type ParseArgsConfig } from "node:util";
-import type { AccountPatch, AccountStage, Actor, Contact, DealStage, NoteSource, Priority, Sentiment, TaskPatch, Workspace } from "../src/types.ts";
+import type { AccountPatch, AccountStage, Actor, ClaimKind, Contact, DealStage, NoteSource, Priority, Sentiment, TaskPatch, Workspace } from "../src/types.ts";
 import { createDemoWorkspace } from "../src/core/demo.ts";
 import { OpError } from "../src/core/ops.ts";
 import { normalizeWorkspace, parseWorkspace } from "../src/core/validate.ts";
@@ -33,6 +33,12 @@ Read
   proposals [--all]                          changes waiting for review
   log [--limit 20]                           what agents did, and what was decided
 
+Know
+  brief <account>                            the brief before a conversation: what changed, what we know, who decides, what to ask
+  claims [--account <account>] [--all]       what we know, with evidence or marked as a hunch
+  why <task | claim | note id>               where a record came from, and what rests on it
+  lint [--account <account>]                 where the memory is thin: hunches, stale evidence, missing roles, overdue commitments
+
 Write
   note add --account <account> --title "<t>" --body "<text or - for stdin>"
            [--source call|email|meeting|note|support|review|community|github|usage|market]
@@ -51,6 +57,9 @@ Write
            [--segment "<s>"] [--arr 42000] [--health 0-100] [--fit 0-100]
            [--need "<n>"]... [--risk "<r>"]... [--tag "<t>"]...     (repeat a flag to set the whole list)
   contact add --account <account> --name "<n>" --role "<r>" [--influence economic|champion|technical|user] [--email e]
+  claim add --account <account> --kind need|risk|goal|objection|commitment|fact --text "<one idea>"
+           [--evidence <note id>,<note id>] [--contact <contact id>] [--owner us|them --due 2026-10-02]   (commitments)
+  claim resolve <claim id> --reason "<why>" [--now "<what is true instead>" [--evidence ...] [--kind ...]]
 
 Decide (a person's call)
   approve <proposal id | all>                apply a proposed change
@@ -275,6 +284,61 @@ async function run(argv: string[]) {
       ];
       return lines.filter((line, i) => line !== "" || i === 3).join("\n");
     });
+  }
+
+  if (command === "brief") {
+    const { flags, rest: pos } = parse(rest);
+    if (!pos[0]) throw new OpError("missing_field", "Usage: crm brief <account>");
+    const result = actions.brief(resolveWorkspaceDir(text(flags, "workspace")), pos.join(" "));
+    return emit(flags, result.memory, () => result.markdown);
+  }
+
+  if (command === "claims") {
+    const { flags } = parse(rest, { account: { type: "string" }, all: { type: "boolean" } });
+    const rows = actions.listClaims(resolveWorkspaceDir(text(flags, "workspace")), { account: text(flags, "account"), all: Boolean(flags.all) });
+    return emit(flags, rows, () => {
+      if (!rows.length) return 'Nothing recorded yet. Record what a note says with: crm claim add --account <account> --kind need --text "…" --evidence <note id>';
+      const byAccount = new Map<string, typeof rows>();
+      for (const row of rows) byAccount.set(row.accountName ?? row.accountId, [...(byAccount.get(row.accountName ?? row.accountId) ?? []), row]);
+      return [...byAccount.entries()]
+        .map(([name, items]) => [name, ...items.map((c) => {
+          const mark = c.status !== "active" ? "✕" : c.grounded ? "●" : "○";
+          const how = c.status !== "active" ? `${c.status} · ${c.resolvedReason ?? ""}` : c.grounded ? `${c.evidence.length} ${c.evidence.length === 1 ? "note" : "notes"} · ${c.ageDays}d${c.stale ? " · stale" : ""}` : "hunch, no source";
+          const due = c.kind === "commitment" ? ` · ${c.owner === "them" ? "theirs" : "ours"}${c.due ? ` by ${day(c.due)}` : ""}${c.overdue ? " · OVERDUE" : ""}` : "";
+          return `  ${mark} ${c.kind.padEnd(10)} ${c.text}${c.contactName ? ` · ${c.contactName}` : ""}${due}  [${c.id}]\n               ${how}`;
+        })].join("\n"))
+        .join("\n\n");
+    });
+  }
+
+  if (command === "why") {
+    const { flags, rest: pos } = parse(rest);
+    if (!pos[0]) throw new OpError("missing_field", "Usage: crm why <task | claim | note id>");
+    const result = actions.why(resolveWorkspaceDir(text(flags, "workspace")), pos[0]);
+    return emit(flags, result, () => {
+      const line = (n: typeof result.focus) => `${n.kind.padEnd(7)} ${n.title}${n.detail ? ` (${n.detail}${n.date ? ` · ${day(n.date)}` : ""})` : ""}  [${n.id}]${n.tone === "hunch" ? "  · hunch" : ""}`;
+      return [
+        line(result.focus),
+        ...(result.upstream.length ? ["", "Rests on:", ...result.upstream.map((n) => `  ← ${line(n)}`)] : ["", "Rests on nothing recorded: this is a hunch."]),
+        ...(result.downstream.length ? ["", "Supports:", ...result.downstream.map((n) => `  → ${line(n)}`)] : []),
+      ].join("\n");
+    });
+  }
+
+  if (command === "lint") {
+    const { flags } = parse(rest, { account: { type: "string" } });
+    const findings = actions.lint(resolveWorkspaceDir(text(flags, "workspace")), text(flags, "account"));
+    emit(flags, findings, () => {
+      if (!findings.length) return "✓ Every active claim has a source, every deciding account has someone who signs off, and no commitment is overdue.";
+      const byAccount = new Map<string, typeof findings>();
+      for (const f of findings) byAccount.set(f.accountName ?? "Workspace", [...(byAccount.get(f.accountName ?? "Workspace") ?? []), f]);
+      const warn = findings.filter((f) => f.severity === "warn").length;
+      return [
+        `${findings.length} ${findings.length === 1 ? "finding" : "findings"} · ${warn} worth acting on`,
+        ...[...byAccount.entries()].flatMap(([name, items]) => ["", name, ...items.map((f) => `  ${f.severity === "warn" ? "!" : "·"} ${f.message}${f.recordId ? `  [${f.recordId}]` : ""}`)]),
+      ].join("\n");
+    });
+    return;
   }
 
   if (command === "accounts") {
@@ -506,6 +570,34 @@ async function run(argv: string[]) {
     if (list(flags, "risk")) patch.risks = list(flags, "risk");
     if (list(flags, "tag")) patch.tags = list(flags, "tag");
     const result = actions.change(resolveWorkspaceDir(text(flags, "workspace")), detectActor(flags), (workspace) => ({ type: "account.update", accountId: actions.resolveAccount(workspace, pos.join(" ")).id, patch }), writeOptions(flags));
+    return emit(flags, result, () => renderChange(result));
+  }
+
+  if (command === "claim" && sub === "add") {
+    const { flags } = parse(args, { account: { type: "string" }, kind: { type: "string" }, text: { type: "string" }, evidence: { type: "string" }, contact: { type: "string" }, owner: { type: "string" }, due: { type: "string" } });
+    const result = actions.change(resolveWorkspaceDir(text(flags, "workspace")), detectActor(flags), (workspace) => ({
+      type: "claim.add",
+      accountId: actions.resolveAccount(workspace, required(flags, "account")).id,
+      kind: required(flags, "kind") as ClaimKind,
+      text: required(flags, "text"),
+      evidence: text(flags, "evidence")?.split(",").map((id) => id.trim()).filter(Boolean),
+      contactId: text(flags, "contact"),
+      owner: text(flags, "owner") as "us" | "them" | undefined,
+      due: text(flags, "due"),
+    }), writeOptions(flags));
+    return emit(flags, result, () => renderChange(result));
+  }
+
+  if (command === "claim" && sub === "resolve") {
+    const { flags, rest: pos } = parse(args, { reason: { type: "string" }, now: { type: "string" }, evidence: { type: "string" }, kind: { type: "string" }, owner: { type: "string" }, due: { type: "string" } });
+    if (!pos[0]) throw new OpError("missing_field", "Usage: crm claim resolve <claim id> --reason \"<why>\" [--now \"<what is true instead>\"]");
+    const now = text(flags, "now");
+    const result = actions.change(resolveWorkspaceDir(text(flags, "workspace")), detectActor(flags), () => ({
+      type: "claim.resolve",
+      claimId: pos[0],
+      reason: required(flags, "reason"),
+      replacement: now ? { text: now, evidence: text(flags, "evidence")?.split(",").map((id) => id.trim()).filter(Boolean), kind: text(flags, "kind") as ClaimKind | undefined, owner: text(flags, "owner") as "us" | "them" | undefined, due: text(flags, "due") } : undefined,
+    }), writeOptions(flags));
     return emit(flags, result, () => renderChange(result));
   }
 

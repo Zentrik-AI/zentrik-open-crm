@@ -7,7 +7,9 @@ workspace operations.
 
 - Make the CRM useful from a clean checkout, in the browser and on a folder.
 - Keep the agent loop trustworthy: one validated write path, review by default,
-  grounded tasks, a visible record of what agents did.
+  grounded tasks and claims, a visible record of what agents did.
+- Keep the memory honest: every claim shows its evidence or shows as a hunch;
+  the brief and the trace are computed from records, never written by hand.
 - Package portable agent setup and opt-in daily/weekly routine contracts.
 - Keep unknown scores, source dates and verified contact distinct; protect
   human edits from stale proposals and make repeat runs idempotent.

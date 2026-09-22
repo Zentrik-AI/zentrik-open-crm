@@ -92,8 +92,15 @@ local storage and can export a one-way Markdown snapshot for an agent to read.
 - **Review by default.** An agent's change is checked, then held as a proposal.
   You approve or reject it in the app. Switch a workspace to direct mode when
   you trust the loop; every direct change is logged with the agent's name.
-- **Grounded work.** Tasks cite the notes behind them. The app draws a solid
-  underline under grounded work and a dashed one under a hunch.
+- **Grounded memory.** What you know about an account is recorded as claims
+  (needs, risks, goals, objections, commitments, facts), each citing the notes
+  that say so. The app draws a solid underline under grounded work and a
+  dashed one under a hunch, and any line opens its trace: source, what we took
+  from it, what it led to.
+- **Before you talk to them.** Every account computes what changed since the
+  last real contact, what each side owes, who decides and who is missing, and
+  the questions worth asking. `./crm brief <account>` is the same page for an
+  agent.
 - **Notes are evidence, never instructions.** The contract tells agents to
   treat customer text as data, to draft and never send, and to say what is
   missing instead of inventing it.
@@ -106,14 +113,17 @@ local storage and can export a one-way Markdown snapshot for an agent to read.
 | Anything else | If it can run a shell command or speak MCP, it can work the CRM. |
 
 See the [Agent Operator Guide](./docs/agent-operator-guide.md) for the full
-loop and the [Workspace Format](./docs/workspace-format.md) for the records,
-operations, and MCP tools.
+loop, the [Workspace Format](./docs/workspace-format.md) for the records,
+operations, and MCP tools, and [Personas and Flows](./docs/personas-and-flows.md)
+for who this is built for and the moments it is built around.
 
 ## Product Surface
 
 - Home: what is due, what moved, and what your agents are waiting on you for
 - Pipeline, Accounts, Contacts, Tasks, and Notes with source references
+- Accounts: what we know with its evidence, who decides, and the brief before a conversation
 - Review: approve or reject what agents proposed, and see what they did
+- Trace: from any task, claim, or note, the chain from source to action
 - `crm` command and MCP server over the same workspace folder
 - Private and share-safe views, JSON backup, calendar export
 - Optional in-app AI with your own Anthropic key
@@ -183,6 +193,7 @@ proprietary platform code. See [NOTICE](./NOTICE),
 - [Public Release Checklist](./docs/public-release-checklist.md)
 - [Roadmap](./docs/roadmap.md)
 - [Architecture](./docs/architecture.md)
+- [Personas and Flows](./docs/personas-and-flows.md)
 - [Agent Operator Guide](./docs/agent-operator-guide.md)
 - [Workspace Format](./docs/workspace-format.md)
 - [Codex Operator Guide](./docs/codex-operator-guide.md)

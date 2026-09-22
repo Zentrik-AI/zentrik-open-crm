@@ -1,4 +1,4 @@
-import type { Account, Deal, Note, Task, Workspace } from "../types";
+import type { Account, Claim, Deal, Note, Task, Workspace } from "../types";
 import { accountMarkdown, buildViewFiles, vaultLayout, type ViewFile } from "../core/markdown.ts";
 import { buildWorkspaceAgentStarterPrompt } from "./agent";
 
@@ -85,8 +85,9 @@ export function accountToMarkdown(
   deals: Deal[],
   tasks: Task[],
   notes: Note[],
+  claims: Claim[] = [],
 ): string {
-  return accountMarkdown(account, deals, tasks, notes);
+  return accountMarkdown(account, deals, tasks, notes, { claims });
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

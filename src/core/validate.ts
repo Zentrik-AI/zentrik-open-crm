@@ -1,5 +1,6 @@
 import type { Workspace } from "../types.ts";
-import { accountStages, contactInfluences, dealStages, isValidDate as isDate, noteSources, priorities, sentiments, stageProbability } from "./model.ts";
+import { accountStages, claimKinds, claimStatuses, contactInfluences, dealStages, isValidDate as isDate, noteSources, priorities, sentiments, stageProbability } from "./model.ts";
+import { deriveAccountLists, migrateLegacyClaims } from "./claims.ts";
 
 /**
  * Structural and referential checks for a workspace. Used before importing a
@@ -141,6 +142,26 @@ export function validateWorkspace(data: unknown): string[] {
         required("taskId");
         within(value.status, ["open", "waiting", "done", "cancelled"], `${where}.status`);
         break;
+      case "claim.add":
+        required("accountId", "text");
+        within(value.kind, claimKinds, `${where}.kind`);
+        if (value.evidence !== undefined) textList(value.evidence, `${where}.evidence`);
+        optionalText(value, ["contactId"], where);
+        if (value.owner !== undefined) within(value.owner, ["us", "them"], `${where}.owner`);
+        optionalDates(value, ["due"], where);
+        break;
+      case "claim.resolve":
+        required("claimId", "reason");
+        if (value.replacement !== undefined) {
+          const path = `${where}.replacement`;
+          if (!isRec(value.replacement)) { errors.push(`${path} must be an object.`); break; }
+          check(isText(value.replacement.text), `${path}.text is missing or is not text.`);
+          if (value.replacement.evidence !== undefined) textList(value.replacement.evidence, `${path}.evidence`);
+          if (value.replacement.kind !== undefined) within(value.replacement.kind, claimKinds, `${path}.kind`);
+          if (value.replacement.owner !== undefined) within(value.replacement.owner, ["us", "them"], `${path}.owner`);
+          optionalDates(value.replacement, ["due"], path);
+        }
+        break;
       case "note.add":
         required("accountId", "title", "body");
         within(value.source, noteSources, `${where}.source`);
@@ -247,6 +268,32 @@ export function validateWorkspace(data: unknown): string[] {
     }
   });
 
+  if (data.claims !== undefined) {
+    if (!Array.isArray(data.claims)) errors.push("workspace.claims must be a list.");
+    else {
+      const claimIds = new Set<string>();
+      for (const raw of data.claims) if (isRec(raw) && isText(raw.id)) claimIds.add(raw.id);
+      data.claims.forEach((raw, i) => {
+        const where = `claims[${i}]`;
+        if (!isRec(raw)) return errors.push(`${where} is not an object.`);
+        claim(raw.id, where);
+        check(isText(raw.accountId) && accountIds.has(raw.accountId), `${where}.accountId points to no account.`);
+        within(raw.kind, claimKinds, `${where}.kind`);
+        check(isText(raw.text), `${where}.text is missing.`);
+        within(raw.status, claimStatuses, `${where}.status`);
+        check(isDate(raw.createdAt), `${where}.createdAt must be a date.`);
+        optionalDates(raw, ["resolvedAt", "due"], where);
+        optionalText(raw, ["resolvedReason"], where);
+        if (raw.owner !== undefined) within(raw.owner, ["us", "them"], `${where}.owner`);
+        if (raw.contactId !== undefined) check(isText(raw.contactId) && contactAccounts.get(raw.contactId) === raw.accountId, `${where}.contactId must belong to its account.`);
+        if (raw.supersededBy !== undefined) check(isText(raw.supersededBy) && claimIds.has(raw.supersededBy), `${where}.supersededBy must name a claim.`);
+        if (raw.status !== "active") check(isDate(raw.resolvedAt) && isText(raw.resolvedReason), `${where} needs a resolved date and reason.`);
+        check(Array.isArray(raw.evidence), `${where}.evidence must be a list of note ids.`);
+        if (Array.isArray(raw.evidence)) for (const noteId of raw.evidence) check(isText(noteId) && noteIds.has(noteId), `${where}.evidence must cite existing note ids.`);
+        if (raw.origin !== undefined) actor(raw.origin, `${where}.origin`);
+      });
+    }
+  }
   if (data.agentMode !== undefined) within(data.agentMode, ["review", "direct"], "workspace.agentMode");
   for (const key of ["proposals", "activity", "ideas", "changelog"]) {
     if (data[key] !== undefined) check(Array.isArray(data[key]), `workspace.${key} must be a list.`);
@@ -315,8 +362,9 @@ export function validateWorkspace(data: unknown): string[] {
 
 /** Fill the fields that older workspaces and hand-written files leave out. */
 export function normalizeWorkspace(workspace: Workspace): Workspace {
-  return {
+  return deriveAccountLists({
     ...workspace,
+    claims: migrateLegacyClaims(workspace),
     edition: workspace.edition ?? "Self-Hosted",
     updatedAt: workspace.updatedAt ?? new Date().toISOString(),
     agentMode: workspace.agentMode ?? "review",
@@ -332,7 +380,7 @@ export function normalizeWorkspace(workspace: Workspace): Workspace {
     })),
     deals: workspace.deals.map(deal => ({ ...deal, owner: deal.owner ?? "Unassigned", probability: deal.probability ?? stageProbability[deal.stage] })),
     tasks: workspace.tasks.map(task => ({ ...task, owner: task.owner ?? "Unassigned" })),
-  };
+  });
 }
 
 export function parseWorkspace(text: string): { workspace?: Workspace; errors: string[] } {

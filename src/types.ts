@@ -123,6 +123,38 @@ export interface Note {
   origin?: Actor;
 }
 
+/* ---- Claims: what we know about an account, and how we know it ---------- */
+
+/** The kinds of fact a team keeps about an account. */
+export type ClaimKind = "need" | "risk" | "goal" | "objection" | "commitment" | "fact";
+
+export type ClaimStatus = "active" | "resolved" | "superseded";
+
+/** One thing we believe about an account, with the notes that say so. A claim
+ *  with no evidence is a hunch and is shown as one. Claims are never edited in
+ *  place: a change of mind resolves the old claim and records the new one. */
+export interface Claim {
+  id: string;
+  accountId: string;
+  kind: ClaimKind;
+  text: string;
+  /** Ids of the notes that say so. Empty means a hunch. */
+  evidence: string[];
+  /** The person this is about or who said it, when one applies. */
+  contactId?: string;
+  status: ClaimStatus;
+  createdAt: string;
+  resolvedAt?: string;
+  resolvedReason?: string;
+  /** The claim that replaced this one. */
+  supersededBy?: string;
+  /** Commitments: who owes it ("us" or "them") and by when. */
+  owner?: "us" | "them";
+  due?: string;
+  /** Set when an agent recorded it. */
+  origin?: Actor;
+}
+
 /* ---- Improve Open CRM (product-feedback layer — not the user's CRM data) -- */
 
 export type IdeaStatus = "candidate" | "shaping" | "queued" | "released";
@@ -181,6 +213,23 @@ export type Op =
   | { type: "task.set_status"; taskId: string; status: TaskStatus }
   | { type: "task.update"; taskId: string; patch: TaskPatch }
   | {
+      type: "claim.add";
+      accountId: string;
+      kind: ClaimKind;
+      text: string;
+      evidence?: string[];
+      contactId?: string;
+      owner?: "us" | "them";
+      due?: string;
+    }
+  | {
+      type: "claim.resolve";
+      claimId: string;
+      reason: string;
+      /** Record what is true now; the old claim is marked superseded by it. */
+      replacement?: { text: string; evidence?: string[]; kind?: ClaimKind; owner?: "us" | "them"; due?: string };
+    }
+  | {
       type: "note.add";
       accountId: string;
       title: string;
@@ -202,7 +251,7 @@ export interface Change {
   review?: boolean;
   /** Id for the record this change creates. Unused by updates. */
   recordId: string;
-  /** Secondary id, for the optional first contact on `account.add`. */
+  /** Secondary id: the first contact on `account.add`, or the replacement on `claim.resolve`. */
   childId?: string;
   at: string;
   actor: Actor;
@@ -257,6 +306,9 @@ export interface Workspace {
   deals: Deal[];
   tasks: Task[];
   notes: Note[];
+  /** What we know about each account. Missing in workspaces written before
+   *  claims existed; `needs` and `risks` on accounts are derived from these. */
+  claims?: Claim[];
   /** Product-feedback layer, surfaced only under "Improve Open CRM". */
   ideas: Idea[];
   changelog: ChangelogEntry[];

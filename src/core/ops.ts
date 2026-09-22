@@ -1,8 +1,11 @@
-import type { Account, ActivityEntry, Actor, Change, Contact, Deal, Note, Op, Proposal, Task, Workspace } from "../types.ts";
+import type { Account, ActivityEntry, Actor, Change, Claim, Contact, Deal, Note, Op, Proposal, Task, Workspace } from "../types.ts";
+import { deriveAccountLists } from "./claims.ts";
 import {
   DAY_MS,
   isValidDate,
   accountStages,
+  claimKinds,
+  stableId,
   contactInfluences,
   dealStages,
   makeId,
@@ -44,6 +47,8 @@ const idPrefix: Record<Op["type"], string> = {
   "task.set_status": "task",
   "task.update": "task",
   "note.add": "note",
+  "claim.add": "claim",
+  "claim.resolve": "claim",
 };
 
 export const humanActor: Actor = { kind: "human", name: "you" };
@@ -51,7 +56,7 @@ export const humanActor: Actor = { kind: "human", name: "you" };
 export function newChange(op: Op, actor: Actor = humanActor, at: string = new Date().toISOString()): Change {
   return {
     recordId: makeId(idPrefix[op.type]),
-    childId: op.type === "account.add" && op.contact ? makeId("contact") : undefined,
+    childId: op.type === "account.add" && op.contact ? makeId("contact") : op.type === "claim.resolve" && op.replacement ? makeId("claim") : undefined,
     at,
     actor,
     op,
@@ -115,6 +120,7 @@ export function proposalBase(workspace: Workspace, op: Op): Record<string, unkno
   if (op.type === "task.update") { record = workspace.tasks.find(t => t.id === op.taskId); fields = Object.keys(op.patch); }
   if (op.type === "task.set_status") { record = workspace.tasks.find(t => t.id === op.taskId); fields = ["status"]; }
   if (op.type === "deal.move") { record = workspace.deals.find(d => d.id === op.dealId); fields = ["stage"]; }
+  if (op.type === "claim.resolve") { record = workspace.claims?.find(c => c.id === op.claimId); fields = ["status"]; }
   return fields.length ? Object.fromEntries(fields.map(k => [k, record ? (record as Record<string, unknown>)[k] ?? null : null])) : undefined;
 }
 
@@ -129,7 +135,28 @@ export function proposalConflict(workspace: Workspace, proposal: Proposal): stri
 export function applyChange(workspace: Workspace, change: Change): Applied {
   const { op, at, actor, recordId } = change;
   const origin = actor.kind === "agent" ? actor : undefined;
-  const touched = (next: Workspace): Workspace => ({ ...next, updatedAt: at });
+  const touched = (next: Workspace): Workspace => deriveAccountLists({ ...next, updatedAt: at });
+
+  const claimText = (value: string | undefined) => {
+    const text = need(value, "text");
+    if (text.length > 400) throw new OpError("invalid_value", "Keep a claim to one idea, under 400 characters.");
+    return text;
+  };
+  const claimEvidence = (account: Account, raw: unknown) => {
+    const evidence = raw === undefined ? [] : stringList(raw, "evidence");
+    for (const noteId of evidence) {
+      const note = workspace.notes.find((n) => n.id === noteId);
+      if (!note) throw new OpError("not_found", `Evidence must cite existing notes. No note with id ${noteId}.`);
+      if (note.accountId !== account.id) throw new OpError("invalid_value", `Note ${noteId} belongs to another account.`);
+    }
+    return [...new Set(evidence)];
+  };
+  const claimOwner = (value: unknown, kind: string) => {
+    if (value === undefined) return undefined;
+    if (value !== "us" && value !== "them") throw new OpError("invalid_value", "A commitment's owner is \"us\" or \"them\".");
+    if (kind !== "commitment") throw new OpError("invalid_value", "Only a commitment has an owner.");
+    return value;
+  };
 
   switch (op.type) {
     case "account.add": {
@@ -201,8 +228,22 @@ export function applyChange(workspace: Workspace, change: Change): Applied {
       if (patch.risks !== undefined) next.risks = stringList(patch.risks, "risks");
       const fields = Object.keys(patch);
       if (fields.length === 0) throw new OpError("missing_field", "Nothing to update.");
+      // The lists are a legacy way in. Keep the claims that back them honest:
+      // a text that is new becomes a hunch, a text that is gone is resolved.
+      let claims = workspace.claims ?? [];
+      const reconcile = (kind: "need" | "risk", texts: string[]) => {
+        const active = claims.filter((c) => c.accountId === account.id && c.kind === kind && c.status === "active");
+        for (const claim of active) {
+          if (!texts.includes(claim.text)) claims = claims.map((c) => (c.id === claim.id ? { ...c, status: "resolved" as const, resolvedAt: at, resolvedReason: `Removed from the account's ${kind}s` } : c));
+        }
+        for (const text of texts) {
+          if (!active.some((c) => c.text === text)) claims = [...claims, { id: stableId("claim", account.id, kind, text, at), accountId: account.id, kind, text, evidence: [], status: "active", createdAt: at, origin }];
+        }
+      };
+      if (patch.needs !== undefined) reconcile("need", next.needs);
+      if (patch.risks !== undefined) reconcile("risk", next.risks);
       return {
-        workspace: touched({ ...workspace, accounts: workspace.accounts.map((a) => (a.id === account.id ? next : a)) }),
+        workspace: touched({ ...workspace, claims: workspace.claims ? claims : undefined, accounts: workspace.accounts.map((a) => (a.id === account.id ? next : a)) }),
         summary: `Updated ${account.name} · ${fields.join(", ")}`,
         targetId: account.id,
         accountId: account.id,
@@ -337,6 +378,70 @@ export function applyChange(workspace: Workspace, change: Change): Applied {
         summary: `Updated "${next.title}" · ${status}`,
         targetId: task.id,
         accountId: task.accountId,
+      };
+    }
+
+    case "claim.add": {
+      const account = findAccount(workspace, op.accountId);
+      if (account.archivedAt) throw new OpError("archived", "Restore this account before recording what you know about it.");
+      const kind = oneOf(op.kind, claimKinds, "kind", "fact");
+      const text = claimText(op.text);
+      if ((workspace.claims ?? []).some((c) => c.accountId === account.id && c.kind === kind && c.status === "active" && identity(c.text) === identity(text))) {
+        throw new OpError("duplicate", `That ${kind} is already recorded. Cite more evidence on it, or resolve it first.`);
+      }
+      if (op.contactId && !account.contacts.some((c) => c.id === op.contactId)) throw new OpError("not_found", `No contact with id ${op.contactId} on ${account.name}.`);
+      const claim: Claim = {
+        id: recordId,
+        accountId: account.id,
+        kind,
+        text,
+        evidence: claimEvidence(account, op.evidence),
+        contactId: op.contactId || undefined,
+        status: "active",
+        createdAt: at,
+        owner: claimOwner(op.owner, kind),
+        due: op.due ? dueOrDefault(op.due, at, 0, "due") : undefined,
+        origin,
+      };
+      return {
+        workspace: touched({ ...workspace, claims: [...(workspace.claims ?? []), claim] }),
+        summary: `Recorded ${kind}: "${text}" on ${account.name}`,
+        targetId: recordId,
+        accountId: account.id,
+      };
+    }
+
+    case "claim.resolve": {
+      const claim = (workspace.claims ?? []).find((c) => c.id === op.claimId);
+      if (!claim) throw new OpError("not_found", `No claim with id ${op.claimId}.`);
+      if (claim.status !== "active") throw new OpError("already_resolved", `That claim was already ${claim.status}.`);
+      const account = findAccount(workspace, claim.accountId);
+      const reason = need(op.reason, "reason");
+      let claims = workspace.claims ?? [];
+      let replacement: Claim | undefined;
+      if (op.replacement) {
+        const kind = oneOf(op.replacement.kind, claimKinds, "kind", claim.kind);
+        replacement = {
+          id: change.childId ?? makeId("claim"),
+          accountId: account.id,
+          kind,
+          text: claimText(op.replacement.text),
+          evidence: claimEvidence(account, op.replacement.evidence),
+          contactId: claim.contactId,
+          status: "active",
+          createdAt: at,
+          owner: claimOwner(op.replacement.owner, kind),
+          due: op.replacement.due ? dueOrDefault(op.replacement.due, at, 0, "due") : undefined,
+          origin,
+        };
+        claims = [...claims, replacement];
+      }
+      claims = claims.map((c) => (c.id === claim.id ? { ...c, status: replacement ? "superseded" as const : "resolved" as const, resolvedAt: at, resolvedReason: reason, supersededBy: replacement?.id } : c));
+      return {
+        workspace: touched({ ...workspace, claims }),
+        summary: replacement ? `Updated ${claim.kind} on ${account.name}: "${claim.text}" → "${replacement.text}"` : `Resolved ${claim.kind} "${claim.text}" on ${account.name}`,
+        targetId: replacement?.id ?? claim.id,
+        accountId: account.id,
       };
     }
 

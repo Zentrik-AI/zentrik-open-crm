@@ -37,6 +37,7 @@ export function HomeView({
   onNavigate,
   onSelectAccount,
   onToggleTask,
+  onTrace,
 }: {
   workspace: Workspace;
   accountsById: Map<string, Account>;
@@ -46,6 +47,7 @@ export function HomeView({
   onNavigate: (v: View) => void;
   onSelectAccount: (id: string) => void;
   onToggleTask: (id: string) => void;
+  onTrace: (id: string) => void;
 }) {
   const openTasks = workspace.tasks
     .filter((t) => t.status === "open" && !accountsById.get(t.accountId ?? "")?.archivedAt)
@@ -175,6 +177,7 @@ export function HomeView({
                   task={task}
                   accountName={task.accountId ? accountsById.get(task.accountId)?.name : undefined}
                   notesById={notesById}
+                  onTrace={onTrace}
                   onToggle={() => onToggleTask(task.id)}
                   onOpenAccount={task.accountId ? () => onSelectAccount(task.accountId!) : undefined}
                 />

@@ -1,5 +1,5 @@
-import type { Account, Deal, Note, Task, Workspace } from "../types.ts";
-import { accountStageLabel, dealStageLabel, noteSourceLabel, slugify } from "./model.ts";
+import type { Account, Claim, ClaimKind, Deal, Note, Task, Workspace } from "../types.ts";
+import { accountStageLabel, claimKindLabel, claimKinds, dealStageLabel, noteSourceLabel, slugify } from "./model.ts";
 
 /**
  * Markdown views of a workspace: one file per account plus an index. They are
@@ -27,7 +27,8 @@ const yq = (value: string) => JSON.stringify(value);
 const day = (iso: string | null) => iso?.slice(0, 10) ?? "unknown";
 const tick = (id: string) => `\`${id}\``;
 
-export function accountMarkdown(account: Account, deals: Deal[], tasks: Task[], notes: Note[], notice = false): string {
+export function accountMarkdown(account: Account, deals: Deal[], tasks: Task[], notes: Note[], options: { notice?: boolean; claims?: Claim[] } = {}): string {
+  const { notice = false, claims = [] } = options;
   const frontmatter = [
     "---",
     `id: ${yq(account.id)}`,
@@ -49,8 +50,19 @@ export function accountMarkdown(account: Account, deals: Deal[], tasks: Task[], 
   if (notice) lines.push(GENERATED_NOTICE, "");
   lines.push(`# ${account.name}`, "", `*${account.segment} · ${account.domain} · ${accountStageLabel[account.stage]}*`, "");
 
-  lines.push("## Needs", ...(account.needs.length ? account.needs.map((need) => `- ${need}`) : ["- None recorded"]), "");
-  lines.push("## Risks", ...(account.risks.length ? account.risks.map((risk) => `- ${risk}`) : ["- None recorded"]), "");
+  // What we know, with how we know it. A claim with no evidence says so.
+  lines.push("## What we know");
+  const active = claims.filter((c) => c.status === "active");
+  if (active.length === 0) lines.push("- Nothing recorded yet. Capture a source note, then record what it says.");
+  for (const kind of claimKinds as ClaimKind[]) {
+    for (const claim of active.filter((c) => c.kind === kind)) {
+      const evidence = claim.evidence.length ? `evidence ${claim.evidence.map(tick).join(", ")}` : "hunch, no source";
+      const who = claim.contactId ? account.contacts.find((c) => c.id === claim.contactId)?.name : undefined;
+      const owner = claim.kind === "commitment" ? ` (${claim.owner === "them" ? "theirs" : "ours"}${claim.due ? `, by ${day(claim.due)}` : ""})` : "";
+      lines.push(`- **${claimKindLabel[kind].singular}**${owner} ${claim.text}${who ? ` · ${who}` : ""} — ${evidence} ${tick(claim.id)}`);
+    }
+  }
+  lines.push("");
 
   if (account.contacts.length) {
     lines.push("## Contacts");
@@ -131,6 +143,7 @@ export function accountRecords(workspace: Workspace, account: Account) {
     deals: workspace.deals.filter((deal) => deal.accountId === account.id),
     tasks: workspace.tasks.filter((task) => task.accountId === account.id),
     notes: workspace.notes.filter((note) => note.accountId === account.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    claims: (workspace.claims ?? []).filter((claim) => claim.accountId === account.id),
   };
 }
 
@@ -138,8 +151,8 @@ export function buildViewFiles(workspace: Workspace, layout: ViewLayout, notice 
   const slugs = uniqueSlugs(workspace.accounts);
   const files: ViewFile[] = [{ path: layout.indexPath, content: indexMarkdown(workspace, slugs, layout, notice) }];
   for (const account of workspace.accounts) {
-    const { deals, tasks, notes } = accountRecords(workspace, account);
-    files.push({ path: `${layout.accountDir}${slugs.get(account.id)}.md`, content: accountMarkdown(account, deals, tasks, notes, notice) });
+    const { deals, tasks, notes, claims } = accountRecords(workspace, account);
+    files.push({ path: `${layout.accountDir}${slugs.get(account.id)}.md`, content: accountMarkdown(account, deals, tasks, notes, { notice, claims }) });
   }
   return files;
 }

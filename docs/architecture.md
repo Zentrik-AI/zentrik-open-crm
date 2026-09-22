@@ -10,6 +10,8 @@ src/core/     pure TypeScript shared by everything below
   ops.ts        the one write path: operations, proposals, review, activity
   validate.ts   structural and referential checks; defaults for older files
   brief.ts      the daily brief: what needs attention, and why
+  claims.ts     claims as the source of truth; legacy needs/risks derived from them
+  memory.ts     account memory: grounding, who decides, what to ask, trace, lint
   markdown.ts   account and index views with record ids
 src/          the visual CRM (Vite, React, TypeScript, Tailwind)
 cli/          Node only

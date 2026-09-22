@@ -3,6 +3,7 @@ import { buildBrief, type Brief } from "../src/core/brief.ts";
 import { accountMarkdown, accountRecords, uniqueSlugs } from "../src/core/markdown.ts";
 import { OpError, newChange, pendingProposals, projectPending, resolveProposal, submitChange } from "../src/core/ops.ts";
 import { validateWorkspace } from "../src/core/validate.ts";
+import { accountMemory, briefMarkdown, groundClaim, lintWorkspace, trace, type AccountMemory, type LintFinding, type Trace } from "../src/core/memory.ts";
 import { readWorkspace, staleViews, updateWorkspace, repairViews } from "./store.ts";
 
 /**
@@ -55,7 +56,46 @@ export function showAccount(dir: string, ref: string) {
   const pending = waiting.length
     ? ["", "## Waiting for review", ...waiting.map((p) => `- ${p.summary} · by ${p.actor.name} \`${p.id}\` → \`${p.change.recordId}\``), ""].join("\n")
     : "";
-  return { account, ...records, pending: waiting, markdown: accountMarkdown(account, records.deals, records.tasks, records.notes) + pending };
+  return { account, ...records, pending: waiting, markdown: accountMarkdown(account, records.deals, records.tasks, records.notes, { claims: records.claims }) + pending };
+}
+
+/* ---- Memory: what we know, why, and what to ask ---- */
+
+export function memory(dir: string, ref: string): AccountMemory {
+  const { workspace } = readWorkspace(dir);
+  return accountMemory(workspace, resolveAccount(workspace, ref).id);
+}
+
+/** The brief before a conversation, as Markdown plus the data behind it. */
+export function brief(dir: string, ref: string): { memory: AccountMemory; markdown: string } {
+  const m = memory(dir, ref);
+  return { memory: m, markdown: briefMarkdown(m) };
+}
+
+/** Why a task, claim, or note exists: its sources, and what rests on it. */
+export function why(dir: string, id: string): Trace {
+  const { workspace } = readWorkspace(dir);
+  const result = trace(workspace, id.trim());
+  if (!result) throw new OpError("not_found", `No task, claim, or note with id ${id}. Ids appear in backticks in every view.`);
+  return result;
+}
+
+export function lint(dir: string, account?: string): LintFinding[] {
+  const { workspace } = readWorkspace(dir);
+  return lintWorkspace(workspace, new Date(), account ? resolveAccount(workspace, account).id : undefined);
+}
+
+export function listClaims(dir: string, options: { account?: string; all?: boolean } = {}) {
+  const { workspace } = readWorkspace(dir);
+  const accountId = options.account ? resolveAccount(workspace, options.account).id : undefined;
+  const nameOf = new Map(workspace.accounts.map((a) => [a.id, a.name]));
+  const now = Date.now();
+  return (workspace.claims ?? [])
+    .filter((c) => (options.all || c.status === "active") && (!accountId || c.accountId === accountId))
+    .map((c) => {
+      const g = groundClaim(workspace, c, now);
+      return { ...c, accountName: nameOf.get(c.accountId), contactName: g.contact?.name, grounded: g.grounded, stale: g.stale, overdue: g.overdue, latestEvidence: g.latest, ageDays: g.ageDays };
+    });
 }
 
 export interface SearchHit {

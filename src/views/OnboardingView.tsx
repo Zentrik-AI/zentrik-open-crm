@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { brand } from "../lib/brand";
 import {
   ArrowLeft,
   Bot,
@@ -80,7 +81,7 @@ export function OnboardingView({
             <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <Building2 className="h-4 w-4" />
             </span>
-            Zentrik Open CRM
+            {brand.fullName}
           </div>
           <h1 className="mt-5 max-w-lg font-serif text-[2rem] font-medium leading-[1.08] tracking-[-0.025em] sm:text-[2.5rem]">
             Start with one relationship worth remembering.
@@ -179,7 +180,7 @@ export function OnboardingView({
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <Button variant="secondary" size="lg" onClick={() => fileRef.current?.click()}>
                   <FileUp />
-                  Import Open CRM backup
+                  Import {brand.name} backup
                 </Button>
                 <input
                   ref={fileRef}

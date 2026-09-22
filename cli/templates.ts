@@ -1,4 +1,5 @@
 import type { Workspace } from "../src/types.ts";
+import { brand } from "../src/lib/brand.ts";
 
 /**
  * The files `crm init` writes beside workspace.json. AGENTS.md is the contract
@@ -6,7 +7,7 @@ import type { Workspace } from "../src/types.ts";
  */
 
 export function agentsMd(workspace: Workspace): string {
-  return `# ${workspace.name} · Open CRM workspace
+  return `# ${workspace.name} · ${brand.name} workspace
 
 This folder is a CRM. \`workspace.json\` holds every record. You work it with the
 \`./crm\` command. A person works it in the visual app (\`./crm ui\`). Both write
@@ -26,6 +27,7 @@ routing in Codex and Claude Code. Installation does not enable any schedules.
 ./crm why <id>            # where a task, claim, or note came from, and what rests on it
 ./crm search "<text>"     # find accounts, contacts, deals, tasks, notes
 ./crm lint                # where the memory is thin: hunches, stale evidence, missing roles
+./crm patterns            # what several accounts are saying: where account work becomes product work
 ./crm help                # every command and flag
 \`\`\`
 
@@ -38,8 +40,18 @@ operations with the same rules. Use whichever is available.
 
 ## Record what you learn
 
+Files you bring in (a transcript, an email export, a ticket) are kept under
+\`sources/\` by content hash, so the original is always one step away and the
+same file twice is the same source:
+
 \`\`\`bash
-./crm note add --account <account> --source call --ref "<where this came from>" \\
+./crm source add inbox/<file> --kind transcript --external-id "<id in its system>" --occurred-at "<when it happened>"
+\`\`\`
+
+Then record what it says, citing it:
+
+\`\`\`bash
+./crm note add --account <account> --source call --ref "source:<source id>" \\
   --title "<one line>" --body "<what was said or observed>" \\
   --occurred-at "<actual source timestamp>" --key "<source-note-key>" --review
 ./crm claim add --account <account> --kind need|risk|goal|objection|commitment|fact \\
@@ -101,6 +113,15 @@ Approving is a person's decision. Never run \`./crm approve\`, \`./crm reject\`,
   \`accounts/*.md\` by hand. The Markdown files are generated views.
 - **Keep it private.** Nothing in this folder leaves it unless the person asks.
 
+## When account work becomes product work
+
+\`./crm patterns\` shows what several accounts are saying. That is evidence about
+the product, and this CRM stops there on purpose: it does not decide what to
+build. Hand the sources to the person's product tool. If a ${brand.maker} MCP is
+connected, follow \`playbooks/product-work.md\`; otherwise
+\`./crm export --signals --pattern <id>\` writes the sources for them to import.
+Send the sources, never your conclusions, and never without the person asking.
+
 ## Playbooks
 
 Read one when the job calls for it:
@@ -111,6 +132,8 @@ Read one when the job calls for it:
 - \`playbooks/process-inbox.md\`: turn files in \`inbox/\` into sourced notes and next actions
 - \`playbooks/prepare-call.md\`: a cited one-page brief before a conversation
 - \`playbooks/draft-follow-up.md\`: a follow-up grounded in the latest notes
+- \`playbooks/pull-sources.md\`: bring calendar, email, and call sources in through whatever your harness can reach
+- \`playbooks/product-work.md\`: hand the sources behind a pattern to the person's product tool
 
 ## Layout
 
@@ -119,6 +142,8 @@ workspace.json   every record (source of truth; written only by ./crm and the ap
 INDEX.md         generated account index
 accounts/        generated, one Markdown file per account
 inbox/           the person drops transcripts, emails, and exports here
+sources/         files kept by content hash once processed; notes cite them as source:<id>
+exports/         signal bundles written by ./crm export --signals
 drafts/          your customer-facing drafts, for review
 playbooks/       how to run the recurring jobs
 docs/            setup and daily/weekly run contract
@@ -149,20 +174,23 @@ For each file:
 2. Find the account with \`./crm search\`; inspect canonical notes/tasks and
    \`./crm proposals --all --json\` for existing work. If no account matches,
    ask before proposing a new account. Pending work is not missing work.
-3. Capture one concise note per conversation with \`./crm note add\`, its
-   source/reference, actual \`--occurred-at\` if known, and
+3. Keep the file: \`./crm source add inbox/<file> --kind <transcript|email|ticket|export>\`
+   with \`--external-id\` when its system has one and \`--occurred-at\` when
+   the date is known. The same file twice returns the same source id.
+4. Capture one concise note per conversation with \`./crm note add\`, citing
+   \`--ref source:<id>\`, actual \`--occurred-at\` if known, and
    \`--key <stable-source-note-key> --review\`. Use \`--interaction\` only for
    verified real contact. Summarize; do not paste whole transcripts.
-4. If a next action is clear and absent from records AND proposals, propose a
+5. If a next action is clear and absent from records AND proposals, propose a
    task citing the note id with its own stable \`--key\` and \`--review\`.
-5. Source-backed risk/stage updates also require \`--key <stable-key> --review\`.
-5b. Record what the source supports as claims with \`./crm claim add\`, one idea
+6. Source-backed risk/stage updates also require \`--key <stable-key> --review\`.
+4b. Record what the source supports as claims with \`./crm claim add\`, one idea
    each, citing the note id (needs, risks, goals, objections, commitments with
    owner and due date, facts). If it contradicts an active claim, propose
    \`./crm claim resolve\` with \`--now\` instead of adding a second one.
-6. Keep source files retrievable. A pending note is not an applied note. Move
-   to \`inbox/processed/\` only after approval and preserve a resolvable source
-   reference; do not move merely because a proposal exists.
+7. Once the note is approved, the file under \`sources/\` is the retrievable
+   copy; remove the inbox copy or move it to \`inbox/processed/\`. Do not move
+   it merely because a proposal exists.
 
 Report each file, the note id it produced, and anything you could not place.
 `,
@@ -182,6 +210,53 @@ Goal: a one-page brief the person can read in five minutes, where every line nam
 5. If preparing revealed a claim that is plainly outdated, propose
    \`./crm claim resolve\` with the note that shows it; do not silently drop it.
 `,
+  "pull-sources.md": `# Pull sources
+
+Goal: the conversations that happened reach this workspace as files, with their
+identity in the system they came from, so nothing is captured twice and every
+note can be traced to an original.
+
+${brand.name} ships no connectors on purpose. Your harness already reaches the
+person's calendar, mail, call recorder, or ticketing tool through its own
+integrations or MCP servers. Use those, and land what you find here.
+
+1. Ask which systems and which window the person wants pulled. Do not pull
+   everything; pull the accounts and dates in scope.
+2. For each item you fetch (a meeting, a thread, a transcript, a ticket), write
+   it to \`inbox/\` as one file with a descriptive name, then keep it:
+   \`./crm source add inbox/<file> --kind <calendar|email|transcript|ticket> --external-id "<its id>" --occurred-at "<when it happened>"\`.
+   A file already on file comes back with its existing id.
+3. Hand off to \`playbooks/process-inbox.md\`: one note per conversation, citing
+   \`source:<id>\`, then claims and next actions for review.
+4. Report what was pulled, what was already on file, and what could not be
+   matched to an account. Never contact anyone or change the source systems.
+`,
+  "product-work.md": `# Turn a pattern into product work
+
+Goal: when several accounts are saying the same thing, the sources behind it
+reach the person's product tool, where deciding what to build belongs.
+
+${brand.name} notices recurrence; it does not draw product conclusions, and
+neither should you. Send sources.
+
+1. \`./crm patterns\`. Read the claims in each group; the grouping is by shared
+   terms, so confirm the accounts really mean the same thing. If you see a
+   group it missed, say so in your report rather than inventing a record.
+2. Confirm with the person which pattern they want to hand over and whether
+   it should be share-safe (people as roles, no emails or domains).
+3. If a ${brand.maker} MCP is connected: \`./crm export --signals --pattern <id> --json\`
+   prints the bundle. For each entry in \`sources\`, call the ${brand.maker} tool
+   \`signals_ingest_evidence\` with \`text\`, \`name\`, \`signalType\`,
+   \`occurredAt\`, \`sourceLinks\`, and the entry's \`sourceKey\` and
+   \`externalId\` unchanged, so a retry updates the same signal instead of
+   duplicating it. Use \`participantPolicy: "match_existing"\`. Put the account
+   name in \`additionalContext\`. Report the signal ids it returns.
+4. Otherwise: \`./crm export --signals --pattern <id>\` writes a folder of one
+   Markdown file per source plus \`bundle.json\`. Tell the person where it is;
+   they import it in ${brand.maker} (${brand.productWorkUrl}).
+5. Do not send the pattern's label, the claims, or your reading of them. The
+   product tool extracts its own insights from the sources.
+`,
   "draft-follow-up.md": `# Draft a follow-up
 
 Goal: a short follow-up the person can send after editing, grounded in the latest conversation.
@@ -200,11 +275,16 @@ export const inboxReadme = `# Inbox
 
 Drop call transcripts, email exports, meeting notes, and other raw sources here.
 Ask your agent to "process the inbox" and it will follow
-\`playbooks/process-inbox.md\`: each file becomes a sourced note on the right
-account, then moves to \`inbox/processed/\`.
+\`playbooks/process-inbox.md\`: each file is kept under \`sources/\` by content
+hash, becomes a sourced note on the right account, and the claims and next
+actions it supports are proposed for your review.
+
+Ask it to "pull this week's calls and email" and it follows
+\`playbooks/pull-sources.md\` using whatever your harness can reach.
 `;
 
 export const gitignore = `.open-crm/
+exports/
 `;
 
 export function mcpConfig(command: string, args: string[]) {

@@ -488,3 +488,35 @@ test("an account shows what we know, who decides, what to ask, and why each line
   await expect(knowledge.getByText("Follow-ups that cite calls, notes, and open product gaps")).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy brief" })).toBeDisabled();
 });
+
+test("the Book shows every account by stage, filters by what is thin, and hands patterns on as sources", async ({ page }) => {
+  test.skip(test.info().project.name !== "chromium", "The Book runs in the desktop project.");
+  await useDemo(page);
+  await nav(page, "Book");
+  const book = page.locator('[data-view="book"]');
+  await expect(book.getByRole("heading", { name: "Book" })).toBeVisible();
+  await expect(book.getByRole("region", { name: "At risk" }).getByText("Harbor & Reed Advisory")).toBeVisible();
+
+  // Filters narrow the lanes to accounts with that finding.
+  await book.getByRole("button", { name: /overdue commitment/ }).click();
+  await expect(book.getByRole("region", { name: "Active" }).getByText("Northstar Robotics")).toBeVisible();
+  await expect(book.getByRole("region", { name: "Researching" }).getByText("Fieldstack Labs")).toHaveCount(0);
+  await book.getByRole("button", { name: /overdue commitment/ }).click();
+  await expect(book.getByRole("region", { name: "Researching" }).getByText("Fieldstack Labs")).toBeVisible();
+
+  // Patterns name the accounts and offer the sources, not a decision.
+  await expect(book.getByText("What several accounts are saying")).toBeVisible();
+  await expect(book.getByText(/Grouped on: .*environment/)).toBeVisible();
+  await expect(book.getByRole("link", { name: /Decide what to build in Zentrik/ }).first()).toHaveAttribute("href", "https://zentrik.ai");
+  const downloadEvent = page.waitForEvent("download");
+  await book.getByRole("button", { name: "Sources" }).first().click();
+  const download = await downloadEvent;
+  expect(download.suggestedFilename()).toMatch(/^open-crm-signals-.*\.json$/);
+
+  // A tile opens the account; share-safe disables the export.
+  await page.getByRole("button", { name: "Private" }).click();
+  await expect(book.getByRole("button", { name: "Sources" }).first()).toBeDisabled();
+  await page.getByRole("button", { name: "Share-safe" }).click();
+  await book.getByRole("button", { name: /Northstar Robotics/ }).first().click();
+  await expect(page.locator('[data-view="accounts"]').getByRole("heading", { name: "Northstar Robotics" })).toBeVisible();
+});

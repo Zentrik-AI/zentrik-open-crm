@@ -11,9 +11,11 @@ import { EmptyState } from "../components/ui/empty-state";
 export function ContactsView({
   accounts,
   onSelectAccount,
+  onTrace,
 }: {
   accounts: Account[];
   onSelectAccount: (id: string) => void;
+  onTrace: (id: string) => void;
 }) {
   const [q, setQ] = useState("");
   const buildroom = useBuildroom();
@@ -78,7 +80,13 @@ export function ContactsView({
                     <Private redactedLabel="email hidden">{contact.email}</Private>
                   </div>
                 )}
-                <div className="mt-3 flex items-center justify-between border-t border-border pt-2.5">
+                <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-2.5">
+                  <button
+                    onClick={() => onTrace(contact.id)}
+                    className="rounded-sm border-b border-accent pb-px text-[12px] text-accent-fg hover:border-b-2 focus-visible:outline-none focus-visible:focus-ring"
+                  >
+                    What they said
+                  </button>
                   <button
                     onClick={() => onSelectAccount(account.id)}
                     className="inline-flex items-center gap-1 rounded-sm text-[12px] font-medium text-accent-fg hover:underline focus-visible:outline-none focus-visible:focus-ring"

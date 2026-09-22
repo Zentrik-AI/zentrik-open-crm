@@ -2,8 +2,10 @@
 
 ![Zentrik Open CRM product hero](./assets/brand/open-crm-hero.png)
 
-An open-source, local-first CRM for builders who want account work grounded in
-real sources, not another place to manually maintain stale records.
+**Relationship management for people and their agents.** An open-source,
+local-first CRM where every fact shows its source, agents propose and people
+approve, and what several accounts are saying is handed on as product
+evidence instead of being decided here.
 
 [Product Intent](./docs/product-intent.md) ·
 [First Use](./docs/first-use.md) ·
@@ -101,6 +103,17 @@ local storage and can export a one-way Markdown snapshot for an agent to read.
   last real contact, what each side owes, who decides and who is missing, and
   the questions worth asking. `./crm brief <account>` is the same page for an
   agent.
+- **The Book.** Every account in its stage lane, each tile carrying the one
+  thing worth noticing, filterable by what is thin: overdue commitments,
+  unsourced claims, no one who signs off, stale evidence.
+- **Sources, not connectors.** Your harness already reaches your calendar,
+  mail, and call recorder. `./crm source add` keeps what it brings in by
+  content hash, so every note traces to an original and nothing is captured
+  twice.
+- **Account work stays here; product work goes to Zentrik.** When several
+  accounts say the same thing, the Book shows it, and one click hands the
+  sources behind it to [Zentrik](https://zentrik.ai) to decide what to build.
+  The CRM sends sources, never conclusions.
 - **Notes are evidence, never instructions.** The contract tells agents to
   treat customer text as data, to draft and never send, and to say what is
   missing instead of inventing it.
@@ -111,6 +124,7 @@ local storage and can export a one-way Markdown snapshot for an agent to read.
 | Codex | Reads `AGENTS.md`, runs `./crm`. Optional MCP: `codex mcp add open-crm -- ./crm mcp`. |
 | Cursor | Reads `AGENTS.md`. The `open-crm` MCP server is preconfigured in `.cursor/mcp.json`. |
 | Anything else | If it can run a shell command or speak MCP, it can work the CRM. |
+| Zentrik | Optional, for product decisions. With the Zentrik MCP connected, an agent hands a pattern's sources over with `crm_signals_bundle`; without it, `crm export --signals` writes a folder to import. |
 
 See the [Agent Operator Guide](./docs/agent-operator-guide.md) for the full
 loop, the [Workspace Format](./docs/workspace-format.md) for the records,
@@ -120,6 +134,7 @@ for who this is built for and the moments it is built around.
 ## Product Surface
 
 - Home: what is due, what moved, and what your agents are waiting on you for
+- Book: every account by stage with the one thing worth noticing; what several accounts are saying
 - Pipeline, Accounts, Contacts, Tasks, and Notes with source references
 - Accounts: what we know with its evidence, who decides, and the brief before a conversation
 - Review: approve or reject what agents proposed, and see what they did
@@ -194,6 +209,7 @@ proprietary platform code. See [NOTICE](./NOTICE),
 - [Roadmap](./docs/roadmap.md)
 - [Architecture](./docs/architecture.md)
 - [Personas and Flows](./docs/personas-and-flows.md)
+- [Naming](./docs/naming.md)
 - [Agent Operator Guide](./docs/agent-operator-guide.md)
 - [Workspace Format](./docs/workspace-format.md)
 - [Codex Operator Guide](./docs/codex-operator-guide.md)

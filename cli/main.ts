@@ -9,11 +9,12 @@ import { normalizeWorkspace, parseWorkspace } from "../src/core/validate.ts";
 import * as actions from "./actions.ts";
 import { StoreError, WORKSPACE_FILE, readWorkspace, resolveWorkspaceDir, writeWorkspace, replaceWorkspace, restoreWorkspace, repairViews } from "./store.ts";
 import { agentKitFiles } from "./agent-kit.ts";
+import { brand } from "../src/lib/brand.ts";
 import { agentsMd, claudeMd, cmdWrapper, gitignore, inboxReadme, mcpConfig, playbooks, shWrapper } from "./templates.ts";
 
 const BIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "open-crm.js");
 
-const HELP = `Open CRM · a local-first CRM that people and agents work together
+const HELP = `${brand.name} · ${brand.descriptor.toLowerCase()}
 
 Usage: crm <command> [options]        (add --json to any command)
 
@@ -38,6 +39,12 @@ Know
   claims [--account <account>] [--all]       what we know, with evidence or marked as a hunch
   why <task | claim | note id>               where a record came from, and what rests on it
   lint [--account <account>]                 where the memory is thin: hunches, stale evidence, missing roles, overdue commitments
+  patterns                                   what several accounts are saying: the bridge from account work to product work
+
+Sources
+  source add <file> [--kind transcript|email|calendar|ticket|export|document] [--external-id <id>] [--occurred-at DATE]
+                                             keep a file under sources/ by content hash; cite it in a note as --ref source:<id>
+  sources                                    every source on file
 
 Write
   note add --account <account> --title "<t>" --body "<text or - for stdin>"
@@ -69,6 +76,8 @@ Decide (a person's call)
 Maintain
   check [--fix]                              validate records; --fix regenerates stale Markdown views
   export [file]                              write a backup of workspace.json
+  export --signals [--pattern <id> | --account <account>] [--share-safe] [--out <folder>]
+                                             the source notes behind a pattern or account, as a bundle + Markdown for a product tool
   import <backup.json>                       replace this workspace with a backup (a person's call)
   restore <backup revision>                  restore a local replacement backup (a person's call)
 
@@ -425,6 +434,42 @@ async function run(argv: string[]) {
     );
     if (!report.ok) process.exitCode = 1;
     return;
+  }
+
+  if (command === "patterns") {
+    const { flags } = parse(rest);
+    const rows = actions.patterns(resolveWorkspaceDir(text(flags, "workspace")));
+    return emit(flags, rows, () =>
+      rows.length
+        ? rows.map((p) => [`${p.summary}  [${p.id}]`, `  ${p.accounts.map((a) => a.name).join(" · ")} · ${p.notes.length} ${p.notes.length === 1 ? "source" : "sources"}${p.hunches ? ` · ${p.hunches} unsourced` : ""} · shared terms: ${p.terms.join(", ") || "none"}`, ...p.claims.map((c) => `    - ${c.text}  [${c.id}]`)].join("\n")).join("\n\n") +
+          "\n\nThis is account work becoming product work. Hand the sources to your product tool: crm export --signals --pattern <id>"
+        : "No pattern yet: nothing is said by more than one account. Record what each account says as claims and this fills in.",
+    );
+  }
+
+  if (command === "sources") {
+    const { flags } = parse(rest);
+    const rows = actions.sources(resolveWorkspaceDir(text(flags, "workspace")));
+    return emit(flags, rows, () => (rows.length ? rows.map((s) => `${s.id}  ${s.kind.padEnd(10)} ${s.originalName}${s.externalId ? ` · ${s.externalId}` : ""} · ${s.occurredAt ? day(s.occurredAt) : "date unknown"} · ${s.path}`).join("\n") : "No sources on file. Add one with: crm source add <file> --kind transcript"));
+  }
+
+  if (command === "source" && sub === "add") {
+    const { flags, rest: pos } = parse(rest.slice(1), { kind: { type: "string" }, "external-id": { type: "string" }, "occurred-at": { type: "string" } });
+    if (!pos[0]) throw new OpError("missing_field", "Usage: crm source add <file> [--kind …] [--external-id …] [--occurred-at DATE]");
+    const result = actions.sourceAdd(resolveWorkspaceDir(text(flags, "workspace")), pos[0], { kind: text(flags, "kind"), externalId: text(flags, "external-id"), occurredAt: text(flags, "occurred-at"), capturedBy: detectActor(flags).name });
+    return emit(flags, result, () => `${result.existed ? "Already on file" : "✓ Kept"} as ${result.source.id} (${result.source.path}). Cite it: --ref source:${result.source.id}`);
+  }
+
+  if (command === "export" && rest.includes("--signals")) {
+    const { flags } = parse(rest, { signals: { type: "boolean" }, pattern: { type: "string" }, account: { type: "string" }, "share-safe": { type: "boolean" }, out: { type: "string" } });
+    const result = actions.exportSignals(resolveWorkspaceDir(text(flags, "workspace")), { pattern: text(flags, "pattern"), account: text(flags, "account"), shareSafe: flags["share-safe"] === true, out: text(flags, "out"), product: brand.name });
+    return emit(flags, result, () =>
+      [
+        `✓ ${result.sources} ${result.sources === 1 ? "source" : "sources"} from ${result.accounts.join(", ")} written to ${result.dir}${result.shareSafe ? " (share-safe: people as roles, no emails or domains)" : ""}`,
+        "  bundle.json is open-crm-signals.v1; each .md is one source with what it supported.",
+        `  Turn them into product decisions in ${brand.maker}: ${brand.productWorkUrl} (drop the folder into Import, or let an agent with the ${brand.maker} MCP ingest bundle.json).`,
+      ].join("\n"),
+    );
   }
 
   if (command === "export") {

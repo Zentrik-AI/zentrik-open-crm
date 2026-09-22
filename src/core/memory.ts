@@ -257,6 +257,8 @@ export interface Trace {
 function noteNode(note: Note, contact?: Contact): TraceNode {
   return { id: note.id, kind: "note", title: note.title, detail: `${noteSourceLabel[note.source]}${contact ? ` · ${contact.name}` : ""} · ${note.sourceRef || "no reference"}`, date: noteDate(note), tone: note.sourceRef && note.sourceRef !== "Manual entry" ? "grounded" : "hunch" };
 }
+/** A `source:<id>` reference points at a file under sources/; anything else is a description. */
+export const sourceFileId = (ref?: string) => (ref?.startsWith("source:") ? ref.slice(7).trim() : undefined);
 function claimNode(g: GroundedClaim): TraceNode {
   return { id: g.claim.id, kind: "claim", title: g.claim.text, detail: `${claimKindLabel[g.claim.kind].singular}${g.claim.status !== "active" ? ` · ${g.claim.status}` : ""}`, date: g.latest ?? g.claim.createdAt, tone: g.claim.status !== "active" ? "done" : g.grounded ? "grounded" : "hunch" };
 }
@@ -299,6 +301,19 @@ export function trace(workspace: Workspace, id: string, now: Date = new Date()):
       focus: claimNode(g),
       upstream: [...g.notes.map((n) => noteNode(n, contacts.find((c) => c.id === n.contactId))), ...(g.contact ? [contactNode(g.contact)] : [])],
       downstream: [...tasks.map(taskNode), ...(replacement ? [claimNode(groundClaim(workspace, replacement, t))] : [])],
+    };
+  }
+
+  for (const account of workspace.accounts) {
+    const contact = account.contacts.find((c) => c.id === id);
+    if (!contact) continue;
+    const said = workspace.notes.filter((n) => n.accountId === account.id && n.contactId === contact.id).sort((a, b) => noteDate(b).localeCompare(noteDate(a)));
+    const about = (workspace.claims ?? []).filter((c) => c.accountId === account.id && c.status === "active" && (c.contactId === contact.id || c.evidence.some((e) => said.some((n) => n.id === e))));
+    return {
+      accountId: account.id,
+      focus: { id: contact.id, kind: "contact", title: contact.name, detail: `${contact.role} · ${contact.lastSeen ? `seen ${daysBetween(contact.lastSeen, t)}d ago` : "never seen"}`, tone: "neutral" },
+      upstream: said.map((n) => noteNode(n)),
+      downstream: about.map((c) => claimNode(groundClaim(workspace, c, t))),
     };
   }
 

@@ -23,8 +23,8 @@ workspace operations.
 - Publish the `crm` command to npm so setup is one `npx` line.
 - Add CSV import for accounts and notes.
 - Extend record maintenance to contact and source-note corrections.
-- Add connector contracts for email, calendar, support, GitHub, reviews, and
-  usage events. Each lands sources as notes with references.
+- Add more pull-sources playbooks for specific harness integrations, each
+  landing files as sources with their external ids.
 - Add hosted direct submission for Tell Open CRM feedback bundles.
 - Add public-safe Buildroom export so accepted ideas can be published cleanly.
 

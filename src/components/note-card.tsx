@@ -12,11 +12,16 @@ export function NoteCard({
   accountName,
   dealName,
   className,
+  grounds,
+  onTrace,
 }: {
   note: Note;
   accountName?: string;
   dealName?: string;
   className?: string;
+  /** How many claims and tasks cite this note. */
+  grounds?: number;
+  onTrace?: (id: string) => void;
 }) {
   const source = sourceMeta[note.source];
   const buildroom = useBuildroom();
@@ -60,7 +65,14 @@ export function NoteCard({
         <>
           <h3 className="mt-2.5 text-h3 text-foreground">{note.title}</h3>
           <p className="mt-1.5 whitespace-pre-line text-body text-muted-foreground">{note.body}</p>
-          <p className="mt-2 text-[12px] text-muted-foreground">Source date: {note.occurredAt ? formatDateFull(note.occurredAt) : "unknown"} · {note.interaction ? "Verified interaction" : "Not verified contact"}</p>
+          <p className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
+            <span>Source date: {note.occurredAt ? formatDateFull(note.occurredAt) : "unknown"} · {note.interaction ? "Verified interaction" : "Not verified contact"}</span>
+            {onTrace && grounds !== undefined && (
+              <button onClick={() => onTrace(note.id)} className={cn("rounded-sm border-b pb-px focus-visible:outline-none focus-visible:focus-ring", grounds > 0 ? "border-accent text-accent-fg" : "border-dashed border-border-strong text-faint-foreground hover:text-foreground")}>
+                {grounds > 0 ? `grounds ${grounds} ${grounds === 1 ? "record" : "records"}` : "grounds nothing yet"}
+              </button>
+            )}
+          </p>
         </>
       )}
     </article>

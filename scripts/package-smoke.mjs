@@ -49,6 +49,16 @@ try {
   for (const file of [manifest.bin["open-crm"], "dist/runtime/cli/main.js", "dist/index.html", "cli/main.ts", "src/core/ops.ts", "docs/agent-setup.md", "docs/agent-routines.md", "LICENSE", "NOTICE", "TRADEMARKS.md", "docs/licensing-and-ip.md"]) {
     assert.ok(fs.existsSync(path.join(pkg, file)), `tarball is missing ${file}`);
   }
+  for (const file of ["THIRD_PARTY_NOTICES.txt", "dist/THIRD_PARTY_NOTICES.txt"]) {
+    const notices = fs.readFileSync(path.join(pkg, file), "utf8");
+    for (const dependency of Object.keys(manifest.dependencies)) assert.ok(notices.includes(`${dependency}@`), `notices missing ${dependency}`);
+    assert.match(notices, /SIL OPEN FONT LICENSE/);
+  }
+  assert.match(run(process.execPath, [path.join(pkg, "dist/runtime/scripts/import-reviewed-feedback.mjs"), "--help"], install), /Dry-run is the default/);
+  const readme = fs.readFileSync(path.join(pkg, "README.md"), "utf8");
+  for (const match of readme.matchAll(/\]\((\.\/[^)#]+)(?:#[^)]*)?\)/g)) {
+    assert.ok(fs.existsSync(path.resolve(pkg, match[1])), `README target missing from package: ${match[1]}`);
+  }
   assert.ok(!fs.existsSync(path.join(pkg, "vite.config.ts")), "build configuration must remain checkout-only");
   const tree = JSON.parse(run(npm, ["ls", "--all", "--omit=dev", "--json"], install));
   function checkDependencies(node) {

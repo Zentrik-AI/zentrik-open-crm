@@ -2,7 +2,6 @@ import { type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "../lib/utils";
 import { type Tone } from "../lib/meta";
-import { toneChip } from "../lib/tone";
 import { Card } from "./ui/card";
 import { Stat } from "./ui/stat";
 
@@ -29,7 +28,7 @@ export function MetricCard({
       <div className="flex items-start justify-between gap-3">
         <Stat label={label} value={value} size="xl" delta={delta} />
         <span
-          className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-md", toneChip[tone])}
+          className="flex h-5 w-5 shrink-0 items-center justify-center text-faint-foreground"
         >
           <Icon className="h-[18px] w-[18px]" aria-hidden />
         </span>

@@ -3,7 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 const controlBase =
-  "min-w-0 w-full rounded-md border border-border bg-surface-sunken px-3 text-body text-foreground outline-none transition-[border-color,box-shadow] duration-fast placeholder:text-faint-foreground focus:border-ring focus:focus-ring disabled:opacity-50";
+  "min-w-0 w-full rounded-md border border-border-strong bg-surface px-3 text-body text-foreground outline-none transition-[border-color,box-shadow] duration-fast placeholder:text-faint-foreground focus:border-ring focus:focus-ring disabled:opacity-50";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   numeric?: boolean;
@@ -69,18 +69,20 @@ export function Field({
   children: React.ReactNode;
 }) {
   const id = React.useId();
+  const labelId = `${id}-label`;
   const describedBy = error ? `${id}-err` : hint ? `${id}-hint` : undefined;
   const control =
-    React.isValidElement(children) && describedBy
+    React.isValidElement(children)
       ? React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
-          "aria-describedby": describedBy,
-          "aria-invalid": error ? true : undefined,
+          ...((children.props as Record<string, unknown>)["aria-label"] || (children.props as Record<string, unknown>)["aria-labelledby"] ? {} : { "aria-labelledby": labelId }),
+          ...(describedBy ? { "aria-describedby": describedBy } : {}),
+          ...(error ? { "aria-invalid": true } : {}),
         })
       : children;
 
   return (
     <label className={cn("block space-y-1.5", className)}>
-      <span className="block text-label uppercase text-muted-foreground">{label}</span>
+      <span id={labelId} className="block text-label uppercase text-muted-foreground">{label}</span>
       {control}
       {error ? (
         <span id={`${id}-err`} className="block text-[12px] text-destructive-fg">

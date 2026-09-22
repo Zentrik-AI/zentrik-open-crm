@@ -1,180 +1,147 @@
 import { useState } from "react";
-import { Check, Copy, ExternalLink, Github, Lightbulb, MessagesSquare, Send } from "lucide-react";
-import type { ChangelogEntry, Idea } from "../types";
+import { Copy, Download, ExternalLink, Github } from "lucide-react";
+import type { Idea } from "../types";
 import {
-  DISCUSSIONS_URL,
-  GITHUB_ISSUES_URL,
-  feedbackKinds,
-  type FeedbackDraft,
+  GITHUB_ISSUES_URL, createGitHubIssueDraft, createPublicFeedbackBundle,
+  feedbackKinds, readFeedbackDraft, saveFeedbackDraft, deleteFeedbackDraft, type FeedbackDraft,
 } from "../lib/feedback";
-import { formatDate } from "../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, Well } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Field, Input, Select, Textarea } from "../components/ui/field";
-import { Badge } from "../components/ui/badge";
-import { IdeaCard } from "../components/idea-card";
-import { ZentrikMark } from "../components/zentrik-mark";
 
-export function ImproveView({
-  ideas,
-  changelog,
-  onApproveIdea,
-  onSubmitFeedback,
-  issueDraft,
-  copied,
-  onCopyIssueDraft,
-}: {
+export function ImproveView({ ideas }: {
   ideas: Idea[];
-  changelog: ChangelogEntry[];
-  onApproveIdea: (id: string) => void;
-  onSubmitFeedback: (draft: FeedbackDraft) => void;
-  issueDraft: { title: string; body: string } | null;
-  copied: boolean;
-  onCopyIssueDraft: () => void;
 }) {
-  const [draft, setDraft] = useState<FeedbackDraft>({ kind: "request", title: "", body: "" });
-  const set = (patch: Partial<FeedbackDraft>) => setDraft((c) => ({ ...c, ...patch }));
-  const maxVotes = ideas.reduce((m, i) => Math.max(m, i.votes), 0);
+  const [initial] = useState(() => {
+    try { return { draft: readFeedbackDraft(window.localStorage), error: "" }; }
+    catch { return { draft: null, error: "The saved feedback draft could not be read. Saving will replace the previous feedback draft." }; }
+  });
+  const [draft, setDraft] = useState<FeedbackDraft>(initial.draft ?? { kind: "request", title: "", body: "" });
+  const [mode, setMode] = useState<"private" | "public">("private");
+  const [reviewed, setReviewed] = useState(false);
+  const [message, setMessage] = useState(initial.error);
+  const valid = Boolean(draft.title.trim() && draft.body.trim());
+  let validationError = "";
+  if (valid) {
+    try { createPublicFeedbackBundle(draft, true); }
+    catch (error) { validationError = error instanceof Error ? error.message : "Invalid feedback."; }
+  }
+  const canShare = mode === "public" && reviewed && valid && !validationError;
+  const issue = createGitHubIssueDraft(draft);
 
-  function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!draft.title.trim() || !draft.body.trim()) return;
-    onSubmitFeedback(draft);
-    setDraft((c) => ({ ...c, title: "", body: "" }));
+  function set(patch: Partial<FeedbackDraft>) {
+    setDraft((current) => ({ ...current, ...patch }));
+    setReviewed(false);
+    setMessage("Unsaved changes. Save before leaving this view.");
+  }
+
+  function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      saveFeedbackDraft(window.localStorage, draft);
+      setMessage("Draft saved in this browser. Nothing was sent to Zentrik or GitHub.");
+    } catch {
+      setMessage("Could not save in this browser. Keep this view open and copy your text before leaving.");
+    }
+  }
+
+  function removeDraft() {
+    if (!window.confirm("Delete this feedback draft from this browser? CRM records will not change.")) return;
+    try {
+      deleteFeedbackDraft(window.localStorage);
+      setDraft({ kind: "request", title: "", body: "" });
+      setReviewed(false);
+      setMode("private");
+      setMessage("Local feedback draft deleted. CRM records were not changed.");
+    } catch {
+      setMessage("Could not delete the saved draft. Your text is still here.");
+    }
+  }
+
+  async function copy() {
+    if (!canShare) return;
+    try {
+      const bundle = createPublicFeedbackBundle(draft, reviewed);
+      const prepared = createGitHubIssueDraft(bundle.feedback);
+      await navigator.clipboard.writeText("# " + prepared.title + "\n\n" + prepared.body);
+      setMessage("Issue text copied. Review and submit it yourself on GitHub; nothing has been posted.");
+    } catch {
+      setMessage("Could not copy. Select the preview text or download the feedback bundle instead.");
+    }
+  }
+
+  function download() {
+    if (!canShare) return;
+    let url: string | undefined;
+    try {
+      const bundle = createPublicFeedbackBundle(draft, reviewed);
+      url = URL.createObjectURL(new Blob([JSON.stringify(bundle, null, 2) + "\n"], { type: "application/json" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "open-crm-feedback.v1.json";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setMessage("Feedback download requested. The file contains only your feedback and format labels. Nothing was sent.");
+    } catch {
+      setMessage("Could not download feedback. Copy the reviewed issue text instead.");
+    } finally {
+      if (url) { const objectUrl = url; window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000); }
+    }
   }
 
   return (
     <div className="grid gap-6">
-      <section className="rounded-xl border border-idea/30 bg-idea-bg/30 p-4">
-        <div className="flex items-center gap-2 text-idea-fg">
-          <Lightbulb className="h-4 w-4" />
-          <span className="text-label">Product feedback</span>
-        </div>
-        <h1 className="mt-1.5 font-serif text-h1 text-foreground">Help shape Open CRM</h1>
-        <p className="mt-1 max-w-2xl text-body text-muted-foreground">
-          This area is about evolving the open-source product — it's separate from your CRM. Nothing here touches your
-          accounts, deals, or notes. Suggest a change, see what's on the roadmap, and read what shipped.
-        </p>
+      <section>
+        <h1 className="font-serif text-h1 text-foreground">Help shape Open CRM</h1>
+        <p className="mt-2 max-w-2xl text-body text-muted-foreground">Describe a workflow problem or suggest a change. Save it locally, then review what you share.</p>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-        <Card className="self-start">
-          <CardHeader>
-            <CardTitle>Suggest a change</CardTitle>
-            <p className="text-body-sm text-muted-foreground">Turn friction or an idea into a ready-to-file GitHub issue.</p>
-          </CardHeader>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="min-w-0 self-start">
+          <CardHeader><CardTitle>Write feedback</CardTitle><p className="text-body-sm text-muted-foreground">Your draft stays in this browser until you share it.</p></CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={submit}>
-              <Field label="Type">
-                <Select value={draft.kind} onChange={(e) => set({ kind: e.target.value as FeedbackDraft["kind"] })}>
-                  {feedbackKinds.map((k) => (
-                    <option key={k.id} value={k.id}>
-                      {k.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Title">
-                <Input value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="Short, specific summary" />
-              </Field>
-              <Field label="What's the friction or idea?">
-                <Textarea className="min-h-32" value={draft.body} onChange={(e) => set({ body: e.target.value })} placeholder="Describe the workflow, what you expected, and what would be better." />
-              </Field>
-              <Button type="submit" variant="primary" className="w-full">
-                <Send />
-                Draft an issue
-              </Button>
+            <form className="space-y-4" onSubmit={save}>
+              <Field label="Type"><Select value={draft.kind} onChange={(event) => set({ kind: event.target.value as FeedbackDraft["kind"] })}>{feedbackKinds.map((kind) => <option key={kind.id} value={kind.id}>{kind.label}</option>)}</Select></Field>
+              <Field label="Title"><Input required value={draft.title} onChange={(event) => set({ title: event.target.value })} placeholder="Short, specific summary" /></Field>
+              <Field label="What's the friction or idea?"><Textarea required className="min-h-32" value={draft.body} onChange={(event) => set({ body: event.target.value })} placeholder="Describe the workflow and expected result using a fictional example." /></Field>
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" variant="primary" disabled={!valid}>Save local draft</Button>
+                <Button type="button" variant="ghost" onClick={removeDraft}>Delete local draft</Button>
+              </div>
             </form>
           </CardContent>
         </Card>
 
-        <Card className="self-start">
-          <CardHeader>
-            <CardTitle>Send or share</CardTitle>
-            <p className="text-body-sm text-muted-foreground">Copy your drafted issue, or jump to GitHub.</p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {issueDraft ? (
-              <Well className="animate-settle">
-                <div className="text-h3 text-foreground">{issueDraft.title}</div>
-                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-5 text-muted-foreground">
-                  {issueDraft.body}
-                </pre>
-                <Button variant="secondary" size="sm" className="mt-3" onClick={onCopyIssueDraft}>
-                  {copied ? <Check /> : <Copy />}
-                  {copied ? "Copied" : "Copy issue draft"}
-                </Button>
-              </Well>
+        <Card className="min-w-0 self-start">
+          <CardHeader><CardTitle>Review the handoff</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <Field label="Sharing"><Select value={mode} onChange={(event) => { setMode(event.target.value as "private" | "public"); setReviewed(false); setMessage(""); }}><option value="private">Private — keep local</option><option value="public">Public — prepare for GitHub</option></Select></Field>
+            {mode === "private" ? (
+              <p className="text-body-sm text-muted-foreground">Saved locally, separate from your CRM records. Choose public sharing when you want to prepare a GitHub issue.</p>
             ) : (
-              <div className="rounded-md border border-dashed border-border p-3 text-body-sm text-muted-foreground">
-                Draft a suggestion to generate a copy-ready GitHub issue.
-              </div>
+              <>
+                <p className="text-body-sm text-muted-foreground">Only the feedback you write is included. Review it for private information before sharing publicly.</p>
+                {validationError && <p role="alert" className="text-body-sm text-destructive-fg">{validationError}</p>}
+                <Well><h2 className="text-h3 [overflow-wrap:anywhere]">{issue.title}</h2><pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap text-body-sm text-muted-foreground [overflow-wrap:anywhere]">{issue.body}</pre></Well>
+                <label className="flex items-start gap-2 text-body-sm"><input type="checkbox" className="mt-1 accent-primary" checked={reviewed} onChange={(event) => setReviewed(event.target.checked)} />I reviewed this text and removed private information. It is safe to share publicly.</label>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" disabled={!canShare} onClick={copy}><Copy />Copy issue text</Button>
+                  <Button variant="secondary" disabled={!canShare} onClick={download}><Download />Download feedback bundle</Button>
+                </div>
+                {canShare && <a href={GITHUB_ISSUES_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-body-sm text-primary underline"><Github className="h-4 w-4" />Open GitHub to submit manually<ExternalLink className="h-3.5 w-3.5" /></a>}
+              </>
             )}
-            <div className="grid gap-2 sm:grid-cols-2">
-              <ExternalLinkButton href={GITHUB_ISSUES_URL} icon={Github}>
-                Open an issue
-              </ExternalLinkButton>
-              <ExternalLinkButton href={DISCUSSIONS_URL} icon={MessagesSquare}>
-                Discussions
-              </ExternalLinkButton>
-            </div>
           </CardContent>
         </Card>
       </div>
+      <p role="status" aria-live="polite" className="text-body-sm text-muted-foreground">{message || "Zentrik delivery is not connected. Nothing is sent automatically."}</p>
 
-      <div>
-        <h2 className="mb-2.5 text-label uppercase text-muted-foreground">Roadmap</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {ideas.map((idea) => (
-            <IdeaCard key={idea.id} idea={idea} maxVotes={maxVotes} onAdvance={() => onApproveIdea(idea.id)} />
-          ))}
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-serif text-h2">What shipped</CardTitle>
-          <p className="text-body-sm text-muted-foreground">A changelog of how the product has evolved.</p>
-        </CardHeader>
-        <CardContent>
-          <ol className="relative ml-2 space-y-5 border-l border-accent/50 pl-6">
-            {changelog.map((entry) => (
-              <li key={entry.id} className="relative">
-                <span className="absolute -left-[29px] top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-accent" aria-hidden />
-                <div className="font-mono text-[11px] uppercase tracking-wide text-faint-foreground">{formatDate(entry.date)}</div>
-                <div className="mt-0.5 font-serif text-h3 text-foreground">{entry.title}</div>
-                <p className="mt-1 text-body text-muted-foreground">{entry.summary}</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {entry.tags.map((t) => (
-                    <Badge key={t} tone="neutral">
-                      {t}
-                    </Badge>
-                  ))}
-                </div>
-              </li>
-            ))}
-          </ol>
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-center pb-2 pt-1">
-        <ZentrikMark tone="prominent" />
-      </div>
+      <details className="border-t border-border pt-4">
+        <summary className="cursor-pointer text-body-sm text-muted-foreground">Local workspace ideas ({ideas.length})</summary>
+        <p className="mb-3 mt-3 text-body-sm text-muted-foreground">These may include demo records. They are not a shared roadmap or release commitments.</p>
+        {ideas.length ? <div className="grid gap-4 sm:grid-cols-2">{ideas.map((idea) => <Card key={idea.id}><CardHeader><CardTitle className="break-words">{idea.title}</CardTitle></CardHeader><CardContent><p className="whitespace-pre-wrap break-words text-body-sm text-muted-foreground">{idea.problem}</p></CardContent></Card>)}</div> : <p className="text-body-sm text-muted-foreground">No local workspace ideas.</p>}
+      </details>
     </div>
-  );
-}
-
-function ExternalLinkButton({ href, icon: Icon, children }: { href: string; icon: typeof Github; children: React.ReactNode }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-border-strong bg-secondary px-3 text-[13px] font-medium text-secondary-foreground transition-colors duration-fast ease-out hover:bg-surface-raised focus-visible:outline-none focus-visible:focus-ring"
-    >
-      <Icon className="h-[15px] w-[15px]" />
-      {children}
-      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-    </a>
   );
 }

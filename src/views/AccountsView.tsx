@@ -119,7 +119,7 @@ export function AccountsView({
   const openPipeline = acctDeals.filter((d) => isOpenDeal(d.stage)).reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className="grid min-w-0 gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+    <div className="grid min-w-0 gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]">
       <h1 className="sr-only">Accounts</h1>
       <div className="min-w-0 space-y-4">
         {addingAccount && (
@@ -161,7 +161,6 @@ export function AccountsView({
 
       {acct ? (
         <div className="min-w-0 space-y-5">
-          {!buildroom && <AccountMaintenance key={JSON.stringify([acct.id, acct.name, acct.owner, acct.archivedAt])} account={acct} onUpdate={patch => onUpdateAccount(acct.id, patch)} onArchive={(archived, reason) => onArchiveAccount(acct.id, archived, reason)} />}
           <Card>
             <CardHeader className="gap-3 border-b border-border pb-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -199,12 +198,11 @@ export function AccountsView({
             </CardHeader>
 
             <CardContent className="space-y-5 pt-5">
-              <div className="grid gap-3 sm:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3">
                   <Ring value={acct.health} size="lg" label="Health" />
                   <div>
                     <div className="text-label uppercase text-muted-foreground">Health</div>
-                    <div className="text-[12px] text-faint-foreground">vitality</div>
                   </div>
                 </div>
                 <div className="rounded-lg border border-border bg-surface p-3">
@@ -226,6 +224,8 @@ export function AccountsView({
                   </div>
                 </div>
               </div>
+
+              {!buildroom && <AccountMaintenance key={JSON.stringify([acct.id, acct.name, acct.owner, acct.archivedAt])} account={acct} onUpdate={patch => onUpdateAccount(acct.id, patch)} onArchive={(archived, reason) => onArchiveAccount(acct.id, archived, reason)} />}
 
               <AiPanel
                 shareSafe={buildroom}

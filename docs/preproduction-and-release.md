@@ -8,10 +8,15 @@ Open CRM uses two long-lived branches:
   and the protected `build` check. Human review is encouraged but not required
   for now; the branch remains protected by its other controls.
 
-The repository is a browser-only Vite application. It does not yet have a
-hosted Fly or Pages environment, so the running pre-production surface is a
-persistent local sandbox checkout. GitHub also stores the validated `dist/`
-bundle from each push to `develop` for fourteen days as an audit artifact.
+The product supports browser-local storage and a folder workspace served by
+the Node CLI on loopback. The CLI and MCP server share the folder's records
+with the app. A static deployment provides only the browser edition.
+The pre-production workflow uses a persistent local sandbox checkout.
+GitHub stores the validated `dist/` bundle from each push to `develop` for
+fourteen days as an audit artifact. Use Node 22.18 or newer.
+
+See [Release readiness](./release-readiness.md) for dated audit evidence and
+remaining public-release gates. Passing CI alone does not clear those gates.
 
 ## Create The Sandbox
 
@@ -67,5 +72,6 @@ gh pr create --repo Zentrik-AI/zentrik-open-crm \
 The promotion pull request must have a passing `build` check. Human review is
 encouraged before merging. Merge it with a merge commit so `main` retains the
 ancestry of the validated `develop` history. Do not squash a release
-promotion. Production hosting and tagging remain a separate follow-up once
-the hosted target exists.
+promotion. Public visibility, release tagging, package publication, and hosted
+deployment are separate release actions. A hosted deployment is not required
+to release the local CLI or browser application.

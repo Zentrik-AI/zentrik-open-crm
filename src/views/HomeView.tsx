@@ -3,8 +3,6 @@ import type { Account, Task, Workspace } from "../types";
 import type { View } from "../lib/nav";
 import { splitCurrency } from "../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { CountUp } from "../components/ui/count";
-import { Meter } from "../components/ui/meter";
 import { MetricCard } from "../components/metric-card";
 import { TaskRow } from "../components/task-row";
 import { NoteCard } from "../components/note-card";
@@ -53,11 +51,9 @@ export function HomeView({
     .filter((t) => t.status === "open" && !accountsById.get(t.accountId ?? "")?.archivedAt)
     .sort((a, b) => a.due.localeCompare(b.due))
     .slice(0, 6);
-  const recentNotes = [...workspace.notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
+  const recentNotes = [...workspace.notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 2);
   const notesById = new Map(workspace.notes.map((note) => [note.id, note]));
   const waiting = pendingProposals(workspace);
-  const totalTasks = Math.max(1, workspace.tasks.length);
-  const totalAccounts = Math.max(1, workspace.accounts.length);
 
   const pipeline = splitCurrency(metrics.weightedPipeline);
   const progress = onboardingProgress(workspace);
@@ -90,9 +86,6 @@ export function HomeView({
         <section className="flex flex-col gap-4 border-y border-accent/40 bg-accent-bg/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-label uppercase text-accent-fg">Synthetic demo workspace</div>
-            <p className="mt-1 max-w-2xl text-body-sm text-muted-foreground">
-              Explore every workflow safely. When you are ready, create a clean workspace around one real account.
-            </p>
           </div>
           <Button variant="accent" size="sm" onClick={onOpenOnboarding} className="self-start sm:self-auto">
             Start with my data
@@ -132,7 +125,7 @@ export function HomeView({
         </section>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <MetricCard
           label="Weighted pipeline"
           tone="signal"
@@ -150,34 +143,31 @@ export function HomeView({
           label="Deals in play"
           tone="account"
           icon={Columns3}
-          value={<CountUp value={metrics.openDeals} />}
-          viz={<Meter value={(metrics.openDeals / Math.max(1, workspace.deals.length)) * 100} tone="account" ticks={false} label="Open deal share" className="w-full" />}
+          value={metrics.openDeals}
         />
         <MetricCard
           label="Open tasks"
           tone="warning"
           icon={ClipboardList}
-          value={<CountUp value={metrics.openTasks} />}
-          viz={<Meter value={(metrics.dueSoon / totalTasks) * 100} tone="warning" ticks={false} label="Due-soon share" className="w-full" />}
+          value={metrics.openTasks}
         />
         <MetricCard
           label="At-risk accounts"
           tone="destructive"
           icon={ShieldAlert}
-          value={<CountUp value={metrics.atRisk} />}
-          viz={<Meter value={(metrics.atRisk / totalAccounts) * 100} tone="destructive" ticks={false} label="At-risk share" className="w-full" />}
+          value={metrics.atRisk}
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
-            <CardTitle className="font-serif text-h2">Today</CardTitle>
-            <p className="text-body-sm text-muted-foreground">Your open tasks, soonest first.</p>
+            <CardTitle className="font-serif text-h2">Next actions</CardTitle>
+            <p className="text-body-sm text-muted-foreground">Open work, ordered by due date.</p>
           </CardHeader>
           <CardContent className="space-y-2.5">
             {openTasks.length === 0 ? (
-              <EmptyState title="Inbox zero, the good kind." hint="New tasks appear here as you add them across accounts." />
+              <EmptyState title="No open tasks" hint="Add a next action from an account or the Tasks view." />
             ) : (
               openTasks.map((task: Task) => (
                 <TaskRow

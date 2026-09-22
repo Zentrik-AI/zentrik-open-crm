@@ -179,6 +179,66 @@ async function useDemo(page: Page) {
   await page.getByRole("button", { name: "Explore with demo data" }).click();
 }
 
+test("feedback handoff exports reviewed authored text without CRM records", async ({ page }) => {
+  await useDemo(page);
+  const before = await page.evaluate(() => localStorage.getItem("zentrik-open-crm.workspace.v2"));
+  await page.getByRole("button", { name: /^Improve/ }).first().click();
+  const view = page.locator('[data-view="improve"]');
+  await view.getByLabel("Title", { exact: true }).fill("Group waiting actions");
+  await view.getByLabel("What's the friction or idea?").fill("Review waiting work separately from today's actions.");
+  await view.getByRole("button", { name: "Save local draft" }).click();
+  await expect(view.getByRole("status")).toContainText("Nothing was sent");
+  await view.getByLabel("Sharing", { exact: true }).selectOption("public");
+  await expect(view.getByRole("button", { name: "Download feedback bundle" })).toBeDisabled();
+  await view.getByRole("checkbox").check();
+  const downloaded = page.waitForEvent("download");
+  await view.getByRole("button", { name: "Download feedback bundle" }).click();
+  const file = await downloaded;
+  const bundle = JSON.parse(await readFile((await file.path())!, "utf8"));
+  expect(bundle).toEqual({ schema: "open-crm-feedback.v1", product: "Zentrik Open CRM", visibility: "public", feedback: {
+    kind: "request", title: "Group waiting actions", body: "Review waiting work separately from today's actions.",
+  } });
+  expect(await page.evaluate(() => localStorage.getItem("zentrik-open-crm.workspace.v2"))).toBe(before);
+  await view.getByLabel("Title", { exact: true }).fill("Revised feedback");
+  await expect(view.getByRole("checkbox")).not.toBeChecked();
+  await expect(view.getByRole("button", { name: "Download feedback bundle" })).toBeDisabled();
+  await view.getByLabel("Title", { exact: true }).fill("a".repeat(501));
+  await view.getByRole("checkbox").check();
+  await expect(view.getByRole("alert")).toContainText("500 characters");
+  await expect(view.getByRole("button", { name: "Download feedback bundle" })).toBeDisabled();
+  page.once("dialog", dialog => dialog.accept());
+  await view.getByRole("button", { name: "Delete local draft" }).click();
+  await expect(view.getByLabel("Title", { exact: true })).toHaveValue("");
+  expect(await page.evaluate(() => localStorage.getItem("zentrik-open-crm.feedback-draft.v1"))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem("zentrik-open-crm.workspace.v2"))).toBe(before);
+  await page.reload();
+  await page.getByRole("button", { name: /^Improve/ }).first().click();
+  await expect(view.getByLabel("Title", { exact: true })).toHaveValue("");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("bundled typography loads with external requests blocked", async ({ page }) => {
+  await useDemo(page);
+  await page.route(/^https:\/\//, route => route.abort());
+  await page.reload();
+  const fonts = await page.evaluate(async () => {
+    const names = ["Inter", "Fraunces", "IBM Plex Mono"];
+    await Promise.all(names.map(name => document.fonts.load(`16px "${name}"`)));
+    return names.map(name => document.fonts.check(`16px "${name}"`));
+  });
+  expect(fonts).toEqual([true, true, true]);
+  const metric = page.locator('[data-view="home"] .text-stat-xl').first();
+  await expect(metric).toHaveCSS("font-size", "26px");
+  await expect(page.getByRole("button", { name: "Start with my data" })).toHaveCSS("font-size", "13px");
+  await page.getByRole("button", { name: "Toggle theme" }).click();
+  const dark = await page.locator("html").getAttribute("class");
+  await expect(metric).toHaveCSS("color", dark?.includes("dark") ? "rgb(238, 235, 226)" : "rgb(53, 46, 39)");
+  for (const route of ["Home", "Accounts", "Tasks", "Review", "Improve"]) {
+    await page.getByRole("button", { name: new RegExp(`^${route}(?:\\s|$)`) }).first().click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
 test("navigates the CRM surfaces and redacts in share-safe mode", async ({ page }) => {
   test.skip(test.info().project.name !== "chromium", "Desktop flow runs in the desktop project.");
   const vw = (name: string) => page.locator(`[data-view="${name}"]`);
@@ -189,7 +249,7 @@ test("navigates the CRM surfaces and redacts in share-safe mode", async ({ page 
   await expect(page).toHaveTitle("Home · Open CRM");
   await expect(vw("home").getByText(/5 open tasks, [1-5] due soon/)).toBeVisible();
   await expect(vw("home").getByText("Weighted pipeline")).toBeVisible();
-  await expect(vw("home").getByRole("heading", { name: "Today" })).toBeVisible();
+  await expect(vw("home").getByRole("heading", { name: "Next actions" })).toBeVisible();
 
   await nav(page, "Pipeline");
   await expect(page).toHaveTitle("Pipeline · Open CRM");

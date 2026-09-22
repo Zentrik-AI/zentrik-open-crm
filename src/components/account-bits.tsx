@@ -34,7 +34,7 @@ export function Money({ value, className }: { value: number; className?: string 
   );
 }
 
-/** Account in the master list — health Ring, fit Meter, ARR, fill-level priority. */
+/** Master list prioritizes recognition; the selected account owns detailed metrics. */
 export function AccountListCard({
   account,
   selected,
@@ -55,18 +55,12 @@ export function AccountListCard({
           : "border-border hover:-translate-y-px hover:border-border-strong hover:shadow-e1",
       )}
     >
-      <div className="flex items-start gap-3">
-        <Ring value={account.health} size="md" label="Health" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 truncate font-serif text-[15px] font-medium text-foreground">{account.name}</div>
-            <PriorityBadge priority={account.priority} />
-          </div>
-          <div className="mt-0.5 truncate text-[12px] text-muted-foreground">{account.segment}</div>
-          <div className="mt-2.5 flex items-center gap-3">
-            <Meter value={account.fit} tone="account" ticks={false} display={`${account.fit}`} className="flex-1" label="Fit" />
-            <ArrValue value={account.arr} className="text-[13px]" />
-          </div>
+      <div className="min-w-0">
+        <div className="break-words text-body font-medium text-foreground">{account.name}</div>
+        <div className="mt-1 text-body-sm text-muted-foreground">{account.segment}</div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-body-sm text-faint-foreground">
+          <span>{stageMeta[account.stage].label} · {account.owner}</span>
+          <ArrValue value={account.arr} className="text-[12px]" />
         </div>
       </div>
     </button>

@@ -40,14 +40,12 @@ import {
   type SyncSettings,
 } from "./lib/sync";
 import { downloadICS, tasksToICS } from "./lib/ics";
-import { createGitHubIssueDraft, type FeedbackDraft } from "./lib/feedback";
 import { buildAccountAgentHandoff, buildWorkspaceAgentStarterPrompt } from "./lib/agent";
 import type { Account, AgentMode, Change, Op, Workspace } from "./types";
 import { PrivacyProvider } from "./components/ui/privacy";
 import { ToastProvider, useToast } from "./components/ui/toast";
 import { NavItem } from "./components/ui/nav-item";
 import { Button } from "./components/ui/button";
-import { Badge } from "./components/ui/badge";
 import { Kbd } from "./components/ui/kbd";
 import { CommandPalette } from "./components/command-palette";
 import { ZentrikMark } from "./components/zentrik-mark";
@@ -136,8 +134,6 @@ function AppInner() {
   const [syncBusy, setSyncBusy] = useState(false);
   const vaultHandle = useRef<Awaited<ReturnType<typeof pickVault>> | null>(null);
 
-  const [issueDraft, setIssueDraft] = useState<{ title: string; body: string } | null>(null);
-  const [issueCopied, setIssueCopied] = useState(false);
 
   useEffect(() => {
     if (!folderBacked) setStorageIssue(saveWorkspace(workspace));
@@ -731,48 +727,6 @@ function AppInner() {
     toast({ title: "Workspace reset to the demo", tone: "warning" });
   }
 
-  /* ---- Improve ---- */
-  function approveIdea(id: string) {
-    const idea = workspace.ideas.find((i) => i.id === id);
-    replaceWorkspace(
-      touchWorkspace({
-        ...workspace,
-        ideas: workspace.ideas.map((i) =>
-          i.id === id
-            ? { ...i, status: i.status === "candidate" ? "shaping" : i.status === "shaping" ? "queued" : "released", votes: i.votes + 1, confidence: Math.min(99, i.confidence + 3) }
-            : i,
-        ),
-      }),
-    );
-    if (idea) toast({ title: `Advanced · ${idea.title}`, tone: "idea" });
-  }
-  function submitFeedback(draft: FeedbackDraft) {
-    if (!draft.title.trim() || !draft.body.trim()) return;
-    const idea = {
-      id: makeId("idea"),
-      title: draft.title.trim(),
-      problem: draft.body.trim(),
-      status: "candidate" as const,
-      votes: 1,
-      targetRelease: "triage",
-      confidence: 60,
-    };
-    replaceWorkspace(touchWorkspace({ ...workspace, ideas: [idea, ...workspace.ideas] }));
-    setIssueDraft(createGitHubIssueDraft(draft));
-    setIssueCopied(false);
-    toast({ title: "Thanks — added to the roadmap as a candidate.", tone: "idea" });
-  }
-  async function copyIssueDraft() {
-    if (!issueDraft) return;
-    try {
-      await navigator.clipboard.writeText(`# ${issueDraft.title}\n\n${issueDraft.body}`);
-      setIssueCopied(true);
-      window.setTimeout(() => setIssueCopied(false), 1600);
-      toast({ title: "Issue draft copied", tone: "success" });
-    } catch {
-      /* ignore */
-    }
-  }
 
   const aiView: AiViewState = {
     hasKey: hasAiKey(aiSettings),
@@ -867,17 +821,14 @@ function AppInner() {
           </nav>
 
           <div className="mt-auto space-y-3">
-            <div className="rounded-lg border border-border bg-surface p-3">
-              <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium text-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
-                Local-first
-              </div>
-              <p className="text-[11px] leading-4 text-muted-foreground">
+            <details className="px-2 text-body-sm text-muted-foreground">
+              <summary className="cursor-pointer rounded-sm focus-visible:outline-none focus-visible:focus-ring">{folderBacked ? "Saved to this computer" : "Saved in this browser"}</summary>
+              <p className="mt-2 leading-relaxed">
                 {folderBacked
-                  ? "Your data stays in a folder on this computer, shared with the agents you run there."
-                  : "Your data stays in this browser. AI runs on your own key; sync writes to your own folder."}
+                  ? "Records are stored in your workspace folder. Connected agents use the providers you choose."
+                  : "Export a backup in Settings. AI requests go to your chosen provider when you use AI features."}
               </p>
-            </div>
+            </details>
             <div className="border-t border-border px-1 pt-3">
               <ZentrikMark />
             </div>
@@ -893,8 +844,7 @@ function AppInner() {
                 </span>
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
-                    <div className="truncate font-serif text-[15px] font-medium text-foreground">{workspace.name}</div>
-                    {onboarding.mode === "demo" && <Badge tone="accent">Demo</Badge>}
+                    <div className="truncate text-body font-medium text-foreground">{workspace.name}</div>
                   </div>
                 </div>
               </div>
@@ -1041,15 +991,7 @@ function AppInner() {
               />
             </div>
             <div data-view="improve" className={cn(view !== "improve" && "hidden")}>
-              <ImproveView
-                ideas={workspace.ideas}
-                changelog={workspace.changelog}
-                onApproveIdea={approveIdea}
-                onSubmitFeedback={submitFeedback}
-                issueDraft={issueDraft}
-                copied={issueCopied}
-                onCopyIssueDraft={copyIssueDraft}
-              />
+              <ImproveView ideas={workspace.ideas} />
             </div>
           </div>
         </main>

@@ -37,6 +37,9 @@ recovery. CI keeps synthetic screenshots and traces as the
       proposal through Review, and export a backup.
 - [ ] `LICENSE`, `NOTICE`, `TRADEMARKS.md`, `SECURITY.md`, `CHANGELOG.md`, and
       the contribution guidance are present and consistent.
+- [ ] The README hero still shows the current product, and
+      `assets/brand/open-crm-og.png` is set as the repository's social preview
+      (Settings → General → Social preview; there is no API for it).
 
 ## Publishing
 

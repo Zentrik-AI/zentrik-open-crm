@@ -21,6 +21,14 @@ contributions.
 - integrations that have explicit data boundaries and clear setup docs
 - tests that protect core CRM flows on desktop and mobile
 
+## Where To Go
+
+- **[Discussions](https://github.com/Zentrik-AI/zentrik-open-crm/discussions)**
+  for questions, setup help, and showing what you built.
+- **Issues** for a defect you can describe or a concrete request.
+- **[Security advisories](https://github.com/Zentrik-AI/zentrik-open-crm/security/advisories/new)**
+  for anything sensitive, privately.
+
 ## Issue Flow
 
 Use the issue template that matches the work:

@@ -1,5 +1,9 @@
 # Zentrik Open CRM
 
+[![Checks](https://github.com/Zentrik-AI/zentrik-open-crm/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/Zentrik-AI/zentrik-open-crm/actions/workflows/checks.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-0f766e.svg)](./LICENSE)
+[![Node 22.18+](https://img.shields.io/badge/node-22.18%2B-0f766e.svg)](https://nodejs.org)
+
 ![An Open CRM account: the brief before a conversation, what we know with the note behind each claim, and who decides](./assets/brand/open-crm-hero.png)
 
 **Relationship management for people and their agents.** An open-source,

@@ -62,6 +62,7 @@ Labels are routing and triage metadata, not decoration — every label should ro
 | `enhancement` | New capability or materially expanded behavior | Release-notes "Features" |
 | `experience` | UX/interaction polish with no new feature headline | Release-notes "Experience / polish" |
 | `performance` | Latency, payload, or query-cost work | Requires before/after benchmark evidence in the PR |
+| `grounding` | Evidence, provenance, or share-safe behavior is weak or wrong | Grounding review: what is the source, and what does it show |
 | `security` | Auth, secrets, customer data, privacy, or infrastructure | Flags a security review; add a one-line security/privacy note in the body |
 | `integrations` | Provider connections, imports/exports, OAuth flows | Integration review: data boundaries and setup docs |
 | `dependencies` | Manifest, lockfile, or version updates | Dependency-update track (Dependabot) |

@@ -2,7 +2,7 @@
 name: Request a feature
 about: Describe a product increment for Open CRM
 title: "Feature: "
-labels: ["type: feature"]
+labels: ["enhancement"]
 assignees: ""
 ---
 

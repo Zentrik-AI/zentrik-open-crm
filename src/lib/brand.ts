@@ -9,6 +9,11 @@ export const brand = {
   fullName: "Zentrik Open CRM",
   /** One line under the name: what it is, for whom. */
   descriptor: "Relationship management for people and their agents",
+  /** The category this product defines. Spelled out on first use, then ARM. */
+  category: "Agent Relationship Management",
+  categoryShort: "ARM",
+  /** The claim, in one sentence. Keep every surface saying this. */
+  claim: "The first open ARM: a CRM people and their agents work together.",
   maker: "Zentrik",
   makerUrl: "https://zentrik.ai",
   /** Where to send people who want their account evidence to become product decisions. */

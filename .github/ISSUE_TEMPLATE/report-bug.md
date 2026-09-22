@@ -2,7 +2,7 @@
 name: Report a bug
 about: Report broken behavior or a regression
 title: "Bug: "
-labels: ["type: bug"]
+labels: ["bug"]
 assignees: ""
 ---
 

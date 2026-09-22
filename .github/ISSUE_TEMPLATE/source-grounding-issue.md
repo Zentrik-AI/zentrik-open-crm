@@ -2,7 +2,7 @@
 name: Source-grounding or privacy issue
 about: Report weak evidence, unsafe public mode behavior, or provenance problems
 title: "Grounding: "
-labels: ["type: source-grounding", "privacy"]
+labels: ["grounding"]
 assignees: ""
 ---
 

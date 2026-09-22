@@ -69,6 +69,31 @@ the network, and connector workers that land sources as notes with references
 through `note.add`. Neither may weaken the review gate or let private account
 fields reach anything share-safe.
 
+## Names
+
+One convention, so new surfaces do not drift:
+
+| Thing | Shape | Examples |
+| --- | --- | --- |
+| Portable file formats | `open-crm-<thing>.v<n>` | `open-crm-signals.v1`, `open-crm-feedback.v1`, `open-crm-sources.v1` |
+| Browser storage keys | `zentrik-open-crm.<thing>.v<n>` | `zentrik-open-crm.workspace.v2` |
+| Environment variables | `OPEN_CRM_<THING>` | `OPEN_CRM_PORT`, `OPEN_CRM_ACTOR`, `OPEN_CRM_WORKSPACE` |
+| The installed command and the MCP server | `open-crm` | `npx open-crm`, `mcpServers: { "open-crm": … }` |
+| The wrapper inside a workspace folder | `crm` | `./crm status` |
+| The product, in text | `Open CRM`, or `Zentrik Open CRM` in full | `src/lib/brand.ts` |
+
+Outside the product we name the category: Open CRM is the first open **ARM**,
+Agent Relationship Management, spelled out on first use. Inside the product we
+say what it does in plain words instead. Both strings live in `brand.ts`.
+
+A globally visible name carries the maker (`zentrik-open-crm` for the package,
+the repository, and browser storage, which shares one origin). A name that is
+already inside the product does not (`open-crm`). Inside a workspace folder,
+where there is only one CRM, it is just `crm`. Every user-facing string reads
+the product name from [`src/lib/brand.ts`](../src/lib/brand.ts); a rename is
+that file plus the package, repository, and schema identifiers, and schema
+identifiers should not change, because they are formats, not branding.
+
 ## Styling
 
 The app uses semantic CSS tokens for product concepts: account, signal, highlight,

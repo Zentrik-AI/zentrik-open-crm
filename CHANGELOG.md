@@ -37,6 +37,11 @@ Notable user-facing changes, newest first.
   empty lane is drawn as the question to ask.
 - Generated Markdown views list what we know with evidence ids.
 - Add `docs/personas-and-flows.md`.
+- Name the category: Open CRM is the first open ARM, Agent Relationship
+  Management, defined in the README by what makes a system one.
+- Adopt the Contributor Covenant 2.1 with a reporting address, align the issue
+  templates with the repository's real labels, and document the naming
+  convention in `docs/architecture.md`.
 - Remove the pre-1.0 product-feedback layer: workspace `ideas` and `changelog`
   records, the hosted-portal manifest, and the maintainer feedback importer.
   Improve keeps the local draft, the reviewed public bundle, and the manual

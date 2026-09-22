@@ -31,7 +31,7 @@ export type DealStage =
   | "won"
   | "lost";
 
-export type TaskStatus = "open" | "done";
+export type TaskStatus = "open" | "waiting" | "done" | "cancelled";
 
 /** Who made a change. People work in the visual CRM; agents work through the
  *  `crm` command or the MCP server. */
@@ -46,7 +46,7 @@ export interface Contact {
   role: string;
   influence: "economic" | "champion" | "technical" | "user";
   email?: string;
-  lastSeen: string;
+  lastSeen: string | null;
 }
 
 export interface Account {
@@ -58,15 +58,17 @@ export interface Account {
   priority: Priority;
   /** Current recurring revenue (distinct from open pipeline in `deals`). */
   arr: number;
-  health: number;
-  fit: number;
-  sourceConfidence: number;
+  health: number | null;
+  fit: number | null;
+  sourceConfidence: number | null;
   owner: string;
   tags: string[];
   contacts: Contact[];
   needs: string[];
   risks: string[];
-  lastTouch: string;
+  lastTouch: string | null;
+  archivedAt?: string;
+  archiveReason?: string;
   createdAt: string;
 }
 
@@ -113,6 +115,10 @@ export interface Note {
   sentiment: Sentiment;
   createdAt: string;
   sourceRef?: string;
+  /** Date of the source event, distinct from the capture timestamp. */
+  occurredAt?: string;
+  /** Explicitly verified contact with the account, never inferred from capture. */
+  interaction?: boolean;
   /** Set when an agent created the record. */
   origin?: Actor;
 }
@@ -144,6 +150,7 @@ export interface ChangelogEntry {
 export type AccountPatch = Partial<
   Pick<Account, "name" | "domain" | "segment" | "stage" | "priority" | "owner" | "arr" | "health" | "fit" | "tags" | "needs" | "risks">
 >;
+export type TaskPatch = Partial<Pick<Task, "title" | "due" | "owner" | "priority" | "status" | "reason">>;
 
 export type Op =
   | {
@@ -157,6 +164,7 @@ export type Op =
       contact?: { name: string; role: string; influence?: Contact["influence"]; email?: string };
     }
   | { type: "account.update"; accountId: string; patch: AccountPatch }
+  | { type: "account.archive"; accountId: string; archived: boolean; reason: string }
   | { type: "contact.add"; accountId: string; name: string; role: string; influence?: Contact["influence"]; email?: string }
   | { type: "deal.add"; accountId: string; name: string; stage?: DealStage; value?: number; owner?: string; closeDate?: string }
   | { type: "deal.move"; dealId: string; stage: DealStage }
@@ -171,6 +179,7 @@ export type Op =
       evidence?: string[];
     }
   | { type: "task.set_status"; taskId: string; status: TaskStatus }
+  | { type: "task.update"; taskId: string; patch: TaskPatch }
   | {
       type: "note.add";
       accountId: string;
@@ -180,11 +189,17 @@ export type Op =
       sourceRef?: string;
       sentiment?: Sentiment;
       contactId?: string;
+      occurredAt?: string;
+      interaction?: boolean;
     };
 
 /** An operation plus everything needed to replay it exactly: when, by whom,
  *  and the id of the record it creates. Applying a change is deterministic. */
 export interface Change {
+  /** Stable source/action key for retries and repeated automation runs. */
+  key?: string;
+  /** Explicit proposal-only execution, even in a direct-mode workspace. */
+  review?: boolean;
   /** Id for the record this change creates. Unused by updates. */
   recordId: string;
   /** Secondary id, for the optional first contact on `account.add`. */
@@ -204,6 +219,8 @@ export type ProposalStatus = "pending" | "applied" | "rejected";
 
 /** One change an agent asked for, waiting for (or resolved by) a person. */
 export interface Proposal {
+  /** Relevant fields as they stood when this proposal was prepared. */
+  base?: Record<string, unknown>;
   id: string;
   createdAt: string;
   actor: Actor;
@@ -227,6 +244,8 @@ export interface ActivityEntry {
 }
 
 export interface Workspace {
+  /** Durable retry receipts; retained after a proposal leaves the visible history. */
+  receipts?: Record<string, { op: Op; targetId: string; proposalId?: string; summary: string; rejected?: boolean }>;
   /** Missing in workspaces written before agent operations existed. */
   agentMode?: AgentMode;
   proposals?: Proposal[];

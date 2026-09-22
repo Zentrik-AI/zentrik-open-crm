@@ -25,7 +25,7 @@ export function Ring({
   label,
   className,
 }: {
-  value: number;
+  value: number | null;
   size?: keyof typeof dims;
   tone?: Tone;
   pending?: boolean;
@@ -34,7 +34,7 @@ export function Ring({
   label?: string;
   className?: string;
 }) {
-  const pct = clampPct(value);
+  const pct = clampPct(value ?? 0);
   const t = tone ?? thresholdTone(pct);
   const { box, stroke, font } = dims[size];
   const r = (box - stroke) / 2;
@@ -50,7 +50,7 @@ export function Ring({
       className={cn("relative inline-flex items-center justify-center", className)}
       style={{ width: box, height: box }}
       role="img"
-      aria-label={`${label ? `${label}: ` : ""}${pct}${suffix || "%"}`}
+      aria-label={value === null ? `${label ?? "Score"}: unknown` : `${label ? `${label}: ` : ""}${pct}${suffix || "%"}`}
     >
       <svg width={box} height={box} className="-rotate-90">
         <circle
@@ -84,7 +84,7 @@ export function Ring({
             font,
           )}
         >
-          {display}
+          {value === null ? "—" : display}
           {suffix && <span className="ml-px text-[0.7em] text-muted-foreground">{suffix}</span>}
         </span>
       )}

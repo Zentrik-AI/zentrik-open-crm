@@ -25,27 +25,42 @@
     "zentrik"
   ],
   "bin": {
-    "open-crm": "bin/open-crm.js"
+    "open-crm": "dist/runtime/bin/open-crm.js"
   },
   "files": [
     "bin",
     "cli",
     "src",
     "dist",
+    "docs",
+    "assets/brand",
+    "portal",
+    "scripts/import-reviewed-feedback.mjs",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
     "README.md",
     "LICENSE",
-    "NOTICE"
+    "TRADEMARKS.md",
+    "NOTICE",
+    "THIRD_PARTY_NOTICES.txt"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "node scripts/third-party-notices.mjs --check && tsc --noEmit && vite build && npm run build:cli && node scripts/third-party-notices.mjs --dist",
+    "notices": "node scripts/third-party-notices.mjs",
+    "build:cli": "tsc --target ES2022 --module NodeNext --moduleResolution NodeNext --moduleDetection force --strict --esModuleInterop --skipLibCheck --allowJs --rewriteRelativeImportExtensions --rootDir . --outDir dist/runtime bin/open-crm.js scripts/import-reviewed-feedback.mjs",
+    "prepack": "npm run build",
+    "test:package": "node scripts/package-smoke.mjs",
     "preview": "vite preview",
     "crm": "node bin/open-crm.js",
-    "test": "node --test \"tests/unit/*.test.ts\"",
+    "test": "node --test \"tests/unit/*.test.ts\" \"tests/unit/*.test.mjs\"",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
     "react": "^18.3.1",
@@ -61,7 +76,7 @@
     "autoprefixer": "^10.6.1",
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.15",
-    "typescript": "^5.6.3",
+    "typescript": "^5.9.3",
     "vite": "^8.3.0"
   },
   "engines": {

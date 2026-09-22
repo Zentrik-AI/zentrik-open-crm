@@ -1,7 +1,7 @@
 import { Bot, Check, Copy, FolderOpen, X } from "lucide-react";
 import type { Account, ActivityEntry, AgentMode, Note, Op, Proposal, Workspace } from "../types";
-import { accountStageLabel, dealStageLabel, noteSourceLabel } from "../core/model.ts";
-import { pendingProposals, projectPending } from "../core/ops.ts";
+import { dealStageLabel, noteSourceLabel } from "../core/model.ts";
+import { pendingProposals, projectPending, proposalApprovalIssue } from "../core/ops.ts";
 import { formatDateFull, formatRelative } from "../lib/utils";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
@@ -14,11 +14,13 @@ const SETUP_COMMANDS = ["npm run crm -- init ~/crm", "cd ~/crm && ./crm ui"];
 const kindLabel: Record<Op["type"], string> = {
   "account.add": "New account",
   "account.update": "Account update",
+  "account.archive": "Account archive / restore",
   "contact.add": "New contact",
   "deal.add": "New deal",
   "deal.move": "Deal stage",
   "task.add": "New task",
   "task.set_status": "Task status",
+  "task.update": "Task update",
   "note.add": "New note",
 };
 
@@ -31,9 +33,19 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+const showValue = (value: unknown) => value == null ? "unknown" : Array.isArray(value) ? value.join(" · ") : String(value);
+
+function ComparedValue({ current, proposed }: { current: unknown; proposed: unknown }) {
+  return <><span className="text-muted-foreground">{showValue(current)}</span><span aria-label="changes to"> → </span><span>{showValue(proposed)}</span></>;
+}
+
 /** The substance of a proposed change, in the words a person would use. */
 function ChangeDetail({ op, workspace, notesById }: { op: Op; workspace: Workspace; notesById: Map<string, Note> }) {
   switch (op.type) {
+    case "account.archive":
+      return <p>{op.archived ? "Archive" : "Restore"} account · {op.reason}. History is retained.</p>;
+    case "task.update":
+      return <dl className="space-y-1">{Object.entries(op.patch).map(([key, value]) => <Field key={key} label={key}><ComparedValue current={workspace.tasks.find(t => t.id === op.taskId)?.[key as keyof import("../types").Task]} proposed={value} /></Field>)}</dl>;
     case "note.add":
       return (
         <div className="space-y-2">
@@ -60,7 +72,7 @@ function ChangeDetail({ op, workspace, notesById }: { op: Op; workspace: Workspa
     case "task.set_status":
       return (
         <p className="text-body-sm text-muted-foreground">
-          {op.status === "done" ? "Mark done: " : "Reopen: "}
+          {op.status}:{" "}
           <span className="text-foreground">{workspace.tasks.find((t) => t.id === op.taskId)?.title ?? op.taskId}</span>
         </p>
       );
@@ -91,7 +103,7 @@ function ChangeDetail({ op, workspace, notesById }: { op: Op; workspace: Workspa
         <dl className="space-y-1">
           {Object.entries(op.patch).map(([key, value]) => (
             <Field key={key} label={key}>
-              {key === "stage" ? accountStageLabel[value as keyof typeof accountStageLabel] : Array.isArray(value) ? value.join(" · ") : String(value)}
+              <ComparedValue current={workspace.accounts.find(a => a.id === op.accountId)?.[key as keyof Account]} proposed={value} />
             </Field>
           ))}
         </dl>
@@ -109,7 +121,7 @@ function ChangeDetail({ op, workspace, notesById }: { op: Op; workspace: Workspa
 function accountOf(op: Op, workspace: Workspace): string | undefined {
   if ("accountId" in op && op.accountId) return op.accountId;
   if (op.type === "deal.move") return workspace.deals.find((d) => d.id === op.dealId)?.accountId;
-  if (op.type === "task.set_status") return workspace.tasks.find((t) => t.id === op.taskId)?.accountId;
+  if (op.type === "task.set_status" || op.type === "task.update") return workspace.tasks.find((t) => t.id === op.taskId)?.accountId;
   return undefined;
 }
 
@@ -131,6 +143,7 @@ function ProposalCard({
   const buildroom = useBuildroom();
   const accountId = accountOf(proposal.change.op, workspace);
   const account = accountId ? accountsById.get(accountId) : undefined;
+  const conflict = proposalApprovalIssue(workspace, proposal)?.message;
   return (
     <article className="rounded-lg border border-border bg-surface p-4 transition-colors duration-fast hover:border-border-strong">
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
@@ -155,8 +168,9 @@ function ProposalCard({
         {buildroom ? <RedactedChip label="detail hidden in share-safe view" /> : <ChangeDetail op={proposal.change.op} workspace={workspace} notesById={notesById} />}
       </Well>
 
+      {conflict && <p role="status" className="mt-3 text-body-sm text-destructive">{conflict}</p>}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button variant="primary" size="sm" disabled={buildroom} onClick={() => onDecide([proposal.id], "approve")}>
+        <Button variant="primary" size="sm" disabled={buildroom || Boolean(conflict)} onClick={() => onDecide([proposal.id], "approve")}>
           <Check />
           Approve
         </Button>
@@ -214,17 +228,17 @@ export function ReviewView({
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-          <h1 className="font-serif text-h1 text-foreground">Review</h1>
-          <p className="mt-0.5 text-body-sm text-muted-foreground">
-            {mode === "review" ? "What your agents want to change. Nothing lands until you approve it." : "Your agents change records directly. Everything they do is listed here."}
-          </p>
+        <h1 className="font-serif text-h1 text-foreground">Review</h1>
+        <p className="mt-0.5 text-body-sm text-muted-foreground">
+          {mode === "review" ? "Approve or reject proposed changes." : "Changes apply immediately and stay in the activity log."}
+        </p>
       </div>
 
       {pending.length > 0 ? (
         <section aria-label="Waiting for your review" className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-label uppercase text-muted-foreground">
-              {pending.length} waiting for you
+              {pending.length} waiting
             </div>
             {pending.length > 1 && !buildroom && (
               <Button variant="secondary" size="sm" onClick={() => onDecide(pending.map((p) => p.id), "approve")}>
@@ -242,12 +256,12 @@ export function ReviewView({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bot className="h-4 w-4 text-agent" />
-              {folder ? "Nothing is waiting" : "Work this CRM with an agent"}
+              {folder ? "No changes waiting" : "Connect an agent"}
             </CardTitle>
             <p className="text-body-sm text-muted-foreground">
               {folder
-                ? "Open this workspace folder in Claude Code, Codex, or Cursor. The agent reads AGENTS.md, works through the crm command, and what it proposes appears here as it happens."
-                : "This workspace lives in your browser, which an agent cannot reach. Put it in a folder and Claude Code, Codex, or Cursor can read it, capture notes, and propose next actions for you to approve here."}
+                ? "Agents can propose updates from this workspace folder."
+                : "Sync this workspace to a folder so Codex, Claude, or Cursor can propose updates here."}
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -264,7 +278,7 @@ export function ReviewView({
                   </Button>
                 </Well>
                 <p className="text-[12px] leading-5 text-faint-foreground">
-                  Then ask for the daily review, or drop a transcript in <code className="font-mono text-muted-foreground">inbox/</code> and ask the agent to process it.
+                  Ask for a daily review, or place a transcript in <code className="font-mono text-muted-foreground">inbox/</code>.
                 </p>
               </>
             ) : (
@@ -275,7 +289,7 @@ export function ReviewView({
                     <Copy />
                     Copy commands
                   </Button>
-                  <span className="text-[12px] text-faint-foreground">Run them in your Open CRM checkout, then import a backup from Settings → Local data to bring these records along.</span>
+                  <span className="text-[12px] text-faint-foreground">Run these in the Open CRM checkout, then import the workspace from Settings.</span>
                 </div>
               </>
             )}
@@ -283,15 +297,15 @@ export function ReviewView({
         </Card>
       )}
 
-      <p className="text-[12px] leading-5 text-faint-foreground">
-        {mode === "review" ? "Agent changes wait here for your approval. " : "Agent changes apply directly and are logged below. "}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-[12px] text-faint-foreground">
+        <span>{mode === "review" ? "Review mode · changes wait for approval" : "Direct mode · changes apply immediately"}</span>
         <button
           onClick={() => onSetMode(mode === "review" ? "direct" : "review")}
           className="rounded-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:focus-ring"
         >
-          {mode === "review" ? "Let agents apply changes directly" : "Review each change again"}
+          {mode === "review" ? "Switch to direct mode" : "Switch to review mode"}
         </button>
-      </p>
+      </div>
 
       {activity.length > 0 && (
         <Card>

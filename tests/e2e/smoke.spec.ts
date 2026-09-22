@@ -1,6 +1,124 @@
 import { expect, test, type Page } from "@playwright/test";
 import { seedWorkspace } from "../../src/data/seed";
 import { readFile } from "node:fs/promises";
+import { newChange, submitChange, applyChange } from "../../src/core/ops.ts";
+
+test("task maintenance separates waiting, cancelled and archived work", async ({ page }) => {
+  await useDemo(page);
+  await page.getByRole("button", { name: /^Tasks(?:\s|$)/ }).first().click();
+  const view = page.locator('[data-view="tasks"]');
+  await view.getByRole("button", {name:/^Edit task:/}).first().click();
+  const form = view.getByRole("form", {name:"Edit task"});
+  await form.getByLabel("Task title").fill("Verify reply before contacting");
+  await form.getByLabel("Task owner").fill("Sam");
+  await form.getByLabel("Task status").selectOption("waiting");
+  await form.getByLabel("Task reason").fill("Review only after a sourced reply");
+  await form.getByRole("button", {name:"Save task"}).click();
+  await expect(view.getByText("Waiting · review dates, not send instructions")).toBeVisible();
+  await view.getByRole("button", {name:"Edit task: Verify reply before contacting"}).click();
+  await expect(page.getByRole("region", {name:"Notifications"}).getByText(/Demo workspace ready/)).toHaveCount(0);
+  await page.screenshot({path:test.info().outputPath("waiting-editor.png"),animations:"disabled"});
+  await form.screenshot({path:test.info().outputPath("waiting-editor-fields.png"),animations:"disabled"});
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await form.getByLabel("Task status").selectOption("cancelled");
+  await form.getByRole("button", {name:"Save task"}).click();
+  await expect(view.getByText("Cancelled", {exact:true})).toBeVisible();
+  await page.getByRole("button", {name:/^Accounts(?:\s|$)/}).first().click();
+  const accounts = page.locator('[data-view="accounts"]');
+  await accounts.getByText("Edit account / archive", {exact:true}).click();
+  await accounts.getByLabel("Archive reason").fill("No current commitment; retain the history");
+  await accounts.getByRole("button", {name:"Archive account",exact:true}).click();
+  await expect(accounts.getByText(/No current commitment; retain the history/)).toBeVisible();
+  await page.screenshot({path:test.info().outputPath("archived-account.png"),animations:"disabled"});
+  if (test.info().project.name === "chromium") {
+    await nav(page,"Pipeline");
+    const pipeline = page.locator('[data-view="pipeline"]');
+    await pipeline.getByRole("button", {name:"New deal",exact:true}).click();
+    const deal = pipeline.locator("form");
+    await expect(deal.getByRole("combobox",{name:"Account",exact:true})).not.toHaveValue(seedWorkspace.accounts[0].id);
+    await deal.getByLabel("Deal name").fill("Visible active-account deal");
+    await deal.getByRole("button", {name:"Add",exact:true}).click();
+    await expect(pipeline.getByText("Visible active-account deal",{exact:true})).toBeVisible();
+    await nav(page,"Accounts");
+  }
+  await accounts.getByText("Edit account / archive", {exact:true}).click();
+  await accounts.getByLabel("Archive reason").fill("New sourced conversation");
+  await accounts.getByRole("button", {name:"Restore account",exact:true}).click();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("zentrik-open-crm.workspace.v2")!));
+  expect(saved.accounts[0].archivedAt).toBeUndefined();
+  expect(saved.tasks.find((t:{title:string}) => t.title === "Verify reply before contacting").completedAt).toBeUndefined();
+});
+
+test("full backup storage requires a downloaded-original confirmation before recovery", async ({ page }) => {
+  test.skip(test.info().project.name !== "chromium", "Desktop recovery failure path.");
+  await page.evaluate(() => localStorage.setItem("zentrik-open-crm.workspace.v2", "{original for recovery"));
+  await page.addInitScript(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value) {
+      if (key.includes(".recovery.")) throw new DOMException("Synthetic full backup storage", "QuotaExceededError");
+      return original.call(this, key, value);
+    };
+  });
+  await page.reload();
+  const file = {name:"backup.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(seedWorkspace))};
+  const input = page.locator('input[type="file"]');
+  await input.setInputFiles(file);
+  await expect(page.getByRole("alert")).toContainText("Recovery did not complete");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", {name:"Download stored original"}).click();
+  const downloaded = await downloadPromise;
+  expect(await readFile((await downloaded.path())!, "utf8")).toBe("{original for recovery");
+  await page.getByRole("checkbox", {name:/I have saved the original/}).check();
+  await input.setInputFiles(file);
+  await expect(page.locator("header").getByText("Demo workspace", {exact:true})).toBeVisible();
+});
+
+test.describe("local calendar dates", () => {
+  test.use({timezoneId:"America/Los_Angeles"});
+  test("task editor preserves the local day when saving unrelated changes", async ({ page }) => {
+    const fixture = structuredClone(seedWorkspace);
+    fixture.tasks[0].due = "2026-10-03T06:59:59.000Z";
+    fixture.tasks[0].title = "Local date check";
+    await page.evaluate(data => localStorage.setItem("zentrik-open-crm.workspace.v2",JSON.stringify(data)),fixture);
+    await page.reload();
+    await page.getByRole("button", {name:/^Tasks(?:\s|$)/}).first().click();
+    await page.getByRole("button", {name:"Edit task: Local date check"}).click();
+    const form = page.getByRole("form", {name:"Edit task"});
+    await expect(form.getByLabel("Task date")).toHaveValue("2026-10-02");
+    await form.getByLabel("Task owner").fill("Alex");
+    await form.getByRole("button", {name:"Save task"}).click();
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("zentrik-open-crm.workspace.v2")!));
+    expect(stored.tasks[0].due).toBe("2026-10-03T06:59:59.000Z");
+  });
+});
+
+test("corrupt browser records are preserved and recovery import backs up the original", async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem("zentrik-open-crm.workspace.v2", "{broken original"));
+  await page.reload();
+  await expect(page.getByRole("alert").filter({hasText:"Stored workspace is invalid"})).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("zentrik-open-crm.workspace.v2"))).toBe("{broken original");
+  await page.screenshot({path:test.info().outputPath("storage-recovery.png"),animations:"disabled"});
+  await page.locator('input[type="file"][accept="application/json"]').setInputFiles({name:"backup.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(seedWorkspace))});
+  await expect(page.locator("header").getByText("Demo workspace", {exact:true})).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("zentrik-open-crm.workspace.v2.recovery.1"))).toBe("{broken original");
+});
+
+test("stale proposals expose the conflict and cannot overwrite current ownership", async ({ page }) => {
+  test.skip(test.info().project.name !== "chromium", "Review desktop path.");
+  const request = newChange({type:"account.update",accountId:seedWorkspace.accounts[0].id,patch:{owner:"Sam"}}, {kind:"agent",name:"Example operator"});
+  const pending = submitChange(structuredClone(seedWorkspace),request).workspace;
+  const current = applyChange(pending,newChange({type:"account.update",accountId:seedWorkspace.accounts[0].id,patch:{owner:"Alex"}})).workspace;
+  await page.evaluate(data => localStorage.setItem("zentrik-open-crm.workspace.v2",JSON.stringify(data)),current);
+  await page.reload();
+  await nav(page,"Review");
+  await expect(page).toHaveTitle("Review · Open CRM");
+  const view = page.locator('[data-view="review"]');
+  await expect(view.getByText(/changed since it was prepared/)).toBeVisible();
+  await expect(view.getByRole("button",{name:"Approve",exact:true})).toBeDisabled();
+  await page.screenshot({path:test.info().outputPath("stale-proposal.png"),animations:"disabled"});
+  await view.getByRole("button",{name:"Reject",exact:true}).click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("zentrik-open-crm.workspace.v2")!).accounts[0].owner)).toBe("Alex");
+});
 
 test("task ownership, completion coverage and calendar export have the same scope", async ({ page }) => {
   const fixture = structuredClone(seedWorkspace);
@@ -61,18 +179,80 @@ async function useDemo(page: Page) {
   await page.getByRole("button", { name: "Explore with demo data" }).click();
 }
 
+test("feedback handoff exports reviewed authored text without CRM records", async ({ page }) => {
+  await useDemo(page);
+  const before = await page.evaluate(() => localStorage.getItem("zentrik-open-crm.workspace.v2"));
+  await page.getByRole("button", { name: /^Improve/ }).first().click();
+  const view = page.locator('[data-view="improve"]');
+  await view.getByLabel("Title", { exact: true }).fill("Group waiting actions");
+  await view.getByLabel("What's the friction or idea?").fill("Review waiting work separately from today's actions.");
+  await view.getByRole("button", { name: "Save local draft" }).click();
+  await expect(view.getByRole("status")).toContainText("Nothing was sent");
+  await view.getByLabel("Sharing", { exact: true }).selectOption("public");
+  await expect(view.getByRole("button", { name: "Download feedback bundle" })).toBeDisabled();
+  await view.getByRole("checkbox").check();
+  const downloaded = page.waitForEvent("download");
+  await view.getByRole("button", { name: "Download feedback bundle" }).click();
+  const file = await downloaded;
+  const bundle = JSON.parse(await readFile((await file.path())!, "utf8"));
+  expect(bundle).toEqual({ schema: "open-crm-feedback.v1", product: "Zentrik Open CRM", visibility: "public", feedback: {
+    kind: "request", title: "Group waiting actions", body: "Review waiting work separately from today's actions.",
+  } });
+  expect(await page.evaluate(() => localStorage.getItem("zentrik-open-crm.workspace.v2"))).toBe(before);
+  await view.getByLabel("Title", { exact: true }).fill("Revised feedback");
+  await expect(view.getByRole("checkbox")).not.toBeChecked();
+  await expect(view.getByRole("button", { name: "Download feedback bundle" })).toBeDisabled();
+  await view.getByLabel("Title", { exact: true }).fill("a".repeat(501));
+  await view.getByRole("checkbox").check();
+  await expect(view.getByRole("alert")).toContainText("500 characters");
+  await expect(view.getByRole("button", { name: "Download feedback bundle" })).toBeDisabled();
+  page.once("dialog", dialog => dialog.accept());
+  await view.getByRole("button", { name: "Delete local draft" }).click();
+  await expect(view.getByLabel("Title", { exact: true })).toHaveValue("");
+  expect(await page.evaluate(() => localStorage.getItem("zentrik-open-crm.feedback-draft.v1"))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem("zentrik-open-crm.workspace.v2"))).toBe(before);
+  await page.reload();
+  await page.getByRole("button", { name: /^Improve/ }).first().click();
+  await expect(view.getByLabel("Title", { exact: true })).toHaveValue("");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("bundled typography loads with external requests blocked", async ({ page }) => {
+  await useDemo(page);
+  await page.route(/^https:\/\//, route => route.abort());
+  await page.reload();
+  const fonts = await page.evaluate(async () => {
+    const names = ["Inter", "Fraunces", "IBM Plex Mono"];
+    await Promise.all(names.map(name => document.fonts.load(`16px "${name}"`)));
+    return names.map(name => document.fonts.check(`16px "${name}"`));
+  });
+  expect(fonts).toEqual([true, true, true]);
+  const metric = page.locator('[data-view="home"] .text-stat-xl').first();
+  await expect(metric).toHaveCSS("font-size", "26px");
+  await expect(page.getByRole("button", { name: "Start with my data" })).toHaveCSS("font-size", "13px");
+  await page.getByRole("button", { name: "Toggle theme" }).click();
+  const dark = await page.locator("html").getAttribute("class");
+  await expect(metric).toHaveCSS("color", dark?.includes("dark") ? "rgb(238, 235, 226)" : "rgb(53, 46, 39)");
+  for (const route of ["Home", "Accounts", "Tasks", "Review", "Improve"]) {
+    await page.getByRole("button", { name: new RegExp(`^${route}(?:\\s|$)`) }).first().click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
 test("navigates the CRM surfaces and redacts in share-safe mode", async ({ page }) => {
   test.skip(test.info().project.name !== "chromium", "Desktop flow runs in the desktop project.");
   const vw = (name: string) => page.locator(`[data-view="${name}"]`);
 
   await useDemo(page);
 
-  await expect(page.getByRole("heading", { name: "Open CRM Workspace" })).toBeVisible();
+  await expect(page.locator("header").getByText("Demo workspace", {exact:true})).toBeVisible();
+  await expect(page).toHaveTitle("Home · Open CRM");
   await expect(vw("home").getByText(/5 open tasks, [1-5] due soon/)).toBeVisible();
   await expect(vw("home").getByText("Weighted pipeline")).toBeVisible();
-  await expect(vw("home").getByRole("heading", { name: "Today" })).toBeVisible();
+  await expect(vw("home").getByRole("heading", { name: "Next actions" })).toBeVisible();
 
   await nav(page, "Pipeline");
+  await expect(page).toHaveTitle("Pipeline · Open CRM");
   await expect(vw("pipeline").getByRole("heading", { name: "Pipeline" })).toBeVisible();
   await expect(vw("pipeline").getByText("Open deals")).toBeVisible();
   await expect(vw("pipeline").getByText("Negotiation").first()).toBeVisible();
@@ -89,8 +269,8 @@ test("navigates the CRM surfaces and redacts in share-safe mode", async ({ page 
   await nav(page, "Notes");
   await expect(vw("notes").getByText("Capture note")).toBeVisible();
 
-  await nav(page, "Improve Open CRM");
-  await expect(vw("improve").getByRole("heading", { name: "Help shape the product" })).toBeVisible();
+  await nav(page, "Improve");
+  await expect(vw("improve").getByRole("heading", { name: "Help shape Open CRM" })).toBeVisible();
 
   await nav(page, "Accounts");
   await expect(vw("accounts").getByRole("heading", { name: "Northstar Robotics" })).toBeVisible();
@@ -258,7 +438,7 @@ test("imports an Open CRM backup from first-run setup", async ({ page }) => {
     buffer: Buffer.from(JSON.stringify(imported)),
   });
 
-  await expect(page.getByRole("heading", { name: "Imported workspace" })).toBeVisible();
+  await expect(page.locator("header").getByText("Imported workspace", {exact:true})).toBeVisible();
   await nav(page, "Accounts");
   await expect(page.getByRole("heading", { name: "Imported account" })).toBeVisible();
 });

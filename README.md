@@ -33,7 +33,7 @@ the middle path for small technical teams:
 - Claude Code, Codex, and Cursor work the same records you do, through a
   checked command and an MCP server, and you approve what they change
 - your data is a folder on your computer: readable, diffable, yours
-- users can shape the product through the public Open CRM Buildroom loop
+- users can prepare public feedback without sharing their CRM records
 
 ## Quick Start
 
@@ -57,7 +57,12 @@ cd ~/crm
 claude        # or: codex, or open the folder in Cursor
 ```
 
-Ask it to **run the daily review**. It reads `AGENTS.md`, runs `./crm status`,
+Ask it to **complete `docs/agent-setup.md`, then run one manual daily review**.
+`./crm setup` shows the local setup state; it creates no schedules. See
+[Agent setup and recovery](./docs/agent-setup.md) for manual operation and
+preserving local instructions during upgrades.
+
+The agent reads `AGENTS.md`, runs `./crm status`,
 reads the accounts that need attention, and proposes next actions that cite the
 notes behind them. Each proposal appears in the app under **Review** as it
 happens. Nothing changes until you approve it.
@@ -82,7 +87,8 @@ local storage and can export a one-way Markdown snapshot for an agent to read.
 ```
 
 - **One write path.** The app, the command, and the MCP tools all submit the
-  same validated operations. An agent cannot write a malformed record.
+  same validated operations. These interfaces reject malformed records; direct
+  filesystem access is not a security boundary.
 - **Review by default.** An agent's change is checked, then held as a proposal.
   You approve or reject it in the app. Switch a workspace to direct mode when
   you trust the loop; every direct change is logged with the agent's name.
@@ -111,7 +117,7 @@ operations, and MCP tools.
 - `crm` command and MCP server over the same workspace folder
 - Private and share-safe views, JSON backup, calendar export
 - Optional in-app AI with your own Anthropic key
-- Improve Open CRM: suggest changes, roadmap, and changelog, kept apart from CRM data
+- Improve: local feedback drafts and reviewed public handoffs, separate from CRM data
 
 ## Development And Release Flow
 
@@ -136,8 +142,14 @@ push feature work directly to `main`.
 npm run typecheck
 npm test            # core operations, the crm command, MCP, and the local API
 npm run build
+npm run test:package # pack, install with production dependencies, check CLI/agent kit/MCP/UI
 npm run test:e2e    # browser edition, plus the live agent-to-Review loop on a folder
 ```
+
+`npm pack` runs the build through `prepack` and includes the UI bundle and
+compiled JavaScript CLI. An installed tarball runs without build tools.
+`test:package` uses temporary synthetic workspaces, disables install scripts, and removes its
+temporary install after the check; dependency installation needs npm registry access.
 
 ## Current Version
 
@@ -188,15 +200,15 @@ proprietary platform code. See [NOTICE](./NOTICE),
 - [Privacy Boundaries](./docs/privacy-boundaries.md)
 - [Public Brand Assets](./assets/brand/README.md)
 
-## Public Portal
+## Product Feedback
 
-The first public feedback portal is **Open CRM Buildroom**. Its initial instance
-manifest lives in [portal/open-crm-buildroom.instance.json](./portal/open-crm-buildroom.instance.json).
+Use **Improve** to save a local draft, review its public content, and export a
+feedback bundle or prepare a GitHub issue. Nothing is submitted automatically.
 
-Open CRM Buildroom is where public-safe user requests, votes, release notes, and
-outcome checks should make the product's evolution visible.
+**Open CRM Buildroom** is planned, not a working public submission channel yet.
+Its [instance manifest](./portal/open-crm-buildroom.instance.json) is a proposal;
+public login and moderation must be verified before it is enabled. See the
+[Zentrik feedback loop](./docs/self-evolving-loop.md) for the reviewed handoff.
 
 Use [Feedback And Support](./docs/feedback-and-support.md) to choose the right
-channel: Tell Open CRM for contextual feedback, Buildroom for public requests
-and votes, GitHub Issues for reproducible open-source work, support requests for
-private help, and private vulnerability reporting for security issues.
+channel. Keep customer records and security reports out of public feedback.

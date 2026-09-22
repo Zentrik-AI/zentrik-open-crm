@@ -71,6 +71,15 @@ export const noteSourceLabel: Record<NoteSource, string> = {
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Reject calendar rollover and ambiguous locale-dependent date strings. */
+export function isValidDate(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2}))?$/.exec(value);
+  if (!match || !Number.isFinite(Date.parse(value))) return false;
+  const day = new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00Z`);
+  return day.getUTCFullYear() === Number(match[1]) && day.getUTCMonth() + 1 === Number(match[2]) && day.getUTCDate() === Number(match[3]);
+}
+
 export function makeId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -82,6 +91,7 @@ export function slugify(name: string) {
 /** Read a date the way a person means it. "2026-10-02" is the END of that
  *  local day, so "due today" is never born overdue; anything else must parse. */
 export function parseDue(value: string): string | null {
+  if (!isValidDate(value)) return null;
   const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
   if (dateOnly) {
     const [, y, m, d] = dateOnly.map(Number);

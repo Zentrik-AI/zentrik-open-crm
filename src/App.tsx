@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Layers3, Lock, Moon, Search, Sun } from "lucide-react";
-import { createDemoWorkspace, hasStoredWorkspace, loadWorkspace, resetWorkspace, saveWorkspace, touchWorkspace } from "./lib/storage";
+import { createDemoWorkspace, getStorageIssue, getStoredWorkspaceText, hasStoredWorkspace, loadWorkspace, recoverWorkspace, saveWorkspace, touchWorkspace } from "./lib/storage";
 import { loadOnboardingState, saveOnboardingState, type OnboardingMode, type OnboardingState } from "./lib/onboarding";
 import { cn, makeId } from "./lib/utils";
 import { primaryNav, secondaryNav, allNav, type View } from "./lib/nav";
@@ -40,14 +40,12 @@ import {
   type SyncSettings,
 } from "./lib/sync";
 import { downloadICS, tasksToICS } from "./lib/ics";
-import { createGitHubIssueDraft, type FeedbackDraft } from "./lib/feedback";
 import { buildAccountAgentHandoff, buildWorkspaceAgentStarterPrompt } from "./lib/agent";
 import type { Account, AgentMode, Change, Op, Workspace } from "./types";
 import { PrivacyProvider } from "./components/ui/privacy";
 import { ToastProvider, useToast } from "./components/ui/toast";
 import { NavItem } from "./components/ui/nav-item";
 import { Button } from "./components/ui/button";
-import { Badge } from "./components/ui/badge";
 import { Kbd } from "./components/ui/kbd";
 import { CommandPalette } from "./components/command-palette";
 import { ZentrikMark } from "./components/zentrik-mark";
@@ -67,6 +65,17 @@ import type { AiKind } from "./components/ai-panel";
 type AiState = { busy: AiKind | null; result: { kind: AiKind; text: string } | null; copied: boolean; error: string | null };
 const emptyAi: AiState = { busy: null, result: null, copied: false, error: null };
 const DAY = 24 * 60 * 60 * 1000;
+const viewTitles: Record<View, string> = {
+  home: "Home",
+  pipeline: "Pipeline",
+  accounts: "Accounts",
+  contacts: "Contacts",
+  tasks: "Tasks",
+  notes: "Notes",
+  review: "Review",
+  settings: "Settings",
+  improve: "Improve",
+};
 
 /** What the app shows for the instant before a workspace folder has loaded. */
 const blankWorkspace: Workspace = normalizeWorkspace({
@@ -92,6 +101,10 @@ export default function App() {
 function AppInner() {
   const toast = useToast();
   const [workspace, setWorkspace] = useState<Workspace>(() => (folderBacked ? blankWorkspace : loadWorkspace()));
+  const [storageIssue, setStorageIssue] = useState(() => folderBacked ? null : getStorageIssue());
+  const [recoveryRequired, setRecoveryRequired] = useState(() => !folderBacked && Boolean(getStorageIssue()));
+  const [recoveryDownload, setRecoveryDownload] = useState<string | null>(null);
+  const [recoveryDownloadConfirmed, setRecoveryDownloadConfirmed] = useState(false);
   const [folder, setFolder] = useState<{ ready: boolean; dir?: string; name?: string; error?: string }>({ ready: !folderBacked });
   const rev = useRef("");
   const inFlight = useRef(0);
@@ -121,11 +134,9 @@ function AppInner() {
   const [syncBusy, setSyncBusy] = useState(false);
   const vaultHandle = useRef<Awaited<ReturnType<typeof pickVault>> | null>(null);
 
-  const [issueDraft, setIssueDraft] = useState<{ title: string; body: string } | null>(null);
-  const [issueCopied, setIssueCopied] = useState(false);
 
   useEffect(() => {
-    if (!folderBacked) saveWorkspace(workspace);
+    if (!folderBacked) setStorageIssue(saveWorkspace(workspace));
   }, [workspace]);
 
   /* ---- workspace folder: load, stay in sync with what agents write ---- */
@@ -151,14 +162,17 @@ function AppInner() {
           const first = rev.current === "";
           if (first) pendingSeen.current = pendingProposals(state.workspace).length;
           adopt(state);
+          setFolder(f => ({ ...f, error: undefined }));
           if (first) {
             setFolder({ ready: true, dir: state.dir, name: state.folder });
             setOnboardingOpen(state.workspace.accounts.length === 0);
           }
         })
-        .catch((error: Error) => live && setFolder((f) => (f.ready ? f : { ready: false, error: error.message })));
+        .catch((error: Error) => live && setFolder(f => ({ ...f, error: error.message })));
     void refresh();
-    const stop = watchFolder((next) => next !== rev.current && void refresh());
+    const stop = watchFolder(() => void refresh(), {
+      onError: error => live && setFolder(f => ({ ...f, error: error.message })),
+    });
     return () => {
       live = false;
       stop();
@@ -198,12 +212,17 @@ function AppInner() {
 
   /** Everything that is not a record operation: setup, import, settings, the Improve corner. */
   function replaceWorkspace(next: Workspace) {
+    const baseRev = rev.current;
     setWorkspace(next);
-    if (folderBacked) send(() => replaceFolderWorkspace(next, rev.current));
+    if (folderBacked) send(() => replaceFolderWorkspace(next, baseRev));
   }
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
+  useEffect(() => {
+    const surface = recoveryRequired ? "Recover" : onboardingOpen ? "Set up" : viewTitles[view];
+    document.title = `${surface} · Open CRM`;
+  }, [onboardingOpen, recoveryRequired, view]);
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [view]);
@@ -232,10 +251,10 @@ function AppInner() {
 
   const counts = useMemo(
     () => ({
-      pipeline: workspace.deals.filter((d) => isOpenDeal(d.stage)).length,
+      pipeline: workspace.deals.filter((d) => isOpenDeal(d.stage) && !accountsById.get(d.accountId)?.archivedAt).length,
       accounts: workspace.accounts.length,
       contacts: workspace.accounts.reduce((s, a) => s + a.contacts.length, 0),
-      tasks: workspace.tasks.filter((t) => t.status === "open").length,
+      tasks: workspace.tasks.filter((t) => t.status === "open" && !accountsById.get(t.accountId ?? "")?.archivedAt).length,
       notes: workspace.notes.length,
       review: pendingProposals(workspace).length,
     }),
@@ -245,9 +264,9 @@ function AppInner() {
   const homeMetrics = useMemo(() => {
     const now = Date.now();
     const weightedPipeline = workspace.deals
-      .filter((d) => isOpenDeal(d.stage))
+      .filter((d) => isOpenDeal(d.stage) && !accountsById.get(d.accountId)?.archivedAt)
       .reduce((s, d) => s + (d.value * d.probability) / 100, 0);
-    const openTasks = workspace.tasks.filter((t) => t.status === "open");
+    const openTasks = workspace.tasks.filter((t) => t.status === "open" && !accountsById.get(t.accountId ?? "")?.archivedAt);
     return {
       weightedPipeline,
       openDeals: counts.pipeline,
@@ -256,7 +275,7 @@ function AppInner() {
         const diff = new Date(t.due).getTime() - now;
         return diff >= 0 && diff < 3 * DAY;
       }).length,
-      atRisk: workspace.accounts.filter((a) => a.stage === "at_risk").length,
+      atRisk: workspace.accounts.filter((a) => a.stage === "at_risk" && !a.archivedAt).length,
     };
   }, [workspace, counts.pipeline]);
 
@@ -285,6 +304,10 @@ function AppInner() {
 
   function useDemoWorkspace() {
     const demo = normalizeWorkspace(createDemoWorkspace());
+    if (!folderBacked && getStorageIssue()) {
+      toast({ title: "Recover the saved workspace with a valid import before starting a demo.", tone: "destructive" });
+      return;
+    }
     replaceWorkspace(demo);
     setSelectedAccountId(demo.accounts[0]?.id ?? "");
     completeOnboarding("demo");
@@ -292,6 +315,10 @@ function AppInner() {
   }
 
   function createPersonalWorkspace(draft: WorkspaceSetupDraft) {
+    if (!folderBacked && getStorageIssue()) {
+      toast({ title: "Recover the saved workspace with a valid import before creating a new workspace.", tone: "destructive" });
+      return;
+    }
     const now = new Date().toISOString();
     const accountId = makeId("acct");
     const accountName = draft.accountName.trim();
@@ -314,18 +341,18 @@ function AppInner() {
           stage: "researching",
           priority: "medium",
           arr: 0,
-          health: 70,
-          fit: 70,
-          sourceConfidence: 20,
+          health: null,
+          fit: null,
+          sourceConfidence: null,
           owner,
           tags: ["new account"],
           contacts:
             contactName && contactRole
-              ? [{ id: makeId("contact"), name: contactName, role: contactRole, influence: "champion", lastSeen: now }]
+              ? [{ id: makeId("contact"), name: contactName, role: contactRole, influence: "champion", lastSeen: null }]
               : [],
           needs: ["Capture the first source-backed need"],
           risks: ["No source note captured yet"],
-          lastTouch: now,
+          lastTouch: null,
           createdAt: now,
         },
       ],
@@ -354,12 +381,12 @@ function AppInner() {
   function toggleTask(id: string) {
     const task = workspace.tasks.find((t) => t.id === id);
     if (!task) return;
-    const done = task.status === "open";
+    const done = task.status === "open" || task.status === "waiting";
     if (dispatch({ type: "task.set_status", taskId: id, status: done ? "done" : "open" }) && done) toast({ title: `Done · ${task.title}`, tone: "success" });
   }
 
   function addTask(draft: TaskDraft) {
-    if (!draft.title.trim()) return;
+    if (!draft.title.trim()) return false;
     const added = dispatch({
       type: "task.add",
       title: draft.title,
@@ -369,10 +396,11 @@ function AppInner() {
       priority: draft.priority,
     });
     if (added) toast({ title: "Task added", tone: "signal" });
+    return Boolean(added);
   }
 
   function addNote(draft: NoteDraft) {
-    if (!draft.title.trim() || !draft.body.trim()) return;
+    if (!draft.title.trim() || !draft.body.trim()) return false;
     const added = dispatch({
       type: "note.add",
       accountId: draft.accountId,
@@ -381,12 +409,15 @@ function AppInner() {
       title: draft.title,
       body: draft.body,
       sourceRef: draft.sourceRef,
+      occurredAt: draft.occurredAt || undefined,
+      interaction: draft.interaction === true,
     });
     if (added) toast({ title: "Note captured", tone: "signal" });
+    return Boolean(added);
   }
 
   function addDeal(draft: DealDraft) {
-    if (!draft.name.trim() || !draft.accountId) return;
+    if (!draft.name.trim() || !draft.accountId) return false;
     const added = dispatch({
       type: "deal.add",
       accountId: draft.accountId,
@@ -397,6 +428,7 @@ function AppInner() {
       closeDate: draft.closeDate || undefined,
     });
     if (added) toast({ title: `Deal added · ${draft.name.trim()}`, tone: "account" });
+    return Boolean(added);
   }
 
   function advanceDeal(id: string) {
@@ -634,7 +666,7 @@ function AppInner() {
   }
   function exportTasksICS(taskIds: string[]) {
     const selected = new Set(taskIds);
-    const open = workspace.tasks.filter((t) => t.status === "open" && selected.has(t.id));
+    const open = workspace.tasks.filter((t) => t.status === "open" && selected.has(t.id) && !accountsById.get(t.accountId ?? "")?.archivedAt);
     downloadICS(tasksToICS(open, accountsById));
     toast({ title: `Exported ${open.length} tasks to calendar (.ics)`, tone: "success" });
   }
@@ -650,11 +682,31 @@ function AppInner() {
     URL.revokeObjectURL(url);
     toast({ title: "Workspace exported", tone: "success" });
   }
+  function downloadStoredOriginal() {
+    try {
+      const raw = getStoredWorkspaceText();
+      if (raw === null) return;
+      const url = URL.createObjectURL(new Blob([raw], {type: "application/json"}));
+      const link = document.createElement("a");
+      link.href = url; link.download = "open-crm-original-recovery.json";
+      link.click(); URL.revokeObjectURL(url);
+      setRecoveryDownload(raw);
+      setRecoveryDownloadConfirmed(false);
+    } catch (error) { toast({ title: String(error), tone: "destructive" }); }
+  }
   async function importWorkspace(file: File, onboardingImport = false) {
     const { workspace: parsed, errors } = parseWorkspace(await file.text());
     if (!parsed) {
       toast({ title: `That file isn't a valid Open CRM workspace. ${errors[0] ?? ""}`.trim(), tone: "destructive" });
       return;
+    }
+    if (!folderBacked) {
+      const { error } = recoverWorkspace(parsed, recoveryDownloadConfirmed && recoveryDownload !== null ? { downloadedOriginal: recoveryDownload } : {});
+      setStorageIssue(error);
+      if (error) return;
+      setRecoveryRequired(false);
+      setRecoveryDownload(null);
+      setRecoveryDownloadConfirmed(false);
     }
     replaceWorkspace(touchWorkspace(parsed));
     setSelectedAccountId(parsed.accounts[0]?.id ?? "");
@@ -662,56 +714,19 @@ function AppInner() {
     toast({ title: "Workspace imported", tone: "success" });
   }
   function handleReset() {
-    const reset = normalizeWorkspace(resetWorkspace());
-    setWorkspace(reset);
+    const reset = createDemoWorkspace();
+    if (!folderBacked) {
+      const { error } = recoverWorkspace(reset, recoveryDownloadConfirmed && recoveryDownload !== null ? { downloadedOriginal: recoveryDownload } : {});
+      setStorageIssue(error);
+      if (error) return;
+    }
+    replaceWorkspace(reset);
     setSelectedAccountId(reset.accounts[0]?.id ?? "");
     setAi(emptyAi);
     setOnboarding(saveOnboardingState("demo"));
     toast({ title: "Workspace reset to the demo", tone: "warning" });
   }
 
-  /* ---- Improve ---- */
-  function approveIdea(id: string) {
-    const idea = workspace.ideas.find((i) => i.id === id);
-    replaceWorkspace(
-      touchWorkspace({
-        ...workspace,
-        ideas: workspace.ideas.map((i) =>
-          i.id === id
-            ? { ...i, status: i.status === "candidate" ? "shaping" : i.status === "shaping" ? "queued" : "released", votes: i.votes + 1, confidence: Math.min(99, i.confidence + 3) }
-            : i,
-        ),
-      }),
-    );
-    if (idea) toast({ title: `Advanced · ${idea.title}`, tone: "idea" });
-  }
-  function submitFeedback(draft: FeedbackDraft) {
-    if (!draft.title.trim() || !draft.body.trim()) return;
-    const idea = {
-      id: makeId("idea"),
-      title: draft.title.trim(),
-      problem: draft.body.trim(),
-      status: "candidate" as const,
-      votes: 1,
-      targetRelease: "triage",
-      confidence: 60,
-    };
-    replaceWorkspace(touchWorkspace({ ...workspace, ideas: [idea, ...workspace.ideas] }));
-    setIssueDraft(createGitHubIssueDraft(draft));
-    setIssueCopied(false);
-    toast({ title: "Thanks — added to the roadmap as a candidate.", tone: "idea" });
-  }
-  async function copyIssueDraft() {
-    if (!issueDraft) return;
-    try {
-      await navigator.clipboard.writeText(`# ${issueDraft.title}\n\n${issueDraft.body}`);
-      setIssueCopied(true);
-      window.setTimeout(() => setIssueCopied(false), 1600);
-      toast({ title: "Issue draft copied", tone: "success" });
-    } catch {
-      /* ignore */
-    }
-  }
 
   const aiView: AiViewState = {
     hasKey: hasAiKey(aiSettings),
@@ -731,6 +746,8 @@ function AppInner() {
     : id === "review" ? counts.review || undefined
     : undefined;
 
+  const recoveryConfirmation = recoveryDownload !== null && <label className="flex items-start gap-2 text-body-sm"><input type="checkbox" checked={recoveryDownloadConfirmed} onChange={event => setRecoveryDownloadConfirmed(event.target.checked)} />I have saved the original download. Use it as my recovery backup if browser storage is full.</label>;
+
   if (folderBacked && !folder.ready) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-6">
@@ -747,8 +764,25 @@ function AppInner() {
     );
   }
 
+  if (recoveryRequired) {
+    return <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+      <section className="max-w-xl space-y-4 rounded-xl border border-border bg-surface p-6">
+        <h1 className="font-serif text-h1">Recover your saved workspace</h1>
+        <p role="alert" className="text-body-sm text-destructive">{storageIssue}</p>
+        <p className="text-body-sm text-muted-foreground">No demo or new records have replaced your data. Download the stored original for inspection, or import a valid Open CRM backup. Import preserves the original before replacement.</p>
+        <Button onClick={downloadStoredOriginal}>Download stored original</Button>
+        {recoveryConfirmation}
+        <label className="block text-body-sm">Import a valid backup
+          <input className="mt-2 block w-full text-body-sm" type="file" accept="application/json" onChange={event => { const file = event.target.files?.[0]; if (file) void importWorkspace(file, true); }} />
+        </label>
+      </section>
+    </main>;
+  }
+
   if (onboardingOpen) {
     return (
+      <>
+      {storageIssue && <div role="alert" className="border-b border-warning bg-surface p-4 text-body-sm">{storageIssue} Import a valid backup below to recover. The original is retained before replacement.</div>}
       <OnboardingView
         onCreateWorkspace={createPersonalWorkspace}
         onImport={(file) => void importWorkspace(file, true)}
@@ -757,6 +791,7 @@ function AppInner() {
         folderBacked={folderBacked}
         workspaceName={folderBacked ? workspace.name : undefined}
       />
+      </>
     );
   }
 
@@ -768,10 +803,7 @@ function AppInner() {
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <Layers3 className="h-[18px] w-[18px]" />
             </span>
-            <div className="leading-tight">
-              <div className="font-serif text-[15px] font-medium text-foreground">Open CRM</div>
-              <div className="text-[11px] text-muted-foreground">Local-first workspace</div>
-            </div>
+            <div className="font-serif text-[15px] font-medium text-foreground">Open CRM</div>
           </div>
 
           <nav aria-label="Primary" className="space-y-0.5">
@@ -789,17 +821,14 @@ function AppInner() {
           </nav>
 
           <div className="mt-auto space-y-3">
-            <div className="rounded-lg border border-border bg-surface p-3">
-              <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium text-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
-                Local-first
-              </div>
-              <p className="text-[11px] leading-4 text-muted-foreground">
+            <details className="px-2 text-body-sm text-muted-foreground">
+              <summary className="cursor-pointer rounded-sm focus-visible:outline-none focus-visible:focus-ring">{folderBacked ? "Saved to this computer" : "Saved in this browser"}</summary>
+              <p className="mt-2 leading-relaxed">
                 {folderBacked
-                  ? "Your data stays in a folder on this computer, shared with the agents you run there."
-                  : "Your data stays in this browser. AI runs on your own key; sync writes to your own folder."}
+                  ? "Records are stored in your workspace folder. Connected agents use the providers you choose."
+                  : "Export a backup in Settings. AI requests go to your chosen provider when you use AI features."}
               </p>
-            </div>
+            </details>
             <div className="border-t border-border px-1 pt-3">
               <ZentrikMark />
             </div>
@@ -815,12 +844,8 @@ function AppInner() {
                 </span>
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
-                    <h1 className="truncate font-serif text-[15px] font-medium text-foreground">{workspace.name}</h1>
-                    {onboarding.mode === "demo" && <Badge tone="accent">Demo</Badge>}
+                    <div className="truncate text-body font-medium text-foreground">{workspace.name}</div>
                   </div>
-                  <p className="truncate text-[11px] text-muted-foreground">
-                    {workspace.edition} · {folderBacked && folder.name ? `folder ${folder.name}` : "local-first"}
-                  </p>
                 </div>
               </div>
 
@@ -871,6 +896,8 @@ function AppInner() {
               })}
             </nav>
           </header>
+          {folderBacked && folder.ready && folder.error && <div role="alert" className="m-4 rounded-lg border border-warning p-3 text-body-sm">Records may be stale: {folder.error} Keep the workspace server running; changes will refresh after reconnection.</div>}
+          {storageIssue && <div role="alert" className="m-4 space-y-2 rounded-lg border border-warning p-3 text-body-sm"><p>{storageIssue}</p><Button size="sm" onClick={exportWorkspace}>Export unsaved work</Button><Button size="sm" onClick={downloadStoredOriginal}>Download stored original</Button>{recoveryConfirmation}</div>}
 
           <div
             className={cn(
@@ -891,10 +918,12 @@ function AppInner() {
               />
             </div>
             <div data-view="pipeline" className={cn(view !== "pipeline" && "hidden")}>
-              <PipelineView deals={workspace.deals} accounts={workspace.accounts} accountsById={accountsById} onAdvanceDeal={advanceDeal} onLoseDeal={loseDeal} onSelectAccount={selectAccountAndOpen} onAddDeal={addDeal} />
+              <PipelineView deals={workspace.deals.filter(d => !accountsById.get(d.accountId)?.archivedAt)} accounts={workspace.accounts.filter(a => !a.archivedAt)} accountsById={accountsById} onAdvanceDeal={advanceDeal} onLoseDeal={loseDeal} onSelectAccount={selectAccountAndOpen} onAddDeal={addDeal} />
             </div>
             <div data-view="accounts" className={cn(view !== "accounts" && "hidden")}>
               <AccountsView
+                onUpdateAccount={(accountId, patch) => Boolean(dispatch({ type: "account.update", accountId, patch }))}
+                onArchiveAccount={(accountId, archived, reason) => Boolean(dispatch({ type: "account.archive", accountId, archived, reason }))}
                 accounts={workspace.accounts}
                 selectedAccount={selectedAccount}
                 deals={workspace.deals}
@@ -924,7 +953,7 @@ function AppInner() {
               <ContactsView accounts={workspace.accounts} onSelectAccount={selectAccountAndOpen} />
             </div>
             <div data-view="tasks" className={cn(view !== "tasks" && "hidden")}>
-              <TasksView tasks={workspace.tasks} accounts={workspace.accounts} accountsById={accountsById} notesById={notesById} onToggleTask={toggleTask} onAddTask={addTask} onSelectAccount={selectAccountAndOpen} onExportICS={exportTasksICS} />
+              <TasksView tasks={workspace.tasks} accounts={workspace.accounts} accountsById={accountsById} notesById={notesById} onToggleTask={toggleTask} onAddTask={addTask} onUpdateTask={(taskId, patch) => Boolean(dispatch({ type: "task.update", taskId, patch }))} onSelectAccount={selectAccountAndOpen} onExportICS={exportTasksICS} />
             </div>
             <div data-view="notes" className={cn(view !== "notes" && "hidden")}>
               <NotesView notes={workspace.notes} accounts={workspace.accounts} accountsById={accountsById} onAddNote={addNote} />
@@ -962,15 +991,7 @@ function AppInner() {
               />
             </div>
             <div data-view="improve" className={cn(view !== "improve" && "hidden")}>
-              <ImproveView
-                ideas={workspace.ideas}
-                changelog={workspace.changelog}
-                onApproveIdea={approveIdea}
-                onSubmitFeedback={submitFeedback}
-                issueDraft={issueDraft}
-                copied={issueCopied}
-                onCopyIssueDraft={copyIssueDraft}
-              />
+              <ImproveView ideas={workspace.ideas} />
             </div>
           </div>
         </main>

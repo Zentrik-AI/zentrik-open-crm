@@ -62,7 +62,7 @@ test("invalid changes are refused before anything is stored", () => {
 test("a stale proposal fails loudly instead of corrupting records", () => {
   const proposed = submitChange(demo(), newChange({ type: "task.set_status", taskId: "task_northstar_security", status: "done" }, agent));
   const without = { ...proposed.workspace, tasks: proposed.workspace.tasks.filter((t) => t.id !== "task_northstar_security") };
-  assert.throws(() => resolveProposal(without, pendingProposals(without)[0].id, "approve", "Jorge"), /No task/);
+  assert.throws(() => resolveProposal(without, pendingProposals(without)[0].id, "approve", "Jorge"), /changed since it was prepared/);
 });
 
 test("date-only due dates mean the end of that local day", () => {

@@ -22,7 +22,7 @@ export function ContactsView({
     () =>
       accounts
         .flatMap((account) => account.contacts.map((contact) => ({ contact, account })))
-        .sort((a, b) => b.contact.lastSeen.localeCompare(a.contact.lastSeen)),
+        .sort((a, b) => (b.contact.lastSeen ?? "").localeCompare(a.contact.lastSeen ?? "")),
     [accounts],
   );
 
@@ -86,7 +86,7 @@ export function ContactsView({
                     {account.name}
                     <ArrowUpRight className="h-3 w-3" />
                   </button>
-                  <span className="font-mono text-[11px] tabular-nums text-faint-foreground">{formatRelative(contact.lastSeen)}</span>
+                  <span className="font-mono text-[11px] tabular-nums text-faint-foreground">{contact.lastSeen ? formatRelative(contact.lastSeen) : "Contact date unknown"}</span>
                 </div>
               </div>
             );

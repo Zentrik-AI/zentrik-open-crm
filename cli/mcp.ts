@@ -1,5 +1,5 @@
 import readline from "node:readline";
-import type { AccountPatch, Actor, Op, Workspace } from "../src/types.ts";
+import type { AccountPatch, Actor, Op, TaskPatch, Workspace } from "../src/types.ts";
 import { accountStages, contactInfluences, dealStages, noteSources, priorities, sentiments } from "../src/core/model.ts";
 import { OpError } from "../src/core/ops.ts";
 import * as actions from "./actions.ts";
@@ -23,11 +23,11 @@ type Tool = { name: string; description: string; inputSchema: Json; run: (dir: s
 
 const str = (description: string, extra: Json = {}) => ({ type: "string", description, ...extra });
 const account = str("Account id, file slug, or any unambiguous part of the name.");
-const schema = (properties: Json, required: string[] = []) => ({ type: "object", properties, required, additionalProperties: false });
+const schema = (properties: Json, required: string[] = []) => ({ type: "object", properties: { ...properties, key: str("Stable source/action retry key for a write."), review: { type: "boolean", description: "Require review even in direct mode; set true for scheduled work." } }, required, additionalProperties: false });
 
 const s = (args: Json, key: string) => (typeof args[key] === "string" ? (args[key] as string) : undefined);
 const accountId = (workspace: Workspace, args: Json) => actions.resolveAccount(workspace, s(args, "account") ?? "").id;
-const write = (build: (workspace: Workspace, args: Json) => Op): Tool["run"] => (dir, args, actor) => actions.change(dir, actor, (workspace) => build(workspace, args));
+const write = (build: (workspace: Workspace, args: Json) => Op): Tool["run"] => (dir, args, actor) => actions.change(dir, actor, (workspace) => build(workspace, args), { key: s(args, "key"), review: args.review === true });
 
 const tools: Tool[] = [
   { name: "crm_status", description: "The daily brief: counts, pending proposals, the agent mode, and a ranked list of what needs attention with the record id and reason for each.", inputSchema: schema({}), run: (dir) => actions.status(dir) },
@@ -50,10 +50,10 @@ const tools: Tool[] = [
     name: "crm_add_note",
     description: "Capture a source note on an account. Record where it came from: the source kind and a reference a person could follow (a file path, a thread subject, a ticket id).",
     inputSchema: schema(
-      { account, title: str("One line."), body: str("What was said or observed. Summarize; do not paste whole transcripts."), source: str("Where it came from.", { enum: noteSources }), sourceRef: str("A reference a person could follow back to the source."), sentiment: str("Overall tone.", { enum: sentiments }), contactId: str("Contact id on this account, if one person said it.") },
+      { account, title: str("One line."), body: str("What was said or observed. Summarize; do not paste whole transcripts."), source: str("Where it came from.", { enum: noteSources }), sourceRef: str("A reference a person could follow back to the source."), sentiment: str("Overall tone.", { enum: sentiments }), contactId: str("Contact id on this account, if one person said it."), occurredAt: str("Actual source-event date, not ingestion time."), interaction: { type: "boolean", description: "True only for a verified account interaction, requires occurredAt." } },
       ["account", "title", "body", "source"],
     ),
-    run: write((workspace, args) => ({ type: "note.add", accountId: accountId(workspace, args), title: s(args, "title") ?? "", body: s(args, "body") ?? "", source: s(args, "source") as never, sourceRef: s(args, "sourceRef"), sentiment: s(args, "sentiment") as never, contactId: s(args, "contactId") })),
+    run: write((workspace, args) => ({ type: "note.add", accountId: accountId(workspace, args), title: s(args, "title") ?? "", body: s(args, "body") ?? "", source: s(args, "source") as never, sourceRef: s(args, "sourceRef"), sentiment: s(args, "sentiment") as never, contactId: s(args, "contactId"), occurredAt: s(args, "occurredAt"), interaction: args.interaction === true })),
   },
   {
     name: "crm_add_task",
@@ -69,6 +69,18 @@ const tools: Tool[] = [
     description: "Mark a task done, or reopen it. Only complete a task when a source shows it happened.",
     inputSchema: schema({ taskId: str("Task id."), status: str("New status.", { enum: ["open", "done"] }) }, ["taskId", "status"]),
     run: write((_workspace, args) => ({ type: "task.set_status", taskId: s(args, "taskId") ?? "", status: s(args, "status") as never })),
+  },
+  {
+    name: "crm_update_task",
+    description: "Edit or reschedule an existing task. Waiting uses due as its review date; waiting and cancellation require a reason. Do not create replacement duplicates.",
+    inputSchema: schema({ taskId: str("Existing task id."), title: str("Action."), due: str("Due or waiting-review date."), owner: str("Owner."), priority: str("Priority.", { enum: priorities }), status: str("State.", { enum: ["open", "waiting", "done", "cancelled"] }), reason: str("Why, including the waiting trigger or cancellation reason.") }, ["taskId"]),
+    run: write((_workspace, args) => { const { taskId, key: _key, review: _review, ...patch } = args; return { type: "task.update", taskId: String(taskId), patch: patch as TaskPatch }; }),
+  },
+  {
+    name: "crm_archive_account",
+    description: "Archive or restore an account without deleting its history. Archived work is excluded from the daily queue.",
+    inputSchema: schema({ account, archived: { type: "boolean" }, reason: str("Reason for archive or restore.") }, ["account", "archived", "reason"]),
+    run: write((workspace, args) => ({ type: "account.archive", accountId: accountId(workspace, args), archived: args.archived === true, reason: s(args, "reason") ?? "" })),
   },
   {
     name: "crm_add_deal",
@@ -96,7 +108,7 @@ const tools: Tool[] = [
       ["account"],
     ),
     run: write((workspace, args) => {
-      const { account: _ref, ...patch } = args;
+      const { account: _ref, key: _key, review: _review, ...patch } = args;
       return { type: "account.update", accountId: accountId(workspace, args), patch: patch as AccountPatch };
     }),
   },

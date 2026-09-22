@@ -15,7 +15,7 @@ const onDisk = () => JSON.parse(fs.readFileSync(path.join(workspaceDir, "workspa
 test("an agent's change arrives live, waits for approval, and lands in the folder", async ({ page }) => {
   await page.goto("/");
   // A folder that already has accounts opens straight into the CRM.
-  await expect(page.getByRole("heading", { name: "Folder workspace" })).toBeVisible();
+  await expect(page.locator("header").getByText("Folder workspace", {exact:true})).toBeVisible();
 
   const out = crm("note", "add", "--account", "northstar", "--source", "email", "--ref", "inbox/thread.eml", "--title", "Legal wants a data-flow diagram", "--body", "Eli forwarded the request from legal.");
   expect(out).toContain("Proposed");

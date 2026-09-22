@@ -44,6 +44,6 @@ Zentrik Open CRM Cloud should preserve the same product contract:
 
 ## Development and release
 
-Contributors can use `develop` as an integration branch and `main` as the
-production branch. See [Pre-production and release](./preproduction-and-release.md)
+Contributors work from feature branches based on `main` and open reviewed pull
+requests back to `main`. See [Pre-production and release](./preproduction-and-release.md)
 for the repository workflow.

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "id": "zentrik-open-crm",
-  "defaultBase": "origin/develop",
+  "defaultBase": "origin/main",
   "branchPrefixFile": ".agent-branch-prefix",
   "localState": [],
   "ports": {

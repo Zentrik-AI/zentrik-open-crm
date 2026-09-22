@@ -1,11 +1,12 @@
-# Product Intent
+# Product intent
 
-Zentrik Open CRM is the first open-source child product that demonstrates the
-Zentrik idea of self-evolving products.
+Zentrik Open CRM is an open-source, local-first CRM for teams that want account
+memory, source-grounded next actions, and agent assistance without giving up
+control of their data.
 
-The CRM should be useful on its own, but it also exists to prove a larger point:
-software can listen to real users, turn feedback into product work, make the
-reasoning visible, and improve through a tight human-plus-agent loop.
+It also provides a clear example of a human-and-agent product loop: users can
+review what an agent proposes, keep the evidence behind a decision, and share
+public-safe feedback that can inform future work.
 
 ## Target Users
 
@@ -24,10 +25,9 @@ source-backed decisions.
 Help small teams know what changed, who needs attention, and what action is
 grounded in actual evidence.
 
-The public story is broader: this is the open-source CRM that improves with its
-users. Requests, votes, workflow pain, usage patterns, and release outcomes
-should feed the Open CRM product workspace and help decide what the CRM becomes
-next.
+The product can improve with its users. Requests, workflow pain, usage patterns,
+and release outcomes may inform future work when they are reviewed and handled
+through an appropriate public or private route.
 
 The product must be:
 
@@ -49,9 +49,9 @@ The product must be:
 5. The Evolution Log records what changed and why.
 6. Public-safe feedback can appear in the Open CRM Buildroom.
 
-## First Release Shape
+## Product shape
 
-The first release should prioritize daily usefulness:
+The product prioritizes daily usefulness:
 
 - account board
 - account detail
@@ -61,11 +61,11 @@ The first release should prioritize daily usefulness:
 - Codex task queue
 - export/reset controls
 - privacy guardrails
-- public Open CRM Buildroom portal
+- reviewed public feedback handoff
 
-Do not spend early product energy on large enterprise CRM customization, complex
-admin settings, or decorative dashboards. The differentiator is the loop between
-source evidence, next action, product improvement, and agent work.
+The differentiator is the loop between source evidence, next action, product
+improvement, and agent work. Large enterprise customization and decorative
+dashboards are outside the core product focus.
 
 See [Product Narrative](./product-narrative.md) and
 [Outward Ecosystem](./outward-ecosystem.md) for the launch story and public

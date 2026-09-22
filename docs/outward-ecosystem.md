@@ -1,147 +1,58 @@
-# Outward Ecosystem
+# Open CRM ecosystem
 
-Zentrik Open CRM should launch as a complete ecosystem, not only a repository.
-
-The outward system has three surfaces:
-
-1. **The CRM app**: the product users run locally, self-host, or use through
-   Zentrik Open CRM Cloud.
-2. **The product workspace**: the operating workspace where signal becomes
-   insight, ideas, Codex tasks, releases, and outcome review.
-3. **Open CRM Buildroom**: the public portal where users vote, request, and see
-   public-safe product evolution.
-
-## System Loop
+Open CRM has a local product surface and an optional product-feedback loop. The
+local app, CLI, and MCP server are useful without a hosted service.
 
 ```mermaid
 flowchart LR
-  A["User uses CRM"] --> B["Signals: usage, calls, tickets, reviews, GitHub"]
-  C["User submits or votes in Open CRM Buildroom"] --> D["Portal ideas and votes"]
-  B --> E["Open CRM workspace processes evidence"]
-  D --> E
-  E --> F["Prioritized ideas"]
-  F --> G["Codex task queue"]
-  G --> H["Human review"]
-  H --> I["Release"]
-  I --> J["Outcome check"]
-  J --> E
-  I --> C
+  A["Use the CRM"] --> B["Capture source-grounded feedback"]
+  B --> C["Review locally"]
+  C --> D["Keep local or share a safe bundle"]
+  D --> E["Product evidence"]
+  E --> F["Agent work"]
+  F --> G["Human review"]
+  G --> H["Release and outcome check"]
+  H --> A
 ```
 
-The loop should be visible without exposing private CRM data. Public users see
-safe summaries, idea status, votes, release notes, and outcome checks. The
-workspace keeps account records, private transcripts, private emails, and
-implementation detail out of the public surface.
+## Local product
 
-The product intent is that the public should be able to see the product's brain
-working: ideas being processed, agent work being prepared, validation waiting on
-humans, releases moving forward, and outcome checks closing the loop.
+The repository owns:
 
-## Required Workspace Entities
+- accounts, contacts, pipeline, tasks, notes, and next actions
+- local browser storage and folder workspaces
+- synthetic fixtures and portable exports
+- the CLI and MCP handoff for coding agents
+- reviewable proposals and public-safe feedback bundles
 
-The first live instance should include:
+Users can start with demo data, create an empty workspace, or connect a folder.
+The product does not require an account with a hosted service for first value.
 
-- workspace: `Zentrik Open CRM`
-- product: `Zentrik Open CRM`
-- portal: `Open CRM Buildroom`
-- portal alias: `open-crm`
-- product allowlist: only `Zentrik Open CRM`
-- account segments:
-  - `Open CRM Community`
-  - `Founder-Led Teams`
-  - `Consultants and Agencies`
-- idea taxonomy:
-  - workflow area
-  - user type
-  - deployment path
-  - evidence source
-- visible starter ideas from the portal manifest
-- moderation queue for new public submissions
-- release/evolution log connected to shipped ideas
-- agent work log showing public-safe context used, work prepared, and human
-  review state
-- outcome metrics for released ideas, including satisfaction and engagement
-  checks where available
+## Optional Zentrik connection
 
-The source manifest lives at
-[`portal/open-crm-buildroom.instance.json`](../portal/open-crm-buildroom.instance.json).
+Zentrik can receive a reviewed, public-safe feedback bundle through a separate
+maintainer-operated adapter. The adapter runs outside the browser, uses explicit
+configuration, and does not send CRM records, credentials, or private notes.
+It creates product evidence only after a person has inspected the content and
+destination.
 
-## Public Portal Defaults
+The connection is intentionally separate from account operations. A failed or
+unavailable hosted service must not make local CRM work disappear or block an
+export.
 
-- **Name**: Open CRM Buildroom
-- **Alias**: `open-crm`
-- **Expected host**: `https://open-crm.ideas.zentrik.ai`
-- **Auth**: magic link for V1
-- **Feedback mode**: simple vote for V1
-- **New submissions**: hidden until review
-- **First product**: Zentrik Open CRM only
+## Hosted feedback
 
-Simple voting is the right V1 default because the first public surface should be
-low-friction. Ranking can be added later for structured customer councils or
-high-signal contributor cohorts.
+Open CRM Buildroom is a planned hosted surface. Its manifest in
+[`portal/`](../portal/) describes portable product ideas and public-safety
+guardrails; it is not a live deployment. Link a hosted destination only after
+verifying authentication, moderation, privacy, accessibility, failure states,
+and support.
 
-## What The Public Should Understand
+Until then, users can keep feedback local or prepare a GitHub issue manually.
 
-Every public surface should make these points obvious:
+## Public boundary
 
-- This is a real CRM users can run.
-- Users can shape what it becomes.
-- Zentrik processes requests, usage, and feedback into product evidence.
-- Agents can help turn evidence into work.
-- Humans approve important decisions.
-- Releases are evaluated against actual outcomes.
-- The product does not hide the work: users can see what is being considered,
-  what is waiting for validation, and what changed because of their input.
-
-## First Value Path
-
-The CRM should not require a user to connect private systems before they feel
-value. The first public path should support:
-
-- a synthetic demo workspace
-- manual signal capture
-- spreadsheet import
-- public market and review research
-- GitHub/community feedback
-- Codex prompts that operate on local workspace context
-- local feedback-bundle export for users who are not connected to hosted
-  services yet
-
-Private connectors can deepen the product later, but the first experience should
-show the loop without asking for trust too early.
-
-## Moderation And Privacy
-
-The Buildroom must never expose private records. Public submissions should be
-reviewed before visibility because users may paste private account context,
-credentials, or confidential business detail.
-
-When converting portal submissions into public ideas:
-
-- summarize instead of quoting sensitive material
-- remove customer names unless the submitter explicitly intended public mention
-- keep private evidence in the private workspace
-- publish the problem, affected workflow, proposed direction, and status
-
-When showing agent work:
-
-- show public-safe context references, not raw private content
-- show a compact "what was used" trail while work runs
-- keep a collapsed audit log after completion
-- make human review state visible before any customer-facing action
-
-## Launch Readiness
-
-The ecosystem is ready for first public use when:
-
-- the repository can be installed locally from a clean checkout
-- the starter CRM app has synthetic demo data and no private records
-- the public Buildroom exists from the manifest
-- new submissions enter a review state
-- accepted submissions create or link to ideas
-- votes are visible and tied to account/user identity
-- local/self-hosted feedback can be exported as `open-crm-feedback.v1`
-- release notes can point back to public-safe evidence
-- Codex has a documented operating contract
-- agent work and human review are visible enough that the product feels
-  self-evolving, not mysteriously automated
+Never publish account records, private notes, credentials, raw transcripts, or
+unreviewed customer evidence. A request or vote is evidence to evaluate, not a
+roadmap promise. Human review remains visible before publication or any
+customer-facing action.

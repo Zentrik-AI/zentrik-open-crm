@@ -1,33 +1,35 @@
-# Codex Operator Guide
+# Codex operator guide
 
 Setup, the review loop, and the operating contract live in the
-[Agent Operator Guide](./agent-operator-guide.md). They are the same for Codex,
-Claude Code, and Cursor.
+[Agent Operator Guide](./agent-operator-guide.md). They also apply to Claude
+Code, Cursor, and other agents that can work with files and a shell.
 
-Codex specifics:
-
-- Codex reads `AGENTS.md` from the workspace folder and runs `./crm` directly.
-- To use the MCP tools as well: `codex mcp add open-crm -- ./crm mcp`, run from
-  the workspace folder.
-- Changes Codex makes are recorded under the name `codex`. Set
-  `OPEN_CRM_ACTOR` to use another name.
-
-## Delivery Branches
-
-Use `develop` as the pre-production integration branch. Start durable worktrees
-from `origin/develop`, open implementation pull requests into `develop`, and
-review the persistent sandbox before requesting production promotion.
-
-The production path is a `develop` -> `main` pull request. Keep `main`
-protected by its build and history controls; human review is encouraged but not
-required for now. Do not use `main` as an agent scratch branch. The shared
-worktree lifecycle is the canonical path for a sandbox checkout:
+Codex reads `AGENTS.md` from the workspace folder and can run `./crm` directly.
+To expose the MCP tools, run this command from the workspace folder:
 
 ```bash
-zentrik-agent-workflows/bin/zentrik-worktree --repo zentrik-open-crm create \
-  --slug open-crm-develop-sandbox --base origin/develop
-zentrik-agent-workflows/bin/zentrik-worktree --repo <sandbox> up --profile sandbox
+codex mcp add open-crm -- ./crm mcp
 ```
 
-Stop the managed runtime with the matching `down` command before removing or
-refreshing the sandbox. Never copy private CRM data into this repository.
+Agent changes are recorded under an actor name. Set `OPEN_CRM_ACTOR` when a
+different name is useful for a team audit.
+
+## Safe handoff
+
+Keep the workspace folder separate from this source repository when it contains
+real account data. Give an agent only the files and records needed for the task.
+It may inspect the explicit snapshot, research within the stated boundary,
+prepare proposals, edit repository files when asked, run validation, and report
+evidence. A person retains authority over customer communication, privacy,
+publication, and other external changes.
+
+The default workflow is:
+
+1. Run `./crm status` and read the workspace operating instructions.
+2. Read the account or source records relevant to the request.
+3. Propose a bounded note, task, or account change with evidence.
+4. Review the proposal in the app before it lands.
+5. Run validation and report what changed, what did not, and what remains open.
+
+Do not put real account records, credentials, or private transcripts into this
+public source repository. See [Privacy boundaries](./privacy-boundaries.md).

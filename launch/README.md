@@ -14,9 +14,9 @@ the repository's React, Lucide, Vite and Playwright. FFmpeg is needed only to
 export media. Output goes to ignored `tmp/launch/`.
 
 ```sh
-# Run the existing dev server first, using your worktree's allocated port.
-LAUNCH_URL=http://127.0.0.1:5203/launch/index.html node launch/render.mjs --stills
-LAUNCH_URL=http://127.0.0.1:5203/launch/index.html node launch/render.mjs
+# Run the existing dev server first.
+LAUNCH_URL=http://127.0.0.1:5177/launch/index.html node launch/render.mjs --stills
+LAUNCH_URL=http://127.0.0.1:5177/launch/index.html node launch/render.mjs
 ```
 
 The renderer samples a deterministic 41-second timeline at 30 fps, 1920×1080.
@@ -41,6 +41,7 @@ Review. The demo does not imply automatic sends, bulk approvals, automatic
 releases, or a working cloud feedback connection.
 
 Before distribution: inspect all keyframes at export size, verify audio and
-video decoding, watch the full cut with sound, confirm the release destination
-is public and works, and close the blockers in `docs/release-readiness.md`.
+video decoding, watch the full cut with sound, and confirm the release
+destination and product claims are current. Use `docs/release-readiness.md` for
+the public release checklist.
 The earlier real-product demonstration remains suitable for a README embed.

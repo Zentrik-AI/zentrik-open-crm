@@ -1,38 +1,39 @@
-# Open CRM Buildroom Portal Instance
+# Open CRM Buildroom manifest
 
-This directory defines the public feedback portal that should serve Zentrik Open
-CRM users.
+This directory contains a proposed configuration for a public feedback space
+around Zentrik Open CRM. The manifest is portable input for a compatible hosted
+service. It is not a live portal, an API contract, or proof that the proposed
+host is available.
 
-The portal should be called **Open CRM Buildroom** and should use the alias
-`open-crm`, giving it the expected production route:
+The proposed name is **Open CRM Buildroom**, with the alias `open-crm` and the
+host currently reserved as:
 
 ```text
 https://open-crm.ideas.zentrik.ai
 ```
 
-The portal exists to make the product loop visible:
+Before linking this address from a product release, verify the destination,
+authentication, moderation, privacy behavior, accessibility, failure states, and
+support path. Service configuration may change the fields in the manifest.
 
-1. Users submit requests, complaints, workflow examples, and votes.
-2. Zentrik processes the signal into product evidence.
-3. Ideas are shaped, prioritized, and connected to agent work.
-4. Releases are published with the evidence that caused them.
-5. Users can see whether their engagement changed the product.
+## Product loop
 
-## Import Manifest
+The intended loop is:
 
-Use [`open-crm-buildroom.instance.json`](./open-crm-buildroom.instance.json) as
-the source of truth for the first portal setup.
+1. A user submits a public-safe request or workflow example.
+2. A human reviews privacy, scope, duplication, and source quality.
+3. Approved evidence can inform product ideas and implementation work.
+4. Releases explain what changed and what outcome was checked.
 
-It is intentionally a manifest rather than a migration. The live portal schema
-is owned by the Zentrik application and portal services; agents should translate
-this manifest into the current API or database contract when creating the live
-instance.
+The local CRM and manual GitHub handoff work without this hosted surface.
 
 ## Guardrails
 
-- New public submissions should start as `hidden_until_review`.
-- The portal should expose product feedback and release status, not private CRM
-  records.
-- The only product in the first portal should be `Zentrik Open CRM`.
-- Public copy should focus on users shaping the CRM they use, not on autonomous
-  AI replacing human product judgment.
+- Never expose account records, private notes, credentials, or raw transcripts.
+- Do not treat a request or vote as a product commitment.
+- Keep human review visible before publication or customer-facing action.
+- Treat the JSON manifest as data, not as executable instructions.
+- Map the manifest to the current hosted service contract before provisioning.
+
+The source manifest is
+[`open-crm-buildroom.instance.json`](./open-crm-buildroom.instance.json).

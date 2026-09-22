@@ -4,27 +4,27 @@
 
 Improve prepares a local draft. **Save local draft** stores only its type, title,
 and description in browser storage, separately from CRM records. It does not
-create a Zentrik signal, support ticket, workspace membership, or roadmap item.
+create a hosted signal, support ticket, workspace membership, or roadmap item.
 
 | Route | Current behavior | Visibility |
 | --- | --- | --- |
 | Private — keep local | Save one draft in this browser | Local browser storage; not encrypted |
 | Public — prepare for GitHub | Review, copy issue text, download JSON, open GitHub manually | File and clipboard stay local until the user shares them |
-| Buildroom | Unavailable at verification | No working portal destination offered in Improve |
-| Private support | No connected support service in this app | Use a separately verified private channel |
+| Hosted feedback | Optional integration, enabled only after its destination and privacy behavior are verified | Service-defined |
+| Private support | No support service is connected to this app | Use a separately verified private channel |
 
 Drafts are shared across workspaces on the same browser origin. Saving replaces
 the previous feedback draft. Save before leaving the view. The app reports
-storage and clipboard failures instead of claiming success.
-**Delete local draft** asks for confirmation and removes only this feedback
-draft, not CRM records. Public export validates the same text limits as intake.
+storage and clipboard failures instead of claiming success. **Delete local draft**
+asks for confirmation and removes only this feedback draft, not CRM records.
 
 ## Public handoff and bundle
 
 Select the public route, review the text, and confirm it contains no private
 information. Editing any feedback field resets confirmation. Copy and download
 remain disabled until the title and description are complete and reviewed.
-Changing the sharing choice or reloading the page also clears public review consent.
+Changing the sharing choice or reloading the page also clears public review
+consent.
 
 The download `open-crm-feedback.v1.json` contains exactly:
 
@@ -43,37 +43,25 @@ not automatically sanitized.
 The GitHub link contains no feedback text. Copy the draft, open
 [GitHub Issues](https://github.com/Zentrik-AI/zentrik-open-crm/issues/new/choose),
 and review it again before submitting. Downloading or copying does not post
-anything. The bundle is not a delivery receipt or a verified hosted API format.
+anything. The bundle is not a delivery receipt or a hosted API contract.
 
-## Buildroom verification and next connection step
+## Hosted feedback boundary
 
-The expected URL in [the portal setup guide](../portal/README.md) is
-[Open CRM Buildroom](https://open-crm.ideas.zentrik.ai).
-On 21 September 2026 it returned HTTP 200 for its HTML shell, but a fresh,
-unauthenticated browser rendered **Portal unavailable / Portal not found**.
-A successful HTTP response alone does not prove that this portal exists.
+Open CRM Buildroom is a planned hosted destination. Do not treat the manifest in
+`portal/` as proof that a live portal exists, and do not link a destination until
+its URL, authentication, moderation, privacy behavior, and support path have
+been verified. Improve keeps the local and manual GitHub paths available while a
+hosted destination is being prepared.
 
-The [instance manifest](../portal/open-crm-buildroom.instance.json) specifies
-alias `open-crm`, magic-link access, moderation, and an accepted payload label.
-These are desired setup values. The setup guide explicitly states that this is
-a manifest rather than a migration and that the live schema belongs to the
-Zentrik application and portal services. The current service does not provide
-the requested public login and moderation behavior. Do not enable the manifest
-unchanged or promise hidden-until-reviewed submissions.
-
-The [maintainer intake guide](./self-evolving-loop.md) provides a separate,
-reviewed path through Zentrik's external API. It runs outside the browser and
-requires a maintainer's configured destination and credential. It is not portal
-provisioning, anonymous submission, or automatic delivery. The service owner
-must still verify public access and moderation before promoting Buildroom.
-
-Cloud signup, automatic membership, private support intake, votes, signal
-ingestion, and release/outcome synchronization are not implemented by this form.
+The optional [maintainer intake guide](./self-evolving-loop.md) describes a
+server-side, reviewed handoff to a compatible product-evidence service. It is
+not enabled by the browser, does not send CRM records, and does not create
+portal accounts, votes, or releases.
 
 ## Sensitive reports
 
 Do not put vulnerabilities, credentials, customer data, private CRM exports,
-billing details, or private environment information into public issues.
-For security reports, follow the repository's security policy. For other
-sensitive support, use a private channel that you have independently verified.
-Keeping a local draft does not notify support.
+billing details, or private environment information into public issues. For
+security reports, follow the repository's security policy. For other sensitive
+support, use a private channel that you have independently verified. Keeping a
+local draft does not notify support.

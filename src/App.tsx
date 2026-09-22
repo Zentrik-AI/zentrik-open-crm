@@ -60,6 +60,8 @@ import { NotesView } from "./views/NotesView";
 import { SettingsView, type AiTest } from "./views/SettingsView";
 import { ImproveView } from "./views/ImproveView";
 import { ReviewView } from "./views/ReviewView";
+import { BookView } from "./views/BookView";
+import { brand } from "./lib/brand";
 import { OnboardingView, type WorkspaceSetupDraft } from "./views/OnboardingView";
 import { seedWorkspace } from "./data/seed";
 import type { AiKind } from "./components/ai-panel";
@@ -69,6 +71,7 @@ const emptyAi: AiState = { busy: null, result: null, copied: false, error: null 
 const DAY = 24 * 60 * 60 * 1000;
 const viewTitles: Record<View, string> = {
   home: "Home",
+  book: "Book",
   pipeline: "Pipeline",
   accounts: "Accounts",
   contacts: "Contacts",
@@ -81,7 +84,7 @@ const viewTitles: Record<View, string> = {
 
 /** What the app shows for the instant before a workspace folder has loaded. */
 const blankWorkspace: Workspace = normalizeWorkspace({
-  name: "Open CRM",
+  name: brand.name,
   edition: "Self-Hosted",
   updatedAt: new Date(0).toISOString(),
   accounts: [],
@@ -223,7 +226,7 @@ function AppInner() {
   }, [darkMode]);
   useEffect(() => {
     const surface = recoveryRequired ? "Recover" : onboardingOpen ? "Set up" : viewTitles[view];
-    document.title = `${surface} · Open CRM`;
+    document.title = `${surface} · ${brand.name}`;
   }, [onboardingOpen, recoveryRequired, view]);
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -249,6 +252,12 @@ function AppInner() {
 
   const accountsById = useMemo(() => new Map(workspace.accounts.map((a) => [a.id, a])), [workspace.accounts]);
   const notesById = useMemo(() => new Map(workspace.notes.map((n) => [n.id, n])), [workspace.notes]);
+  const groundsById = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of workspace.claims ?? []) if (c.status === "active") for (const id of c.evidence) counts.set(id, (counts.get(id) ?? 0) + 1);
+    for (const t of workspace.tasks) for (const id of t.evidence ?? []) counts.set(id, (counts.get(id) ?? 0) + 1);
+    return counts;
+  }, [workspace.claims, workspace.tasks]);
   const selectedAccount = accountsById.get(selectedAccountId) ?? workspace.accounts[0];
   const selectedMemory = useMemo(() => (selectedAccount ? accountMemory(workspace, selectedAccount.id) : null), [workspace, selectedAccount]);
   const [traceId, setTraceId] = useState<string | null>(null);
@@ -704,7 +713,7 @@ function AppInner() {
   async function importWorkspace(file: File, onboardingImport = false) {
     const { workspace: parsed, errors } = parseWorkspace(await file.text());
     if (!parsed) {
-      toast({ title: `That file isn't a valid Open CRM workspace. ${errors[0] ?? ""}`.trim(), tone: "destructive" });
+      toast({ title: `That file isn't a valid ${brand.name} workspace. ${errors[0] ?? ""}`.trim(), tone: "destructive" });
       return;
     }
     if (!folderBacked) {
@@ -810,7 +819,7 @@ function AppInner() {
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <Layers3 className="h-[18px] w-[18px]" />
             </span>
-            <div className="font-serif text-[15px] font-medium text-foreground">Open CRM</div>
+            <div className="font-serif text-[15px] font-medium text-foreground">{brand.name}</div>
           </div>
 
           <nav aria-label="Primary" className="space-y-0.5">
@@ -925,6 +934,9 @@ function AppInner() {
                 onTrace={setTraceId}
               />
             </div>
+            <div data-view="book" className={cn(view !== "book" && "hidden")}>
+              <BookView workspace={workspace} onSelectAccount={selectAccountAndOpen} />
+            </div>
             <div data-view="pipeline" className={cn(view !== "pipeline" && "hidden")}>
               <PipelineView deals={workspace.deals.filter(d => !accountsById.get(d.accountId)?.archivedAt)} accounts={workspace.accounts.filter(a => !a.archivedAt)} accountsById={accountsById} onAdvanceDeal={advanceDeal} onLoseDeal={loseDeal} onSelectAccount={selectAccountAndOpen} onAddDeal={addDeal} />
             </div>
@@ -971,13 +983,13 @@ function AppInner() {
               />
             </div>
             <div data-view="contacts" className={cn(view !== "contacts" && "hidden")}>
-              <ContactsView accounts={workspace.accounts} onSelectAccount={selectAccountAndOpen} />
+              <ContactsView accounts={workspace.accounts} onSelectAccount={selectAccountAndOpen} onTrace={setTraceId} />
             </div>
             <div data-view="tasks" className={cn(view !== "tasks" && "hidden")}>
               <TasksView tasks={workspace.tasks} accounts={workspace.accounts} accountsById={accountsById} notesById={notesById} onToggleTask={toggleTask} onAddTask={addTask} onUpdateTask={(taskId, patch) => Boolean(dispatch({ type: "task.update", taskId, patch }))} onSelectAccount={selectAccountAndOpen} onExportICS={exportTasksICS} onTrace={setTraceId} />
             </div>
             <div data-view="notes" className={cn(view !== "notes" && "hidden")}>
-              <NotesView notes={workspace.notes} accounts={workspace.accounts} accountsById={accountsById} onAddNote={addNote} />
+              <NotesView notes={workspace.notes} accounts={workspace.accounts} accountsById={accountsById} onAddNote={addNote} groundsById={groundsById} onTrace={setTraceId} />
             </div>
             <div data-view="review" className={cn(view !== "review" && "hidden")}>
               <ReviewView

@@ -12,10 +12,12 @@ src/core/     pure TypeScript shared by everything below
   brief.ts      the daily brief: what needs attention, and why
   claims.ts     claims as the source of truth; legacy needs/risks derived from them
   memory.ts     account memory: grounding, who decides, what to ask, trace, lint
+  patterns.ts   what several accounts are saying; the signals bundle for a product tool
   markdown.ts   account and index views with record ids
 src/          the visual CRM (Vite, React, TypeScript, Tailwind)
 cli/          Node only
   store.ts      workspace folder: atomic writes, lock, generated views
+  sources.ts    files kept by content hash under sources/, cited by notes
   actions.ts    what the command and MCP can do, as plain functions
   main.ts       the crm command
   mcp.ts        MCP server over stdio, no SDK dependency

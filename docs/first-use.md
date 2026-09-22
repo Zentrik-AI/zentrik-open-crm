@@ -18,6 +18,9 @@ checkout should let someone understand the product loop in one sitting.
    then approve or reject.
 8. See the approved task on the account, carrying the agent's name, its reason,
    and the notes behind it.
+9. Open the Book: every account by stage, each with the one thing worth
+   noticing, and what several accounts are saying. When that becomes product
+   work, hand the sources to Zentrik from there.
 
 The browser-only edition (`npm run dev`) covers steps 2 to 5 with no folder and
 offers a one-way Markdown snapshot for agents.

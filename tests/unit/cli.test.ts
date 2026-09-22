@@ -157,3 +157,28 @@ test("brief, claims, why and lint read the memory; claim writes go through revie
   assert.match(crm(dir, "claim", "resolve", "claim_missing", "--reason", "x").err, /No claim/);
   assert.equal(crm(dir, "check").status, 0);
 });
+
+test("patterns, signals export, and sources close the loop from inbox to product work", () => {
+  const dir = makeWorkspace();
+  const patterns = JSON.parse(crm(dir, "patterns", "--json").out);
+  assert.ok(patterns.length >= 3);
+  assert.match(crm(dir, "patterns").out, /accounts share/);
+
+  const exported = JSON.parse(crm(dir, "export", "--signals", "--pattern", patterns[0].id, "--share-safe", "--json").out);
+  assert.ok(exported.sources >= 1);
+  assert.ok(fs.existsSync(path.join(exported.dir, "bundle.json")));
+  const bundle = JSON.parse(fs.readFileSync(path.join(exported.dir, "bundle.json"), "utf8"));
+  assert.equal(bundle.schema, "open-crm-signals.v1");
+  assert.equal(bundle.shareSafe, true);
+  assert.ok(fs.readdirSync(exported.dir).some((f) => f.endsWith(".md")));
+  assert.equal(crm(dir, "export", "--signals", "--pattern", "nope").status, 2);
+
+  fs.writeFileSync(path.join(dir, "inbox", "call.txt"), "Eli: legal wants a diagram.\n");
+  const kept = JSON.parse(crm(dir, "source", "add", path.join(dir, "inbox", "call.txt"), "--kind", "transcript", "--external-id", "cal-9", "--json").out);
+  assert.equal(kept.existed, false);
+  assert.match(crm(dir, "sources").out, /cal-9/);
+  const note = JSON.parse(crm(dir, "note", "add", "--account", "northstar", "--source", "call", "--ref", `source:${kept.source.id}`, "--title", "Legal wants a diagram", "--body", "From the call.", "--json").out);
+  assert.equal(crm(dir, "approve", note.id, "--approved-by", "Jorge").status, 0);
+  assert.match(crm(dir, "why", note.recordId).out, new RegExp(kept.source.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(crm(dir, "why", "contact_eli").out, /Head of Revenue Operations/);
+});

@@ -56,8 +56,11 @@ Then ask for work in plain language:
    `./crm brief <account>` is the page to read before a conversation: what
    changed since the last real contact, what we know and how well, who decides,
    what to ask. `./crm show <account>` prints every record with its id.
-2. **The agent captures.** New information becomes a note with its source and a
-   reference you could follow back: `./crm note add --source call --ref "inbox/northstar-0917.txt" …`
+2. **The agent captures.** A file it brings in is kept first:
+   `./crm source add inbox/northstar-0917.txt --kind transcript --external-id …`.
+   Then the note cites it: `./crm note add --source call --ref "source:src_…" …`.
+   Your harness's own calendar, mail, and call integrations are the connectors;
+   `playbooks/pull-sources.md` says how to land what they fetch.
 3. **The agent records what it learned.** A note is what was said; a claim is
    what we now know. `./crm claim add --kind objection --text "…" --evidence note_k3x9a2bd`.
    One idea per claim: a need, a risk, a goal, an objection, a commitment
@@ -76,6 +79,10 @@ Then ask for work in plain language:
 7. **The memory gets audited.** `./crm lint` lists hunches, stale evidence,
    overdue commitments, and accounts with no one who signs off. Those are the
    questions for the next conversation, not facts to fill in.
+8. **Account work becomes product work.** `./crm patterns` shows what several
+   accounts are saying. The CRM stops there. `playbooks/product-work.md` hands
+   the sources behind a pattern to Zentrik, through its MCP when connected or
+   as an exported folder, and never sends the conclusions.
 
 ## Review Mode And Direct Mode
 

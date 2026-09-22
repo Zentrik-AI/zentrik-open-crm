@@ -34,14 +34,19 @@ page; when a change does not serve one of these flows, it is probably bloat.
    facts everywhere they appear.
 5. **Reviewing agent work.** Review: each proposal with its evidence, approved
    in order, nothing landing until a person decides.
-6. **Weekly.** Pipeline and `crm lint`: where the memory is thin, which
-   commitments slipped, which accounts have no one who signs off.
+6. **Weekly.** The Book and `crm lint`: every account by stage with the one
+   thing worth noticing; where the memory is thin, which commitments slipped,
+   which accounts have no one who signs off.
+7. **When it becomes product work.** The Book's patterns show what several
+   accounts are saying. The handoff to Zentrik carries the sources; the
+   decision is made there, not here.
 
 ## What each surface must make obvious first
 
 | Surface | First thing noticed |
 | --- | --- |
 | Home | The one overdue thing, and whether an agent is waiting on you |
+| Book | The lane with the most accounts needing something, and what several accounts are saying |
 | Account | What changed since you last spoke, and the question to lead with |
 | What we know | Which lines are grounded and which are hunches |
 | Who decides | Which lane is empty |
@@ -54,4 +59,8 @@ page; when a change does not serve one of these flows, it is probably bloat.
 - Dashboards that do not change what someone does today.
 - A global graph view. Local, typed traces answer real questions; a hairball
   does not.
+- Product roadmapping inside the CRM. Recurrence is surfaced and handed on;
+  the decision belongs in a product tool.
+- Bundled connectors with their own OAuth. The person's harness already
+  reaches their systems; the CRM keeps what it brings in.
 - Automatic sending, automatic stage changes, or inferred intent from silence.

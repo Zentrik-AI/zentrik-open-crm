@@ -5,6 +5,10 @@ import { OpError, newChange, pendingProposals, projectPending, resolveProposal, 
 import { validateWorkspace } from "../src/core/validate.ts";
 import { accountMemory, briefMarkdown, groundClaim, lintWorkspace, trace, type AccountMemory, type LintFinding, type Trace } from "../src/core/memory.ts";
 import { readWorkspace, staleViews, updateWorkspace, repairViews } from "./store.ts";
+import { describePattern, findPatterns, signalsBundle, signalsMarkdown, type Pattern } from "../src/core/patterns.ts";
+import { addSource, findSource, readSources, type SourceRecord } from "./sources.ts";
+import fs from "node:fs";
+import path from "node:path";
 
 /**
  * What the `crm` command and the MCP server can do, as plain functions over a
@@ -76,8 +80,49 @@ export function brief(dir: string, ref: string): { memory: AccountMemory; markdo
 export function why(dir: string, id: string): Trace {
   const { workspace } = readWorkspace(dir);
   const result = trace(workspace, id.trim());
-  if (!result) throw new OpError("not_found", `No task, claim, or note with id ${id}. Ids appear in backticks in every view.`);
-  return result;
+  if (!result) throw new OpError("not_found", `No task, claim, note, or contact with id ${id}. Ids appear in backticks in every view.`);
+  // A note that cites a durable source gets the file it came from.
+  const withFiles = (node: typeof result.focus) => {
+    if (node.kind !== "source") return node;
+    const source = findSource(dir, node.title);
+    return source ? { ...node, detail: `${node.detail} · ${source.path}${source.externalId ? ` · ${source.externalId}` : ""}`, tone: "grounded" as const } : node;
+  };
+  return { ...result, upstream: result.upstream.map(withFiles) };
+}
+
+/* ---- Across accounts: patterns, and the sources behind them ---- */
+
+export function patterns(dir: string): Array<Pattern & { summary: string }> {
+  const { workspace } = readWorkspace(dir);
+  return findPatterns(workspace).map((p) => ({ ...p, summary: describePattern(p) }));
+}
+
+/** Write the evidence behind a pattern or an account as a signals bundle plus
+ *  one Markdown file per source, for a product tool such as Zentrik to ingest. */
+export function exportSignals(dir: string, options: { pattern?: string; account?: string; shareSafe?: boolean; out?: string; product?: string }) {
+  const { workspace } = readWorkspace(dir);
+  let pattern: Pattern | undefined;
+  if (options.pattern) {
+    pattern = findPatterns(workspace).find((p) => p.id === options.pattern || p.id.endsWith(options.pattern!));
+    if (!pattern) throw new OpError("not_found", `No pattern with id ${options.pattern}. List them with: crm patterns`);
+  }
+  const accountId = options.account ? resolveAccount(workspace, options.account).id : undefined;
+  const bundle = signalsBundle(workspace, { pattern, accountId, shareSafe: options.shareSafe, product: options.product });
+  if (bundle.sources.length === 0) throw new OpError("not_found", "There are no source notes to export yet.");
+  const stamp = bundle.generatedAt.slice(0, 10);
+  const out = path.resolve(options.out ?? path.join(dir, "exports", `signals-${stamp}${pattern ? `-${pattern.id.slice(-6)}` : accountId ? `-${accountId.slice(-6)}` : ""}`));
+  fs.mkdirSync(out, { recursive: true });
+  fs.writeFileSync(path.join(out, "bundle.json"), `${JSON.stringify(bundle, null, 2)}\n`);
+  for (const file of signalsMarkdown(bundle)) fs.writeFileSync(path.join(out, file.path), file.content);
+  return { dir: out, sources: bundle.sources.length, accounts: [...new Set(bundle.sources.map((s) => s.account.name))], shareSafe: bundle.shareSafe, pattern: bundle.pattern };
+}
+
+export function sources(dir: string): SourceRecord[] {
+  return readSources(dir);
+}
+
+export function sourceAdd(dir: string, file: string, options: { kind?: string; externalId?: string; occurredAt?: string; capturedBy: string }) {
+  return addSource(dir, file, options);
 }
 
 export function lint(dir: string, account?: string): LintFinding[] {

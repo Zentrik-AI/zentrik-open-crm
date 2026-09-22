@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Bot,
   Building2,
   Columns3,
@@ -13,6 +14,7 @@ import {
 
 export type View =
   | "home"
+  | "book"
   | "pipeline"
   | "accounts"
   | "contacts"
@@ -27,6 +29,7 @@ export type NavEntry = { id: View; label: string; icon: LucideIcon };
 /** The CRM itself — the primary product. */
 export const primaryNav: NavEntry[] = [
   { id: "home", label: "Home", icon: Home },
+  { id: "book", label: "Book", icon: BookOpen },
   { id: "pipeline", label: "Pipeline", icon: Columns3 },
   { id: "accounts", label: "Accounts", icon: Building2 },
   { id: "contacts", label: "Contacts", icon: Contact },

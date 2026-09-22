@@ -14,11 +14,16 @@ export function NotesView({
   accounts,
   accountsById,
   onAddNote,
+  groundsById,
+  onTrace,
 }: {
   notes: Note[];
   accounts: Account[];
   accountsById: Map<string, Account>;
   onAddNote: (draft: NoteDraft) => boolean;
+  /** How many claims and tasks cite each note. */
+  groundsById: Map<string, number>;
+  onTrace: (id: string) => void;
 }) {
   const [draft, setDraft] = useState<NoteDraft>({
     accountId: accounts[0]?.id ?? "",
@@ -112,7 +117,7 @@ export function NotesView({
             <EmptyState title="Quiet on every channel." hint="The first note you capture lands right here." />
           ) : (
             sorted.map((note) => (
-              <NoteCard key={note.id} note={note} accountName={accountsById.get(note.accountId)?.name} />
+              <NoteCard key={note.id} note={note} accountName={accountsById.get(note.accountId)?.name} grounds={groundsById.get(note.id) ?? 0} onTrace={onTrace} />
             ))
           )}
         </CardContent>

@@ -6,6 +6,26 @@ This project follows a lightweight changelog until the first tagged release.
 
 ## Unreleased
 
+## 1.0.0
+
+- Add the Book: every account in its stage lane, each tile carrying the one
+  thing worth noticing, with filters for overdue commitments, unsourced claims,
+  missing deciders, stale evidence, and no verified contact.
+- Add patterns: what several accounts are saying, grouped on shared terms and
+  shown with the accounts, claims, and sources behind them. `crm patterns` and
+  `crm_patterns` for agents.
+- Add the product-work handoff: `crm export --signals` and `crm_signals_bundle`
+  write the sources behind a pattern or an account as `open-crm-signals.v1`
+  plus one Markdown file per source, share-safe on request, for Zentrik to
+  turn into product decisions. The CRM sends sources, never conclusions.
+- Add durable sources: `crm source add` keeps a file under `sources/` by
+  content hash with its external id and date; notes cite it as
+  `source:<id>` and the trace reaches the original.
+- Add the `pull-sources` and `product-work` playbooks; the inbox playbook keeps
+  files as sources first.
+- A contact can be the focus of a trace: what they said, what we know from it.
+- Put the product name in one place (`src/lib/brand.ts`); see `docs/naming.md`.
+
 - Add claims: what we know about an account as typed facts (needs, risks,
   goals, objections, commitments, facts), each citing the notes that say so.
   Legacy needs and risks migrate on first read and stay derived from claims.

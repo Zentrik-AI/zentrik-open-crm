@@ -64,6 +64,9 @@ Memory tools, computed from the records ([`src/core/memory.ts`](../src/core/memo
 | `crm claims [--account] [--all]` | `crm_list_claims` | Each claim with grounding, contact, age, and whether it is stale or overdue. |
 | `crm why <id>` | `crm_why` | A task, claim, or note: the sources upstream and what rests on it downstream. |
 | `crm lint [--account]` | `crm_lint` | Hunches, evidence older than 45 days, overdue commitments, accounts with no one who signs off, contacts never seen, notes without a reference. |
+| `crm patterns` | `crm_patterns` | What several accounts are saying, with the accounts, claims, shared terms, and sources behind each group. |
+| `crm export --signals` | `crm_signals_bundle` | The sources behind a pattern or account, ready for a product tool. |
+| `crm sources` | `crm_list_sources` | Files kept under `sources/`. |
 
 A change is an operation plus the id of the record it creates, a timestamp, and
 the actor. Applying a change is deterministic, which is what lets a proposal be
@@ -98,6 +101,34 @@ an account returns its unfinished work. Archive and restore require a reason.
 Add `--json` to any command for structured output. Errors exit with status 2
 (3 when the command needs a person's decision) and, with `--json`, print
 `{"error": {"code", "message"}}` on stderr.
+
+## Sources
+
+`crm source add <file>` copies a file into `sources/` named by its content
+hash and records it in `sources/index.json` (`open-crm-sources.v1`): id, kind
+(transcript, email, calendar, ticket, export, document), path, sha256, size,
+original name, optional external id and date, who captured it. The same
+content, or the same external id, returns the existing source. A note cites
+one as `sourceRef: "source:<id>"`, and `crm why` on that note reaches the file.
+
+## Patterns and the signals bundle
+
+`crm patterns` groups active claims of kind need, objection, goal, risk, or
+fact that share enough key terms across at least two accounts (three shared
+terms, or two with Jaccard ≥ 0.4). Grouping is lexical and shows its shared
+terms; an agent reading the claims may see groups it missed.
+
+`crm export --signals [--pattern <id> | --account <account>] [--share-safe]`
+writes `exports/signals-<date>/`: `bundle.json` (`open-crm-signals.v1`) and
+one Markdown file per source. Each source carries the note's text, title,
+signal type (mapped from the note source), date, `providerType: "open-crm"`,
+`sourceLinks` when the reference is a URL (otherwise the reference goes into
+`additionalContext` with the account name), the account, the participant, and
+the claims it supported. Field names follow the public
+[Zentrik Signals API](https://zentrik.ai/docs/api/signals), so an entry can be
+passed to it as is. Share-safe replaces people with
+their roles and drops emails and domains. The bundle carries sources, not the
+pattern's conclusions; the receiving product tool draws its own.
 
 ## Generated Views
 

@@ -28,6 +28,22 @@ The repository owns:
 Users can start with demo data, create an empty workspace, or connect a folder.
 The product does not require an account with a hosted service for first value.
 
+## Your evidence, and product decisions
+
+Open CRM keeps account memory. It notices when several accounts say the same
+thing (the Book's patterns) and stops there: deciding what to build from that
+evidence is product work, and Zentrik is built for it.
+
+The handoff carries sources, never conclusions. `crm export --signals` writes
+the notes behind a pattern or an account as `open-crm-signals.v1` plus one
+Markdown file per source, share-safe on request; a person imports them in
+Zentrik. An agent with the Zentrik MCP connected can ingest the same bundle
+directly, entry by entry, with each note's stable identity so retries do not
+duplicate. Nothing leaves the workspace unless the person asks, and the CRM
+keeps working exactly the same if Zentrik is never used.
+
+This is separate from the loop below, which is feedback about Open CRM itself.
+
 ## Optional Zentrik connection
 
 Zentrik can receive a reviewed, public-safe feedback bundle through a separate

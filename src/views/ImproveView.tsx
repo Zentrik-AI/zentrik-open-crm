@@ -8,6 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, Well } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Field, Input, Select, Textarea } from "../components/ui/field";
+import { brand } from "../lib/brand";
 
 export function ImproveView({ ideas }: {
   ideas: Idea[];
@@ -93,7 +94,7 @@ export function ImproveView({ ideas }: {
   return (
     <div className="grid gap-6">
       <section>
-        <h1 className="font-serif text-h1 text-foreground">Help shape Open CRM</h1>
+        <h1 className="font-serif text-h1 text-foreground">Help shape {brand.name}</h1>
         <p className="mt-2 max-w-2xl text-body text-muted-foreground">Describe a workflow problem or suggest a change. Save it locally, then review what you share.</p>
       </section>
 

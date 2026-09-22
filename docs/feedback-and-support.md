@@ -1,81 +1,79 @@
-# Feedback And Support
+# Feedback and support
 
-Open CRM should collect user signal without forcing every user into the same
-channel. Use the channel that matches the privacy and workflow.
+## What works today
 
-## Channels
+Improve prepares a local draft. **Save local draft** stores only its type, title,
+and description in browser storage, separately from CRM records. It does not
+create a Zentrik signal, support ticket, workspace membership, or roadmap item.
 
-| Channel | Use For | Visibility | Zentrik Signal |
-| --- | --- | --- | --- |
-| Tell Open CRM | Contextual product feedback while using the CRM | Private by default | In-app feedback bundle or hosted signal |
-| Open CRM Buildroom | Public requests, votes, release status, outcome checks | Public after moderation | Portal submission, vote, and idea link |
-| GitHub Issues | Reproducible bugs, setup failures, source-grounding defects, contributor work | Public | Issue backlink plus signal envelope |
-| Support Request | Hosted-account problems, private setup help, sensitive troubleshooting | Private | Support signal and triage task |
-| Security Reporting | Vulnerabilities or sensitive exposure | Private | Security process, not public product feedback |
+| Route | Current behavior | Visibility |
+| --- | --- | --- |
+| Private — keep local | Save one draft in this browser | Local browser storage; not encrypted |
+| Public — prepare for GitHub | Review, copy issue text, download JSON, open GitHub manually | File and clipboard stay local until the user shares them |
+| Buildroom | Unavailable at verification | No working portal destination offered in Improve |
+| Private support | No connected support service in this app | Use a separately verified private channel |
 
-GitHub is required for open-source trust and contributor workflows, but it should
-not become the only product system. Buildroom is the public product loop.
-Zentrik is the product memory that links all channels into evidence, ideas,
-agent work, releases, and outcome checks.
+Drafts are shared across workspaces on the same browser origin. Saving replaces
+the previous feedback draft. Save before leaving the view. The app reports
+storage and clipboard failures instead of claiming success.
+**Delete local draft** asks for confirmation and removes only this feedback
+draft, not CRM records. Public export validates the same text limits as intake.
 
-## Joining The Workspace
+## Public handoff and bundle
 
-Users should be able to join the Open CRM Buildroom in three ways:
+Select the public route, review the text, and confirm it contains no private
+information. Editing any feedback field resets confirmation. Copy and download
+remain disabled until the title and description are complete and reviewed.
+Changing the sharing choice or reloading the page also clears public review consent.
 
-1. **Cloud signup**: after account creation, offer an opt-in magic-link invite
-   to the Open CRM Buildroom with an `Open CRM member` role.
-2. **Local or self-hosted app**: show the Buildroom link from Tell Open CRM and
-   launch surfaces. Local users can also download a feedback bundle.
-3. **GitHub contributors**: link the Buildroom from issue templates and launch
-   docs so contributors can see public product context before filing issues.
+The download `open-crm-feedback.v1.json` contains exactly:
 
-Workspace access must never expose private CRM account records, raw support
-messages, customer names, transcripts, emails, credentials, private workspace
-IDs, or internal prioritization notes.
+- `schema`: `open-crm-feedback.v1`
+- `product`: `Zentrik Open CRM`
+- `visibility`: `public`
+- `feedback`: user-authored `kind`, `title`, and `body`
 
-## Feedback Bundle
+See [the exact format and limits](./self-evolving-loop.md#bundle-contract).
+No account reference, workspace ID, signal envelope, user identity, local idea,
+CRM record, or diagnostic is added. The serializer rejects invalid feedback and
+discards extra properties. It cannot remove private information that a user
+types into the title or description; public-safe means reviewed by the user,
+not automatically sanitized.
 
-Local and self-hosted users need a portable artifact because their app may not
-be connected to Zentrik. The app exports an `open-crm-feedback.v1` bundle after a
-Tell Open CRM submission.
+The GitHub link contains no feedback text. Copy the draft, open
+[GitHub Issues](https://github.com/Zentrik-AI/zentrik-open-crm/issues/new/choose),
+and review it again before submitting. Downloading or copying does not post
+anything. The bundle is not a delivery receipt or a verified hosted API format.
 
-The bundle includes:
+## Buildroom verification and next connection step
 
-- stable `externalId`
-- source, source facet, source label, and privacy mode
-- product: `Zentrik Open CRM`
-- workflow area and feedback type
-- public/private routing instruction
-- linked local account reference
-- a Zentrik signal envelope
-- optional GitHub issue draft
+The expected URL in [the portal setup guide](../portal/README.md) is
+[Open CRM Buildroom](https://open-crm.ideas.zentrik.ai).
+On 21 September 2026 it returned HTTP 200 for its HTML shell, but a fresh,
+unauthenticated browser rendered **Portal unavailable / Portal not found**.
+A successful HTTP response alone does not prove that this portal exists.
 
-Agents can import the bundle into the Zentrik Open CRM workspace, create or link
-ideas, and preserve provenance without scraping free-form text.
+The [instance manifest](../portal/open-crm-buildroom.instance.json) specifies
+alias `open-crm`, magic-link access, moderation, and an accepted payload label.
+These are desired setup values. The setup guide explicitly states that this is
+a manifest rather than a migration and that the live schema belongs to the
+Zentrik application and portal services. The current service does not provide
+the requested public login and moderation behavior. Do not enable the manifest
+unchanged or promise hidden-until-reviewed submissions.
 
-## GitHub Usage
+The [maintainer intake guide](./self-evolving-loop.md) provides a separate,
+reviewed path through Zentrik's external API. It runs outside the browser and
+requires a maintainer's configured destination and credential. It is not portal
+provisioning, anonymous submission, or automatic delivery. The service owner
+must still verify public access and moderation before promoting Buildroom.
 
-Use GitHub for public, reproducible work:
+Cloud signup, automatic membership, private support intake, votes, signal
+ingestion, and release/outcome synchronization are not implemented by this form.
 
-- bugs and regressions
-- setup or self-hosting failures
-- source-grounding and privacy defects
-- implementation-ready feature requests
-- contributor tasks
+## Sensitive reports
 
-Do not use GitHub for private account data, private CRM exports, hosted account
-support, vulnerabilities, billing, credentials, or confidential customer
-context.
-
-## Support Usage
-
-Use support requests for private operational help:
-
-- cloud account access
-- invite or Buildroom membership problems
-- setup issues that include private environment details
-- data/privacy questions
-- cases where the user cannot safely publish reproduction details
-
-Support records can still become product signal after private details are
-summarized and linked safely.
+Do not put vulnerabilities, credentials, customer data, private CRM exports,
+billing details, or private environment information into public issues.
+For security reports, follow the repository's security policy. For other
+sensitive support, use a private channel that you have independently verified.
+Keeping a local draft does not notify support.

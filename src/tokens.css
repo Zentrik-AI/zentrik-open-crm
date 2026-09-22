@@ -1,0 +1,150 @@
+  :root {
+    /* substrate, ink, chrome */
+    --background: 42 30% 97%;
+    --foreground: 30 16% 18%;
+    --faint-foreground: 32 9% 42%;
+    --surface: 42 40% 99%;
+    --surface-raised: 0 0% 100%;
+    --surface-sunken: 42 26% 92%;
+    --card: 42 40% 99%;
+    --card-foreground: 30 16% 18%;
+    --border: 36 16% 82%;
+    --border-strong: 34 12% 56%;
+    --input: 42 26% 92%;
+    --ring: 176 60% 32%;
+    --muted: 40 22% 90%;
+    --muted-foreground: 32 9% 38%;
+
+    /* primary / secondary / accent (ink-teal = the one signature hue) */
+    --primary: 176 58% 28%;
+    --primary-foreground: 42 40% 99%;
+    --secondary: 40 22% 90%;
+    --secondary-foreground: 30 16% 22%;
+    --accent: 176 58% 28%;
+    --accent-bg: 176 38% 90%;
+    --accent-fg: 176 64% 20%;
+
+    /* semantic ramps — color encodes KIND, never decoration */
+    --signal: 202 80% 36%;
+    --signal-bg: 202 64% 91%;
+    --signal-fg: 202 84% 24%;
+    --account: 30 16% 30%;
+    --account-bg: 36 22% 89%;
+    --account-fg: 30 18% 22%;
+    --agent: 262 44% 46%;
+    --agent-bg: 262 44% 93%;
+    --agent-fg: 262 52% 34%;
+    --idea: 24 68% 44%;
+    --idea-bg: 28 62% 91%;
+    --idea-fg: 24 72% 30%;
+    --success: 158 50% 32%;
+    --success-bg: 158 42% 89%;
+    --success-fg: 158 58% 22%;
+    --success-foreground: 42 40% 99%;
+    --warning: 36 78% 40%;
+    --warning-bg: 38 76% 88%;
+    --warning-fg: 30 80% 28%;
+    --warning-foreground: 42 40% 99%;
+    --destructive: 6 62% 44%;
+    --destructive-bg: 6 60% 92%;
+    --destructive-fg: 6 66% 34%;
+    --destructive-foreground: 42 40% 99%;
+
+    /* radius */
+    --r-sm: 6px;
+    --r-md: 8px;
+    --r-lg: 12px;
+    --r-xl: 16px;
+
+    /* elevation — warm-tinted, low-spread */
+    --e-1: 0 1px 2px hsl(30 30% 18% / 0.05), 0 1px 1px hsl(30 30% 18% / 0.04);
+    --e-2: 0 4px 12px hsl(30 30% 16% / 0.08), 0 1px 2px hsl(30 30% 16% / 0.05);
+    --e-3: 0 12px 32px hsl(30 30% 14% / 0.14);
+
+    /* fonts */
+    --font-serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+    --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    /* Shared product + launch hierarchy. Body text never borrows display metrics. */
+    --text-display: 2rem;
+    --text-h1: 1.625rem;
+    --text-h2: 1.125rem;
+    --text-body: 0.875rem;
+    --text-body-sm: 0.8125rem;
+    --text-label: 0.75rem;
+    --sidebar-width: 224px;
+    --content-gutter: 24px;
+    --space-section: 24px;
+    --space-panel: 20px;
+    --control-height: 36px;
+    --film-title: 5rem;
+    --film-heading: 2.875rem;
+    --film-body: 1.375rem;
+    --film-gutter: 64px;
+
+    /* motion */
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+    --d-fast: 120ms;
+    --d-base: 200ms;
+    --d-slow: 320ms;
+    --d-trace: 500ms;
+
+    --focus-ring: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring) / 0.55);
+  }
+
+  .dark {
+    --background: 30 12% 9%;
+    --foreground: 42 28% 91%;
+    --faint-foreground: 36 10% 56%;
+    --surface: 32 11% 13%;
+    --surface-raised: 34 10% 17%;
+    --surface-sunken: 28 12% 7%;
+    --card: 32 11% 13%;
+    --card-foreground: 42 28% 91%;
+    --border: 34 8% 32%;
+    --border-strong: 36 8% 42%;
+    --input: 28 12% 7%;
+    --ring: 176 52% 56%;
+    --muted: 34 9% 20%;
+    --muted-foreground: 38 12% 66%;
+
+    --primary: 176 48% 54%;
+    --primary-foreground: 30 14% 9%;
+    --secondary: 34 9% 20%;
+    --secondary-foreground: 42 24% 86%;
+    --accent: 176 48% 54%;
+    --accent-bg: 176 38% 18%;
+    --accent-fg: 176 46% 80%;
+
+    --signal: 202 76% 62%;
+    --signal-bg: 202 56% 17%;
+    --signal-fg: 202 70% 82%;
+    --account: 38 16% 76%;
+    --account-bg: 32 10% 21%;
+    --account-fg: 38 20% 84%;
+    --agent: 258 58% 72%;
+    --agent-bg: 262 36% 22%;
+    --agent-fg: 258 52% 84%;
+    --idea: 26 76% 64%;
+    --idea-bg: 26 50% 20%;
+    --idea-fg: 28 70% 80%;
+    --success: 158 50% 54%;
+    --success-bg: 158 42% 17%;
+    --success-fg: 158 46% 78%;
+    --success-foreground: 30 14% 9%;
+    --warning: 38 84% 60%;
+    --warning-bg: 36 58% 19%;
+    --warning-fg: 38 82% 78%;
+    --warning-foreground: 30 14% 9%;
+    --destructive: 6 70% 63%;
+    --destructive-bg: 6 50% 21%;
+    --destructive-fg: 6 68% 82%;
+    --destructive-foreground: 30 14% 9%;
+
+    --e-1: 0 1px 2px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(40 20% 60% / 0.05);
+    --e-2: 0 4px 14px hsl(0 0% 0% / 0.55), inset 0 1px 0 hsl(40 20% 60% / 0.05);
+    --e-3: 0 14px 36px hsl(0 0% 0% / 0.6), inset 0 1px 0 hsl(40 20% 60% / 0.06);
+  }

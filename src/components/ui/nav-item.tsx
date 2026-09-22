@@ -23,7 +23,7 @@ export function NavItem({
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group relative flex h-[34px] w-full items-center gap-2.5 rounded-md px-2.5 text-[13px] font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:focus-ring",
+        "group relative flex h-10 w-full items-center gap-2.5 rounded-md px-2.5 text-body-sm font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:focus-ring",
         active
           ? "bg-accent-bg text-foreground"
           : "text-muted-foreground hover:bg-secondary hover:text-foreground",

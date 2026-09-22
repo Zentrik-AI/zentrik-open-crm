@@ -33,10 +33,10 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: "h-7 px-3 text-[12px]",
-  md: "h-8 px-3.5 text-[13px]",
-  lg: "h-9 px-4 text-[13px]",
-  icon: "h-8 w-8 p-0",
+  sm: "h-8 px-3 text-body-sm",
+  md: "h-9 px-3.5 text-body-sm",
+  lg: "h-10 px-4 text-body",
+  icon: "h-9 w-9 p-0",
 };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(

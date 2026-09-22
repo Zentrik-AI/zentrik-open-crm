@@ -45,7 +45,11 @@ Account-list structure comparison:
 - Metric cards (existing): health ring, fit bar, value and priority competed with
   the name. Reject repeated metrics; retain detail-view metrics.
 - Dense table: good cross-account comparison, poor fit beside a selected account
-  at laptop widths. Keep the existing Pipeline surface for comparisons.
+  at laptop widths. Kept, but as its own full-width mode on Accounts rather than
+  in the sidebar: the list recognizes an account, the table compares them, and
+  opening a row returns to the list with that account selected. Unknown values
+  sort last in both directions so a reversed sort cannot promote a record
+  nobody has confirmed.
 - Relationship list: full wrapping names, segment, stage/owner and value. Selected
   for recognition and enough room for the detail panel.
 

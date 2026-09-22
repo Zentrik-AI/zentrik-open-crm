@@ -520,3 +520,31 @@ test("the Book shows every account by stage, filters by what is thin, and hands 
   await book.getByRole("button", { name: /Northstar Robotics/ }).first().click();
   await expect(page.locator('[data-view="accounts"]').getByRole("heading", { name: "Northstar Robotics" })).toBeVisible();
 });
+
+test("the account table compares every account and sorts by the column you pick", async ({ page }) => {
+  test.skip(test.info().project.name !== "chromium", "The table is a desktop comparison surface.");
+  await useDemo(page);
+  await nav(page, "Accounts");
+  const view = page.locator('[data-view="accounts"]');
+  await view.getByRole("button", { name: "Table", exact: true }).click();
+
+  const table = view.getByRole("table");
+  await expect(table).toBeVisible();
+  const names = () => table.locator("tbody tr th").allInnerTexts();
+  await expect(table.locator("tbody tr")).toHaveCount(5);
+
+  // Sorting by value ranks the accounts, and the header says so for a screen reader.
+  const value = table.getByRole("button", { name: "Value" });
+  await value.click();
+  const byValueDesc = await names();
+  await expect(table.locator('th[aria-sort="descending"]')).toContainText("Value");
+  await value.click();
+  await expect(table.locator('th[aria-sort="ascending"]')).toContainText("Value");
+  expect(await names()).toEqual([...byValueDesc].reverse());
+
+  // Opening a row leaves the comparison and lands on that account.
+  await table.getByRole("button", { name: "Meridian Health Co-op" }).click();
+  await expect(view.getByRole("table")).toHaveCount(0);
+  await expect(view.getByRole("heading", { name: "Meridian Health Co-op" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

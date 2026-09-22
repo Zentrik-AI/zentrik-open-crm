@@ -1,5 +1,5 @@
 import type { Account, Claim, ClaimKind, Contact, Deal, Note, Task, Workspace } from "../types.ts";
-import { DAY_MS, STALE_EVIDENCE_DAYS, claimKindLabel, claimKinds, isOpenDeal, noteSourceLabel } from "./model.ts";
+import { DAY_MS, STALE_EVIDENCE_DAYS, accountStages, claimKindLabel, claimKinds, isOpenDeal, noteSourceLabel } from "./model.ts";
 
 /**
  * Account memory: what we know, how we know it, who decides, and what to ask
@@ -375,4 +375,77 @@ export function lintWorkspace(workspace: Workspace, now: Date = new Date(), acco
   }
   const weight = { warn: 0, info: 1 };
   return findings.sort((a, b) => weight[a.severity] - weight[b.severity] || (a.accountName ?? "").localeCompare(b.accountName ?? ""));
+}
+
+/* ---- The table: every account in one grid, comparable on one column ------ */
+
+export interface AccountRow {
+  account: Account;
+  /** Money in play: recorded value plus everything still open. */
+  value: number;
+  openPipeline: number;
+  /** Last verified interaction, or null when nobody has confirmed one. */
+  lastTouch: string | null;
+  claims: number;
+  grounded: number;
+  /** Share of active claims that cite a note, or null when there are none. */
+  groundedRatio: number | null;
+  openTasks: number;
+  /** Soonest open due date across tasks and our commitments. */
+  nextDue: string | null;
+  overdue: number;
+}
+
+export type AccountSortKey = "name" | "stage" | "owner" | "value" | "lastTouch" | "grounded" | "nextDue";
+
+export function accountRows(workspace: Workspace, now: Date = new Date()): AccountRow[] {
+  const at = now.getTime();
+  return workspace.accounts.map((account) => {
+    const claims = (workspace.claims ?? []).filter((c) => c.accountId === account.id && c.status === "active");
+    const grounded = claims.filter((c) => c.evidence.length > 0).length;
+    const openTasks = workspace.tasks.filter((t) => t.accountId === account.id && t.status === "open");
+    const ours = claims.filter((c) => c.kind === "commitment" && c.owner === "us" && c.due);
+    const due = [...openTasks.map((t) => t.due), ...ours.map((c) => c.due!)].filter(Boolean).sort();
+    return {
+      account,
+      value: account.arr + workspace.deals.filter((d) => d.accountId === account.id && isOpenDeal(d.stage)).reduce((s, d) => s + d.value, 0),
+      openPipeline: workspace.deals.filter((d) => d.accountId === account.id && isOpenDeal(d.stage)).reduce((s, d) => s + d.value, 0),
+      lastTouch: account.lastTouch ?? null,
+      claims: claims.length,
+      grounded,
+      groundedRatio: claims.length ? grounded / claims.length : null,
+      openTasks: openTasks.length,
+      nextDue: due[0] ?? null,
+      overdue: due.filter((d) => Date.parse(d) < at).length,
+    };
+  });
+}
+
+/**
+ * Sort the table. Unknowns never climb: an account with no verified contact or
+ * no claims stays at the bottom in both directions, because reversing the sort
+ * should not promote a record we know nothing about.
+ */
+export function sortAccountRows(rows: AccountRow[], key: AccountSortKey, direction: "asc" | "desc"): AccountRow[] {
+  const sign = direction === "asc" ? 1 : -1;
+  const stageRank = (row: AccountRow) => accountStages.indexOf(row.account.stage);
+  const unknown = (row: AccountRow) =>
+    (key === "lastTouch" && row.lastTouch === null) ||
+    (key === "grounded" && row.groundedRatio === null) ||
+    (key === "nextDue" && row.nextDue === null);
+  const compare = (a: AccountRow, b: AccountRow) => {
+    switch (key) {
+      case "name": return a.account.name.localeCompare(b.account.name);
+      case "owner": return a.account.owner.localeCompare(b.account.owner);
+      case "stage": return stageRank(a) - stageRank(b);
+      case "value": return a.value - b.value;
+      case "lastTouch": return (a.lastTouch ?? "").localeCompare(b.lastTouch ?? "");
+      case "grounded": return (a.groundedRatio ?? 0) - (b.groundedRatio ?? 0);
+      case "nextDue": return (a.nextDue ?? "").localeCompare(b.nextDue ?? "");
+    }
+  };
+  return [...rows].sort((a, b) => {
+    if (unknown(a) !== unknown(b)) return unknown(a) ? 1 : -1;
+    return compare(a, b) * sign || a.account.name.localeCompare(b.account.name);
+  });
 }

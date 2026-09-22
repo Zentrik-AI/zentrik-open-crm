@@ -2,6 +2,14 @@
 
 Notable user-facing changes, newest first.
 
+## 1.1.0
+
+- Add the account table: every account on one grid, sorted by value, last
+  verified contact, how much of what you know is grounded, or what is due next.
+  Unknown values stay at the bottom in both directions, because reversing a
+  sort should not promote a record nobody has confirmed. Open a row to land on
+  that account; the list view is unchanged.
+
 ## 1.0.0
 
 - Add the Book: every account in its stage lane, each tile carrying the one

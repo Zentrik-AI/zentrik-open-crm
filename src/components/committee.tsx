@@ -7,7 +7,7 @@ import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Field, Input, Select } from "./ui/field";
 import { Monogram } from "./ui/monogram";
-import { Private, useBuildroom } from "./ui/privacy";
+import { Private, useShareSafe } from "./ui/privacy";
 
 /**
  * Who decides. Four lanes computed from the contacts: who signs off, who
@@ -25,7 +25,7 @@ export function CommitteeMap({
   setDraftContact: React.Dispatch<React.SetStateAction<ContactDraft>>;
   onAddContact: (e: FormEvent<HTMLFormElement>) => void;
 }) {
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
   const set = (patch: Partial<ContactDraft>) => setDraftContact((c) => ({ ...c, ...patch }));
   const people = lanes.reduce((n, lane) => n + lane.members.length, 0);
   return (
@@ -52,7 +52,7 @@ export function CommitteeMap({
                 <ul className="mt-2 space-y-2">
                   {lane.members.map((m) => (
                     <li key={m.contact.id} className="flex min-w-0 items-center gap-2.5">
-                      <Monogram name={m.contact.name} tone={meta.tone} size="sm" redacted={buildroom} />
+                      <Monogram name={m.contact.name} tone={meta.tone} size="sm" redacted={shareSafe} />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-body-sm font-medium text-foreground">
                           <Private redactedLabel="name hidden">{m.contact.name}</Private>
@@ -74,7 +74,7 @@ export function CommitteeMap({
           );
         })}
       </div>
-      {!buildroom && (
+      {!shareSafe && (
         <form className="mt-3 space-y-2" onSubmit={onAddContact}>
           <div className="grid gap-2 sm:grid-cols-2">
             <Field label="Name">

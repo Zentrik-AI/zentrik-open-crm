@@ -25,12 +25,10 @@ workspace operations.
 - Extend record maintenance to contact and source-note corrections.
 - Add more pull-sources playbooks for specific harness integrations, each
   landing files as sources with their external ids.
-- Add hosted direct submission for Tell Open CRM feedback bundles.
-- Add public-safe Buildroom export so accepted ideas can be published cleanly.
+- Add CSV export alongside the JSON backup.
 
 ## Later
 
-- Add hosted Open CRM Cloud.
 - Add workspace teams, roles, and approval flows.
 - Add richer account intelligence and market research views.
 - Add extension points for custom objects, scoring, and workflows.
@@ -41,7 +39,6 @@ workspace operations.
 
 - Source-grounded account work should be the main differentiator.
 - The first value path should work before private integrations.
-- Public product evolution should be visible through Open CRM Buildroom.
 - Agent work should feel inspectable and useful, not autonomous in a way users
   cannot trust.
 - Self-hosting and local control should remain first-class.

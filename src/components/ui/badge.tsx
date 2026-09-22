@@ -13,7 +13,7 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   live?: boolean;
   /** A leading lucide glyph (e.g. signal source). */
   icon?: LucideIcon;
-  /** Ghost variant: transparent with a strong border (e.g. "Buildroom-safe"). */
+  /** Ghost variant: transparent with a strong border (e.g. "Share-safe"). */
   ghost?: boolean;
 }
 

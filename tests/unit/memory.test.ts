@@ -77,7 +77,7 @@ test("agent claims wait for review like any other change, and can be cited by a 
   const first = submitChange(demo(), claim);
   assert.equal(first.outcome, "proposed");
   assert.equal(first.workspace.claims!.some((c) => c.id === claim.recordId), false);
-  const approved = resolveProposal(first.workspace, pendingProposals(first.workspace)[0].id, "approve", "Jorge").workspace;
+  const approved = resolveProposal(first.workspace, pendingProposals(first.workspace)[0].id, "approve", "Rowan").workspace;
   assert.deepEqual(approved.claims!.find((c) => c.id === claim.recordId)!.origin, agent);
 });
 

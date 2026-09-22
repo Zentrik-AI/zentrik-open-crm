@@ -24,7 +24,7 @@ export function CommandPalette({
   deals,
   notes,
   tasks,
-  buildroom,
+  shareSafe,
   onNavigate,
   onSelectAccount,
   onTogglePrivacy,
@@ -35,7 +35,7 @@ export function CommandPalette({
   deals: Deal[];
   notes: Note[];
   tasks: Task[];
-  buildroom: boolean;
+  shareSafe: boolean;
   onNavigate: (view: View) => void;
   onSelectAccount: (id: string) => void;
   onTogglePrivacy: () => void;
@@ -73,7 +73,7 @@ export function CommandPalette({
       {
         key: "toggle-privacy",
         group: "Go to",
-        label: buildroom ? "Switch to Private view" : "Switch to Share-safe view",
+        label: shareSafe ? "Switch to Private view" : "Switch to Share-safe view",
         icon: Lock,
         run: onTogglePrivacy,
       },
@@ -107,7 +107,7 @@ export function CommandPalette({
       }));
 
     // Note titles can carry sensitive free text — omit them from search in share-safe mode.
-    const nt: Item[] = buildroom
+    const nt: Item[] = shareSafe
       ? []
       : notes.slice(0, 12).map((nNote) => ({
           key: `note-${nNote.id}`,
@@ -120,7 +120,7 @@ export function CommandPalette({
 
     const all = [...actions, ...acc, ...dl, ...tk, ...nt];
     return n ? all.filter((it) => match(it.label) || (it.sub ? match(it.sub) : false)) : all;
-  }, [q, accounts, deals, notes, tasks, buildroom, accountName, onNavigate, onSelectAccount, onTogglePrivacy]);
+  }, [q, accounts, deals, notes, tasks, shareSafe, accountName, onNavigate, onSelectAccount, onTogglePrivacy]);
 
   useEffect(() => {
     setActive((a) => Math.min(a, Math.max(0, items.length - 1)));

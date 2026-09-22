@@ -17,7 +17,7 @@ contributions.
 - product workflow improvements that make daily account work clearer
 - better first-use, self-hosting, and local setup documentation
 - source-grounding fixes where a recommendation lacks evidence
-- privacy improvements, especially around public Buildroom mode
+- privacy improvements, especially in the share-safe view and in exports
 - integrations that have explicit data boundaries and clear setup docs
 - tests that protect core CRM flows on desktop and mobile
 
@@ -39,7 +39,7 @@ Every pull request should state:
 
 - what changed
 - which user workflow it improves
-- whether it touches data handling, privacy, or public Buildroom behavior
+- whether it touches data handling, privacy, or what leaves the workspace
 - how it was validated
 
 ## Branch And Release Flow
@@ -49,8 +49,8 @@ Open CRM uses `main` as its protected production branch:
 - Start feature branches from `origin/main`.
 - Open pull requests against `main`.
 - Run the full checks in the pull request before merge.
-- Keep feature work in its own branch or worktree; do not push directly to
-  `main`.
+- Keep feature work in its own branch; do not push directly to `main`.
+- See [Releasing](./docs/releasing.md) for the checks a change has to pass.
 
 ## Labels
 
@@ -62,13 +62,13 @@ Labels are routing and triage metadata, not decoration — every label should ro
 | `enhancement` | New capability or materially expanded behavior | Release-notes "Features" |
 | `experience` | UX/interaction polish with no new feature headline | Release-notes "Experience / polish" |
 | `performance` | Latency, payload, or query-cost work | Requires before/after benchmark evidence in the PR |
-| `security` | Auth, secrets, customer data, privacy/Buildroom, or infra | Flags a security review; add a one-line security/privacy note in the body |
+| `security` | Auth, secrets, customer data, privacy, or infrastructure | Flags a security review; add a one-line security/privacy note in the body |
 | `integrations` | Provider connections, imports/exports, OAuth flows | Integration review: data boundaries and setup docs |
 | `dependencies` | Manifest, lockfile, or version updates | Dependency-update track (Dependabot) |
 | `documentation` | Setup, self-hosting, or explanatory content | Lighter validation bar |
 | `release-notes` | Changelog or release-communication content | Pulled into the release rollup |
 
-As a public repository, `good first issue`, `help wanted`, and `question` stay for community triage. There is no `migration` label here — this repo carries no production schema.
+`good first issue`, `help wanted`, and `question` stay for community triage.
 
 ## Contribution License
 

@@ -13,7 +13,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/empty-state";
 import { Meter } from "../components/ui/meter";
-import { Private, RedactedChip, useBuildroom } from "../components/ui/privacy";
+import { Private, RedactedChip, useShareSafe } from "../components/ui/privacy";
 
 /**
  * The book of accounts. Every account in its stage lane, each tile carrying
@@ -35,7 +35,7 @@ function AccountTile({ account, workspace, findings, onOpen }: { account: Accoun
   const grounded = claims.filter((c) => c.evidence.length > 0).length;
   const openPipeline = workspace.deals.filter((d) => d.accountId === account.id && d.stage !== "won" && d.stage !== "lost").reduce((s, d) => s + d.value, 0);
   const top = findings.find((f) => f.severity === "warn") ?? findings[0];
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
   return (
     <button
       onClick={onOpen}
@@ -63,19 +63,19 @@ function AccountTile({ account, workspace, findings, onOpen }: { account: Accoun
         </div>
       )}
       <p className={cn("mt-2 text-[12px] leading-5", top ? (top.severity === "warn" ? "text-foreground" : "text-muted-foreground") : "text-faint-foreground")}>
-        {top ? (buildroom && /"/.test(top.message) ? <RedactedChip label="detail hidden" /> : top.message) : "Memory is sound."}
+        {top ? (shareSafe && /"/.test(top.message) ? <RedactedChip label="detail hidden" /> : top.message) : "Memory is sound."}
       </p>
     </button>
   );
 }
 
 function PatternCard({ pattern, workspace, onOpenAccount }: { pattern: Pattern; workspace: Workspace; onOpenAccount: (id: string) => void }) {
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
   const kind = pattern.kinds[0].kind;
   const meta = claimKindMeta[kind];
-  const [shareSafe, setShareSafe] = useState(true);
+  const [rolesOnly, setRolesOnly] = useState(true);
   function download() {
-    const bundle = signalsBundle(workspace, { pattern, shareSafe, product: brand.name });
+    const bundle = signalsBundle(workspace, { pattern, shareSafe: rolesOnly, product: brand.name });
     const url = URL.createObjectURL(new Blob([JSON.stringify(bundle, null, 2) + "\n"], { type: "application/json" }));
     const link = document.createElement("a");
     link.href = url;
@@ -93,7 +93,7 @@ function PatternCard({ pattern, workspace, onOpenAccount }: { pattern: Pattern; 
         </Badge>
         <span className="text-[12px] text-faint-foreground">{pattern.accounts.length} accounts · {pattern.notes.length} {pattern.notes.length === 1 ? "source" : "sources"}{pattern.hunches ? ` · ${pattern.hunches} unsourced` : ""}</span>
       </div>
-      <p className="mt-2 text-body text-foreground">{buildroom && meta.sensitive ? <RedactedChip label={`${meta.label.toLowerCase()} hidden in share-safe view`} /> : pattern.label}</p>
+      <p className="mt-2 text-body text-foreground">{shareSafe && meta.sensitive ? <RedactedChip label={`${meta.label.toLowerCase()} hidden in share-safe view`} /> : pattern.label}</p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {pattern.accounts.map((a) => (
           <button key={a.id} onClick={() => onOpenAccount(a.id)} className="rounded-sm border border-border bg-card px-1.5 py-0.5 text-[12px] text-muted-foreground hover:text-accent-fg focus-visible:outline-none focus-visible:focus-ring">
@@ -103,12 +103,12 @@ function PatternCard({ pattern, workspace, onOpenAccount }: { pattern: Pattern; 
       </div>
       {pattern.terms.length > 0 && <p className="mt-2 text-[11px] text-faint-foreground">Grouped on: {pattern.terms.join(", ")}</p>}
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3">
-        <Button size="sm" variant="secondary" onClick={download} disabled={buildroom} title={buildroom ? "Switch to Private view to export" : "Download the sources behind this pattern"}>
+        <Button size="sm" variant="secondary" onClick={download} disabled={shareSafe} title={shareSafe ? "Switch to Private view to export" : "Download the sources behind this pattern"}>
           <Download />
           Sources
         </Button>
         <label className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
-          <input type="checkbox" checked={shareSafe} onChange={(e) => setShareSafe(e.target.checked)} />
+          <input type="checkbox" checked={rolesOnly} onChange={(e) => setRolesOnly(e.target.checked)} />
           People as roles, no emails
         </label>
         <a href={brand.productWorkUrl} target="_blank" rel="noreferrer" className="ml-auto inline-flex items-center gap-1 rounded-sm text-[12px] text-accent-fg hover:underline focus-visible:outline-none focus-visible:focus-ring">

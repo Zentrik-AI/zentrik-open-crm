@@ -6,7 +6,7 @@ import { PriorityBadge } from "./ui/segment-bar";
 import { DueChip } from "./account-bits";
 import { useMounted, useReducedMotion } from "../lib/hooks";
 import { Grounding } from "./grounding";
-import { useBuildroom } from "./ui/privacy";
+import { useShareSafe } from "./ui/privacy";
 
 /** An animated strike that draws through completed text. */
 function StrikeLabel({ children, done }: { children: ReactNode; done: boolean }) {
@@ -51,8 +51,8 @@ export function TaskRow({
   onEdit?: () => void;
 }) {
   const done = task.status === "done";
-  const buildroom = useBuildroom();
-  const showGrounding = notesById && !done && !buildroom && (task.origin || task.evidence?.length || task.reason);
+  const shareSafe = useShareSafe();
+  const showGrounding = notesById && !done && !shareSafe && (task.origin || task.evidence?.length || task.reason);
   return (
     <div className="flex items-start gap-3 rounded-lg border border-border bg-surface p-3 transition-colors duration-fast hover:border-border-strong">
       <button
@@ -92,7 +92,7 @@ export function TaskRow({
       </div>
       <div className="flex shrink-0 flex-col items-end gap-2">
         <PriorityBadge priority={task.priority} />
-        {!buildroom && onEdit && <button className="rounded-sm text-[12px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:focus-ring" onClick={onEdit} aria-label={`Edit task: ${task.title}`}>Edit</button>}
+        {!shareSafe && onEdit && <button className="rounded-sm text-[12px] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:focus-ring" onClick={onEdit} aria-label={`Edit task: ${task.title}`}>Edit</button>}
       </div>
     </div>
   );

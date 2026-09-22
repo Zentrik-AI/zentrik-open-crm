@@ -36,7 +36,6 @@ export function createDemoWorkspace(): Workspace {
     createdAt: atDay(-2 - (index % 9)),
     due: claim.due ? atDay(claim.owner === "them" ? 6 + (index % 3) * 4 : -1, 23) : undefined,
   }));
-  demo.changelog = demo.changelog.map((entry, index) => ({ ...entry, date: atDay(-90 + index * 30) }));
   return demo;
 }
 

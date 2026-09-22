@@ -7,7 +7,7 @@ type ButtonVariant =
   | "ghost"
   | "accent"
   | "agent"
-  | "idea"
+  | "highlight"
   | "destructive"
   | "destructive-solid";
 type ButtonSize = "sm" | "md" | "lg" | "icon";
@@ -25,7 +25,7 @@ const variants: Record<ButtonVariant, string> = {
   ghost: "bg-transparent text-muted-foreground border border-transparent hover:bg-secondary hover:text-foreground",
   accent: "bg-transparent text-accent-fg border border-accent hover:bg-accent-bg active:scale-[.99]",
   agent: "bg-transparent text-agent-fg border border-agent hover:bg-agent-bg active:scale-[.99]",
-  idea: "bg-transparent text-idea-fg border border-idea hover:bg-idea-bg active:scale-[.99]",
+  highlight: "bg-transparent text-highlight-fg border border-highlight hover:bg-highlight-bg active:scale-[.99]",
   destructive:
     "bg-transparent text-destructive-fg border border-destructive hover:bg-destructive-bg active:scale-[.99]",
   "destructive-solid":

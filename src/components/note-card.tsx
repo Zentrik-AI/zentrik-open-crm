@@ -4,7 +4,7 @@ import type { Note } from "../types";
 import { Badge } from "./ui/badge";
 import { SentimentMark } from "./ui/dot";
 import { Tooltip } from "./ui/tooltip";
-import { RedactedChip, useBuildroom } from "./ui/privacy";
+import { RedactedChip, useShareSafe } from "./ui/privacy";
 
 /** A single source-grounded note / touchpoint. */
 export function NoteCard({
@@ -24,7 +24,7 @@ export function NoteCard({
   onTrace?: (id: string) => void;
 }) {
   const source = sourceMeta[note.source];
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
 
   return (
     <article
@@ -57,7 +57,7 @@ export function NoteCard({
         </span>
       </div>
 
-      {buildroom ? (
+      {shareSafe ? (
         <div className="mt-2.5">
           <RedactedChip label="note hidden in share-safe view" />
         </div>

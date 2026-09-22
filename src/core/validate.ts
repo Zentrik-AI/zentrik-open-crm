@@ -295,7 +295,7 @@ export function validateWorkspace(data: unknown): string[] {
     }
   }
   if (data.agentMode !== undefined) within(data.agentMode, ["review", "direct"], "workspace.agentMode");
-  for (const key of ["proposals", "activity", "ideas", "changelog"]) {
+  for (const key of ["proposals", "activity"]) {
     if (data[key] !== undefined) check(Array.isArray(data[key]), `workspace.${key} must be a list.`);
   }
   const entries = (key: string, visit: (raw: Rec, where: string) => void) => {
@@ -332,17 +332,6 @@ export function validateWorkspace(data: unknown): string[] {
     text(raw.summary, `${where}.summary`);
     optionalText(raw, ["targetId", "accountId"], where);
   });
-  entries("ideas", (raw, where) => {
-    for (const key of ["title", "problem", "targetRelease"]) text(raw[key], `${where}.${key}`);
-    within(raw.status, ["candidate", "shaping", "queued", "released"], `${where}.status`);
-    number(raw.votes, `${where}.votes`);
-    number(raw.confidence, `${where}.confidence`, 100);
-  });
-  entries("changelog", (raw, where) => {
-    check(isDate(raw.date), `${where}.date must be a date.`);
-    for (const key of ["title", "summary"]) text(raw[key], `${where}.${key}`);
-    textList(raw.tags, `${where}.tags`);
-  });
   if (data.receipts !== undefined) {
     if (!isRec(data.receipts)) errors.push("workspace.receipts must be an object.");
     else for (const [key, raw] of Object.entries(data.receipts)) {
@@ -362,16 +351,17 @@ export function validateWorkspace(data: unknown): string[] {
 
 /** Fill the fields that older workspaces and hand-written files leave out. */
 export function normalizeWorkspace(workspace: Workspace): Workspace {
+  // Workspaces written before 1.0 carried a product-feedback layer (`ideas`,
+  // `changelog`). Those keys are dropped here rather than migrated.
+  const { ideas: _ideas, changelog: _changelog, ...rest } = workspace as Workspace & { ideas?: unknown; changelog?: unknown };
   return deriveAccountLists({
-    ...workspace,
+    ...rest,
     claims: migrateLegacyClaims(workspace),
     edition: workspace.edition ?? "Self-Hosted",
     updatedAt: workspace.updatedAt ?? new Date().toISOString(),
     agentMode: workspace.agentMode ?? "review",
     proposals: workspace.proposals ?? [],
     activity: workspace.activity ?? [],
-    ideas: workspace.ideas ?? [],
-    changelog: workspace.changelog ?? [],
     // Older hand-written records can omit these fields. Supply defaults for
     // consumers that trim owners or calculate weighted pipeline values.
     accounts: workspace.accounts.map(account => ({

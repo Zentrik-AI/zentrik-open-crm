@@ -50,31 +50,28 @@ so a concurrent agent write is never overwritten.
 See [Workspace Format](./workspace-format.md) for records, operations, views,
 and the server's request checks.
 
-## Feedback Bundles
+## Two Kinds Of Export
 
-Tell Open CRM produces an `open-crm-feedback.v1` bundle for local and
-self-hosted users. It is a portable envelope that can be copied into GitHub or
-passed through an optional, maintainer-operated product-evidence adapter. It is
-not a second persistence model.
+Both are files someone chooses to hand over; neither is a second persistence
+model.
 
-## Future Service Boundary
+- **Signals.** `crm export --signals` writes the notes behind a pattern or an
+  account as `open-crm-signals.v1` for a product tool. See
+  [Account work here, product work in Zentrik](./product-work.md).
+- **Feedback.** Improve writes an `open-crm-feedback.v1` envelope about Open CRM
+  itself, carrying only what the user typed. See
+  [Feedback and support](./feedback-and-support.md).
 
-When adding a hosted backend, keep these surfaces separate:
+## If A Hosted Backend Is Added
 
-- workspace API: the same operations, over the network
-- connector workers: email, calendar, calls, GitHub, reviews, support, usage.
-  Each lands sources as notes with references, through `note.add`
-- public Buildroom API: public-safe feedback and release state
-- feedback intake API: hosted `open-crm-feedback.v1` submissions
-
-The public Buildroom must never expose deal details, raw private notes, private
-contact data, or transcripts unless a user explicitly publishes safe summaries.
-The first portal instance is defined in
-[`portal/open-crm-buildroom.instance.json`](../portal/open-crm-buildroom.instance.json).
+Keep two surfaces separate: a workspace API that speaks the same operations over
+the network, and connector workers that land sources as notes with references
+through `note.add`. Neither may weaken the review gate or let private account
+fields reach anything share-safe.
 
 ## Styling
 
-The app uses semantic CSS tokens for product concepts: account, signal, idea,
+The app uses semantic CSS tokens for product concepts: account, signal, highlight,
 agent, success, warning, destructive. Violet is reserved for agents. Use the
 tokens when adding UI; avoid one-off colors unless the set is missing a real
 concept.

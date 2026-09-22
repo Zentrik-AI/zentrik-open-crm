@@ -7,8 +7,7 @@ privately before sharing exploit details.
 
 ## Supported Versions
 
-This project is pre-1.0. Security fixes should target `main` until release
-branches exist.
+Security fixes target `main` and ship in the next release.
 
 ## Data Handling
 
@@ -26,7 +25,7 @@ are responsible for reviewing staged changes before committing.
 
 ## Release safety
 
-Before each release, review the [Public Release Checklist](./docs/public-release-checklist.md),
+Before each release, review the the [release checks](./docs/releasing.md),
 run the documented checks, and confirm that the release contains only synthetic
 fixtures and public-safe documentation.
 

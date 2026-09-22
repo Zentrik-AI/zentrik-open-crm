@@ -8,9 +8,9 @@ import { Ring } from "./ui/ring";
 import { Meter } from "./ui/meter";
 import { Monogram } from "./ui/monogram";
 import { PriorityBadge } from "./ui/segment-bar";
-import { Private, useBuildroom } from "./ui/privacy";
+import { Private, useShareSafe } from "./ui/privacy";
 
-/** Abbreviated currency with a demoted unit; redacted in Buildroom mode. */
+/** Abbreviated currency with a demoted unit; redacted in share-safe mode. */
 export function ArrValue({ value, className }: { value: number; className?: string }) {
   const { lead, unit } = splitCurrency(value);
   return (
@@ -139,10 +139,10 @@ export function InfoList({
 
 export function ContactRow({ contact }: { contact: Contact }) {
   const meta = influenceMeta[contact.influence];
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
   return (
     <div className="flex min-w-0 max-w-full items-center gap-3 rounded-md border border-border bg-surface p-3">
-      <Monogram name={contact.name} tone={meta.tone} redacted={buildroom} />
+      <Monogram name={contact.name} tone={meta.tone} redacted={shareSafe} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-body font-medium text-foreground">
           <Private redactedLabel="name hidden">{contact.name}</Private>

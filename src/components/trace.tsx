@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import type { Trace, TraceNode } from "../core/memory";
 import { cn, formatDate } from "../lib/utils";
 import { Button } from "./ui/button";
-import { RedactedChip, useBuildroom } from "./ui/privacy";
+import { RedactedChip, useShareSafe } from "./ui/privacy";
 
 /**
  * The evidence trace: where a record came from, and what rests on it. Drawn
@@ -14,15 +14,15 @@ import { RedactedChip, useBuildroom } from "./ui/privacy";
 const kindLabel: Record<TraceNode["kind"], string> = { source: "Source", note: "Note", claim: "We know", task: "Action", deal: "Deal", contact: "Person" };
 
 function Node({ node, focus, onNavigate }: { node: TraceNode; focus?: boolean; onNavigate: (id: string) => void }) {
-  const buildroom = useBuildroom();
+  const shareSafe = useShareSafe();
   const hunch = node.tone === "hunch";
   const navigable = node.kind === "note" || node.kind === "claim" || node.kind === "task";
   const dot = node.tone === "done" ? "bg-success" : node.tone === "open" ? "bg-warning" : hunch ? "border-2 border-dashed border-border-strong bg-surface" : "bg-accent";
   const body = (
     <>
       <div className="text-label uppercase text-faint-foreground">{kindLabel[node.kind]}{hunch ? " · hunch" : ""}</div>
-      <div className={cn("text-body text-foreground", focus && "font-serif text-h3")}>{buildroom && node.kind !== "contact" ? <RedactedChip label="hidden in share-safe view" /> : node.title}</div>
-      {node.detail && <div className="text-[12px] text-muted-foreground">{buildroom && node.kind === "source" ? <RedactedChip label="reference hidden" /> : node.detail}</div>}
+      <div className={cn("text-body text-foreground", focus && "font-serif text-h3")}>{shareSafe && node.kind !== "contact" ? <RedactedChip label="hidden in share-safe view" /> : node.title}</div>
+      {node.detail && <div className="text-[12px] text-muted-foreground">{shareSafe && node.kind === "source" ? <RedactedChip label="reference hidden" /> : node.detail}</div>}
       {node.date && <div className="font-mono text-[11px] tabular-nums text-faint-foreground">{formatDate(node.date)}</div>}
     </>
   );

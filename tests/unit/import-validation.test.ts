@@ -29,7 +29,7 @@ function rejected(workspace: Workspace, path: string) {
 
 test("legacy omissions, nullable scores, and dated notes survive import and re-export", () => {
   const workspace = demo();
-  for (const path of ["edition", "updatedAt", "agentMode", "proposals", "activity", "ideas", "changelog", "receipts", "accounts.0.owner", "deals.0.owner", "deals.0.probability", "tasks.0.owner", "notes.0.sourceRef", "notes.0.occurredAt", "notes.0.interaction"]) set(workspace, path, undefined);
+  for (const path of ["edition", "updatedAt", "agentMode", "proposals", "activity", "receipts", "accounts.0.owner", "deals.0.owner", "deals.0.probability", "tasks.0.owner", "notes.0.sourceRef", "notes.0.occurredAt", "notes.0.interaction"]) set(workspace, path, undefined);
   workspace.accounts[0].health = null;
   workspace.accounts[0].fit = null;
   workspace.accounts[0].sourceConfidence = null;
@@ -87,7 +87,7 @@ test("optional UI strings and nested text lists reject objects, arrays, nulls, a
     set(workspace, path, value);
     rejected(workspace, path);
   }
-  for (const path of ["accounts.0.tags", "accounts.0.needs", "accounts.0.risks", "changelog.0.tags"]) {
+  for (const path of ["accounts.0.tags", "accounts.0.needs", "accounts.0.risks"]) {
     const workspace = demo();
     set(workspace, path, ["valid", { toString: null }]);
     rejected(workspace, path);
@@ -98,7 +98,7 @@ test("optional UI strings and nested text lists reject objects, arrays, nulls, a
 });
 
 test("numeric fields reject non-finite values, including overflowing JSON numbers", () => {
-  for (const path of ["accounts.0.arr", "accounts.0.health", "accounts.0.fit", "accounts.0.sourceConfidence", "deals.0.value", "deals.0.probability", "ideas.0.votes", "ideas.0.confidence"]) {
+  for (const path of ["accounts.0.arr", "accounts.0.health", "accounts.0.fit", "accounts.0.sourceConfidence", "deals.0.value", "deals.0.probability"]) {
     for (const value of [NaN, Infinity, -Infinity, -1, "10", {}]) {
       const workspace = demo();
       set(workspace, path, value);
@@ -153,9 +153,7 @@ test("nested history entries and change envelopes are checked before UI use", ()
     ["proposals.0.change.actor", null], ["proposals.0.change.actor.name", {}],
     ["proposals.0.change.key", "__proto__"], ["proposals.0.change.review", "false"],
     ["activity.0", null], ["activity.0.actor", []], ["activity.0.summary", {}], ["activity.0.at", "invalid"],
-    ["activity.0.accountId", {}], ["activity.0.targetId", []], ["ideas.0", null],
-    ["ideas.0.status", "unknown"], ["ideas.0.title", {}], ["ideas.0.problem", []], ["ideas.0.targetRelease", {}],
-    ["changelog.0", false], ["changelog.0.title", {}], ["changelog.0.summary", []], ["changelog.0.date", "invalid"],
+    ["activity.0.accountId", {}], ["activity.0.targetId", []],
   ];
   for (const [path, value] of cases) {
     const workspace = fixture();

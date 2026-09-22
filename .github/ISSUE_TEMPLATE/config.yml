@@ -2,7 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: Feedback and support guide
     url: https://github.com/Zentrik-AI/zentrik-open-crm/blob/main/docs/feedback-and-support.md
-    about: Choose a public-safe feedback path. The hosted Buildroom is not live yet.
+    about: Choose a public-safe feedback path. Nothing is submitted automatically.
   - name: Private security report
     url: https://github.com/Zentrik-AI/zentrik-open-crm/security/advisories/new
     about: Report vulnerabilities privately; do not open public issues with sensitive details.

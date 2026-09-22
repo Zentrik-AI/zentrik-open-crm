@@ -13,13 +13,13 @@ too much information?
 
 ## Where it appears
 
-- Today board
-- Account detail
-- Signals
-- Open CRM Loop
-- Codex task queue
+- Home
+- Book
+- Account detail: claims, the brief, or the committee
+- Trace
+- Review
 - Export
-- Buildroom/public mode
+- Share-safe view
 - Documentation
 - Other
 

@@ -18,13 +18,14 @@ Describe what should happen instead.
 
 Which part of Open CRM is affected?
 
-- Today board
-- Accounts
-- Signals
-- Open CRM Loop
-- Codex tasks
-- Settings/export
-- Buildroom/public mode
+- Home
+- Book
+- Accounts, Contacts, or Pipeline
+- Tasks or Notes
+- Review
+- The `crm` command or the MCP server
+- Settings, export, or import
+- Share-safe view
 - Other
 
 ## Reproduction

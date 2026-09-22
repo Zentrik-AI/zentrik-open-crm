@@ -28,7 +28,7 @@ const defaultIcon: Record<Tone, LucideIcon> = {
   signal: Info,
   account: Info,
   agent: Info,
-  idea: Info,
+  highlight: Info,
   success: Check,
   warning: ShieldAlert,
   destructive: ShieldAlert,

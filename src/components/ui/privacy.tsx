@@ -2,23 +2,23 @@ import { createContext, useContext, type ReactNode } from "react";
 import { EyeOff } from "lucide-react";
 import { cn } from "../../lib/utils";
 
-/** Buildroom (public-safe) mode is render-time state. When on, sensitive values
+/** Share-safe mode is render-time state. When on, sensitive values
  *  are NEVER rendered into the DOM — the component returns a redacted chip
  *  instead of its children, so a real value can never flash or be inspected. */
-const BuildroomContext = createContext(false);
+const ShareSafeContext = createContext(false);
 
 export function PrivacyProvider({
-  buildroom,
+  shareSafe,
   children,
 }: {
-  buildroom: boolean;
+  shareSafe: boolean;
   children: ReactNode;
 }) {
-  return <BuildroomContext.Provider value={buildroom}>{children}</BuildroomContext.Provider>;
+  return <ShareSafeContext.Provider value={shareSafe}>{children}</ShareSafeContext.Provider>;
 }
 
-export function useBuildroom() {
-  return useContext(BuildroomContext);
+export function useShareSafe() {
+  return useContext(ShareSafeContext);
 }
 
 /** The canonical redacted marker: dashed strong border + diagonal hatch + eye-off
@@ -45,7 +45,7 @@ export function RedactedChip({
 }
 
 /**
- * Render `children` privately; in Buildroom mode render a RedactedChip instead.
+ * Render `children` privately; in share-safe mode render a RedactedChip instead.
  * `sensitive` defaults to true — pass false to always show. When redacted, the
  * children are not evaluated into the DOM at all.
  */
@@ -60,8 +60,8 @@ export function Private({
   sensitive?: boolean;
   className?: string;
 }) {
-  const buildroom = useBuildroom();
-  if (buildroom && sensitive) {
+  const shareSafe = useShareSafe();
+  if (shareSafe && sensitive) {
     return <RedactedChip label={redactedLabel} className={className} />;
   }
   return <>{children}</>;

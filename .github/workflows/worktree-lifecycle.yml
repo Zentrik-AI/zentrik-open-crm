@@ -3,7 +3,7 @@ name: Worktree Adapter
 on:
   pull_request:
     branches:
-      - develop
+      - main
     paths:
       - '.github/workflows/worktree-lifecycle.yml'
       - '.zentrik/worktree.json'
@@ -11,7 +11,7 @@ on:
       - 'scripts/worktree-dev.mjs'
   push:
     branches:
-      - develop
+      - main
     paths:
       - '.github/workflows/worktree-lifecycle.yml'
       - '.zentrik/worktree.json'
@@ -42,7 +42,7 @@ jobs:
       - name: Validate entry points and profile
         run: |
           node --check scripts/worktree-dev.mjs
-          node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync('.zentrik/worktree.json','utf8')); if (p.defaultBase !== 'origin/develop') process.exit(1); if (!p.runtime?.profiles?.sandbox) process.exit(1);"
+          node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync('.zentrik/worktree.json','utf8')); if (p.defaultBase !== 'origin/main') process.exit(1); if (!p.runtime?.profiles?.sandbox) process.exit(1);"
 
       - name: Validate the sandbox runtime
         run: |

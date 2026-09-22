@@ -121,13 +121,10 @@ operations, and MCP tools.
 
 ## Development And Release Flow
 
-`develop` is the integration branch. Feature branches should start from
-`origin/develop` and open pull requests into `develop`. The checks run on every
-integration change. See [Pre-production and release](./docs/preproduction-and-release.md)
+`main` is the protected production branch. Feature branches should start from
+`origin/main` and open pull requests into `main`; the same checks run for every
+pull request and production update. See [Pre-production and release](./docs/preproduction-and-release.md)
 for the complete workflow.
-
-Production promotion uses a pull request from `develop` to `main`. Do not push
-feature work directly to `main`.
 
 ## Validate Changes
 

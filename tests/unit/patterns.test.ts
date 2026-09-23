@@ -9,7 +9,8 @@ import { findPatterns, keyTerms, related, signalsBundle, signalsMarkdown } from 
 import { trace } from "../../src/core/memory.ts";
 import { addSource, findSource, readSources } from "../../cli/sources.ts";
 
-const demo = () => normalizeWorkspace(createDemoWorkspace());
+const now = new Date("2026-09-22T12:00:00.000Z");
+const demo = () => normalizeWorkspace(createDemoWorkspace(now));
 
 test("key terms drop noise and plurals; relatedness needs real overlap", () => {
   assert.deepEqual([...keyTerms("Follow-ups that cite calls, notes, and open product gaps")].sort(), ["call", "cite", "follow", "gap", "note", "open", "product", "ups"]);

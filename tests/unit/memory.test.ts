@@ -12,7 +12,7 @@ import type { Actor, Op, Workspace } from "../../src/types.ts";
 const agent: Actor = { kind: "agent", name: "test-agent" };
 const at = "2026-09-22T12:00:00.000Z";
 const now = new Date(at);
-const demo = () => normalizeWorkspace(createDemoWorkspace());
+const demo = () => normalizeWorkspace(createDemoWorkspace(now));
 const change = (op: Op, actor: Actor = { kind: "human", name: "you" }) => newChange(op, actor, at);
 
 test("legacy needs and risks become claims once, and the lists are derived from claims afterwards", () => {
@@ -189,4 +189,21 @@ test("sorting never promotes an account we know nothing about", () => {
   assert.deepEqual(byName, [...byName].sort((a, b) => a.localeCompare(b)));
   const stages = sortAccountRows(rows, "stage", "asc").map((r) => r.account.stage);
   assert.deepEqual(stages, [...stages].sort((a, b) => accountStages.indexOf(a) - accountStages.indexOf(b)), "stage sorts by lifecycle, not alphabet");
+});
+
+test("the demo is built from the clock it is given, so this suite cannot rot with the wall clock", () => {
+  // A demo built from `new Date()` and asserted against a fixed instant drifts
+  // apart the moment the two land on different sides of "due yesterday at 23:00".
+  for (const instant of ["2026-09-22T12:00:00.000Z", "2027-03-04T09:30:00.000Z", "2030-12-31T23:45:00.000Z"]) {
+    const at = new Date(instant);
+    const workspace = normalizeWorkspace(createDemoWorkspace(at));
+    const codes = new Set(lintWorkspace(workspace, at).map((f) => f.code));
+    assert.ok(codes.has("overdue_commitment"), `a commitment is overdue at ${instant}`);
+    assert.ok(codes.has("hunch"), `a claim is unsourced at ${instant}`);
+    const memory = accountMemory(workspace, "acct_northstar", at);
+    assert.equal(memory.questions[0].rank, 1, `the overdue commitment still leads at ${instant}`);
+  }
+  // Same clock in, same records out.
+  const fixed = new Date("2027-03-04T09:30:00.000Z");
+  assert.deepEqual(createDemoWorkspace(fixed), createDemoWorkspace(fixed));
 });

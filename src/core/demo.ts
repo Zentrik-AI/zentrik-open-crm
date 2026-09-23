@@ -1,11 +1,17 @@
 import { seedWorkspace } from "../data/seed.ts";
 import type { Workspace } from "../types.ts";
 
-/** Keep a new demo active and believable instead of letting fixed seed dates decay. */
-export function createDemoWorkspace(): Workspace {
+/**
+ * Keep a new demo active and believable instead of letting fixed seed dates
+ * decay. Every date is relative to `now`, and callers that assert on the result
+ * must pass the same clock they assert with: a demo built from the wall clock
+ * and checked against a fixed instant drifts apart as soon as the two land on
+ * different sides of an hour like "due yesterday at 23:00".
+ */
+export function createDemoWorkspace(now: Date = new Date()): Workspace {
   const demo = structuredClone(seedWorkspace);
   const atDay = (offset: number, hour = 12) => {
-    const value = new Date();
+    const value = new Date(now);
     value.setHours(hour, 0, 0, 0);
     value.setDate(value.getDate() + offset);
     return value.toISOString();
@@ -14,7 +20,7 @@ export function createDemoWorkspace(): Workspace {
   const dealCloseOffsets = [14, 24, 10, 5, 18, 35, -42];
   const noteOffsets = [-1, -3, -2, -7, -4, -9, -6];
 
-  demo.updatedAt = new Date().toISOString();
+  demo.updatedAt = now.toISOString();
   demo.accounts = demo.accounts.map((account, index) => ({
     ...account,
     createdAt: atDay(-120 - index * 24),

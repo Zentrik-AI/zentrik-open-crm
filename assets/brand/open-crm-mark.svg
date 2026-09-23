@@ -1,6 +1,6 @@
 <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">Zentrik Open CRM mark</title>
-  <desc id="desc">A stacked signal-workshop mark with three connected open layers.</desc>
+  <desc id="desc">Three connected open layers: sources, what they support, and the work they lead to.</desc>
   <rect x="24" y="24" width="208" height="208" rx="44" fill="#14254F"/>
   <path d="M128 65L178 88L128 111L78 88L128 65Z" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round"/>
   <path d="M128 105L178 128L128 151L78 128L128 105Z" stroke="#00ACE6" stroke-width="6" stroke-linejoin="round"/>

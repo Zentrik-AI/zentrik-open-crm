@@ -44,7 +44,10 @@ recovery. CI keeps synthetic screenshots and traces as the
       the contribution guidance are present and consistent.
 - [ ] The README hero still shows the current product, and
       `assets/brand/open-crm-og.png` is set as the repository's social preview
-      (Settings → General → Social preview; there is no API for it).
+      (Settings → General → Social preview; GitHub exposes no API for this, so
+      it is a manual upload). Keep that file at exactly 1280x640 without an
+      alpha channel: GitHub rejects a 2x export with "Something went really
+      wrong and we can't process that picture".
 
 ## Publishing
 

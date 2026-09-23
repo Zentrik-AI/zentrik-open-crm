@@ -11,11 +11,6 @@ approve, and your records stay in a folder you own.
 
 Open CRM is the first open **ARM**: Agent Relationship Management.
 
-### [▶ Try it in your browser](https://zentrik-ai.github.io/zentrik-open-crm/)
-
-Demo data, no sign-up, nothing sent anywhere. Whatever you type stays in your
-own browser storage.
-
 ![An Open CRM account: the brief before a conversation, what we know with the note behind each claim, and who decides](https://raw.githubusercontent.com/Zentrik-AI/zentrik-open-crm/main/assets/brand/open-crm-hero.png)
 
 We built this for ourselves. Open CRM carries the way we run our own accounts

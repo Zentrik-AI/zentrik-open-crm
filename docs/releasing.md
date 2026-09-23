@@ -22,14 +22,26 @@ Pushing to `main` redeploys the hosted demo at
 built with `OPEN_CRM_BASE` set to the project path. It is the browser edition:
 no server, no records anywhere but the visitor's own browser.
 
-Do not make that URL a headline call to action. Chrome shows a lookalike-domain
-interstitial for it ("The site you just tried to visit looks fake"), because the
-label `zentrik-ai` reads as the domain `zentrik.ai` with the dot replaced by a
-hyphen, which is the pattern Chrome's target-embedding check looks for. The fix
-is a custom domain: add a `CNAME` record for `demo` pointing at
-`zentrik-ai.github.io.`, then set it on the Pages configuration
-(`gh api -X PUT repos/Zentrik-AI/zentrik-open-crm/pages -f cname=demo.zentrik.ai`).
-Promote the demo again once that resolves.
+One known wrinkle. Chrome shows a lookalike-domain interstitial for that URL
+("The site you just tried to visit looks fake") to visitors whose browser has
+engagement with `zentrik.ai`, because the label `zentrik-ai` reads as
+`zentrik.ai` with the dot replaced by a hyphen. A fresh profile loads it
+without a warning, so this hits our own team, customers and investors rather
+than the public, which is still the audience we share with first.
+
+The fix is a custom domain, and it is two steps:
+
+1. At the registrar, add `CNAME  demo  ->  zentrik-ai.github.io.` The apex is on
+   Fly and `demo` is unused, so nothing existing is touched.
+2. Once it resolves, point Pages at it and keep HTTPS enforced:
+
+```bash
+gh api -X PUT repos/Zentrik-AI/zentrik-open-crm/pages -f cname=demo.zentrik.ai
+gh api -X PUT repos/Zentrik-AI/zentrik-open-crm/pages -F https_enforced=true
+```
+
+Then update the demo URL in `README.md`, `.github/ISSUE_TEMPLATE/config.yml`,
+`docs/first-use.md`, this file, and the repository homepage.
 
 The browser suite covers first use, account work, claims and the brief, review,
 task ownership, responsive layout, theme contrast, feedback export, and storage

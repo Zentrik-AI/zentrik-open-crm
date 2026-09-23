@@ -1,6 +1,6 @@
 {
   "name": "zentrik-open-crm",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": false,
   "type": "module",
   "description": "Open-source, local-first CRM that people and their coding agents work together: every fact shows its source, agents propose and people approve, and what several accounts are saying is handed on as product evidence.",

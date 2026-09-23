@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { createApi } from "../../cli/api.ts";
+import { brand } from "../../src/lib/brand.ts";
 
 const bin = path.resolve(import.meta.dirname, "..", "..", "bin", "open-crm.js");
 
@@ -181,4 +182,15 @@ test("patterns, signals export, and sources close the loop from inbox to product
   assert.equal(crm(dir, "approve", note.id, "--approved-by", "Rowan").status, 0);
   assert.match(crm(dir, "why", note.recordId).out, new RegExp(kept.source.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(crm(dir, "why", "contact_eli").out, /Head of Revenue Operations/);
+});
+
+test("the product version is reported once and stays in step with the package", () => {
+  const manifest = JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
+  assert.equal(brand.version, manifest.version, "src/lib/brand.ts must carry the published version");
+  const dir = makeWorkspace();
+  const handshake = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "test", version: "1" } } });
+  const out = spawnSync(process.execPath, [bin, "mcp", "--workspace", dir], { input: `${handshake}\n`, encoding: "utf8" }).stdout;
+  const info = JSON.parse(out.trim().split("\n")[0]).result.serverInfo;
+  assert.equal(info.version, manifest.version, "an MCP client is told the real version");
+  assert.equal(info.name, "open-crm");
 });

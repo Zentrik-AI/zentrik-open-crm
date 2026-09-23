@@ -165,7 +165,7 @@ export function serveMcp(dir: string) {
       const client = (params.clientInfo as Json | undefined)?.name;
       if (typeof client === "string" && client && !process.env.OPEN_CRM_ACTOR) actor = { kind: "agent", name: client };
       const requested = typeof params.protocolVersion === "string" ? params.protocolVersion : PROTOCOL;
-      return reply({ id, result: { protocolVersion: requested <= PROTOCOL ? requested : PROTOCOL, capabilities: { tools: {} }, serverInfo: { name: "open-crm", version: "0.2.0" }, instructions: INSTRUCTIONS } });
+      return reply({ id, result: { protocolVersion: requested <= PROTOCOL ? requested : PROTOCOL, capabilities: { tools: {} }, serverInfo: { name: "open-crm", version: brand.version }, instructions: INSTRUCTIONS } });
     }
     if (method === "ping") return reply({ id, result: {} });
     if (method === "tools/list") return reply({ id, result: { tools: tools.map(({ run: _run, ...tool }) => tool) } });

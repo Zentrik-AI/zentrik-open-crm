@@ -2,6 +2,14 @@
 
 Notable user-facing changes, newest first.
 
+## 1.1.1
+
+- The MCP server reported version 0.2.0 to its clients while the package was
+  1.1.0. It now reports the real version, and a test keeps the two in step.
+- Rebuild the README around what a new user needs: a two-minute start, recorded
+  clips of the trace and the table, where your data lives, and what the common
+  error messages mean.
+
 ## 1.1.0
 
 - Add the account table: every account on one grid, sorted by value, last

@@ -3,34 +3,102 @@
 [![Checks](https://github.com/Zentrik-AI/zentrik-open-crm/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/Zentrik-AI/zentrik-open-crm/actions/workflows/checks.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-0f766e.svg)](./LICENSE)
 [![Node 22.18+](https://img.shields.io/badge/node-22.18%2B-0f766e.svg)](https://nodejs.org)
-
-![An Open CRM account: the brief before a conversation, what we know with the note behind each claim, and who decides](./assets/brand/open-crm-hero.png)
+[![Latest release](https://img.shields.io/github/v/release/Zentrik-AI/zentrik-open-crm?color=0f766e&label=release)](https://github.com/Zentrik-AI/zentrik-open-crm/releases)
 
 **Relationship management for people and their agents.** An open-source,
 local-first CRM where every fact shows its source, agents propose and people
-approve, and what several accounts are saying is handed on as product
-evidence instead of being decided here.
+approve, and your records stay in a folder you own.
 
 Open CRM is the first open **ARM**: Agent Relationship Management.
 
-**[Try it in your browser →](https://zentrik-ai.github.io/zentrik-open-crm/)**
-Demo data, no sign-up; whatever you type stays in your own browser storage.
+### [▶ Try it in your browser](https://zentrik-ai.github.io/zentrik-open-crm/)
+
+Demo data, no sign-up, nothing sent anywhere. Whatever you type stays in your
+own browser storage.
+
+![An Open CRM account: the brief before a conversation, what we know with the note behind each claim, and who decides](https://raw.githubusercontent.com/Zentrik-AI/zentrik-open-crm/main/assets/brand/open-crm-hero.png)
 
 We built this for ourselves. Open CRM carries the way we run our own accounts
 at Zentrik, the same operating model we depend on every day, published as its
 own product rather than described in a blog post.
 
-[First Use](./docs/first-use.md) ·
-[Agent Operator Guide](./docs/agent-operator-guide.md) ·
-[Workspace Format](./docs/workspace-format.md) ·
-[Self-Hosting](./docs/self-hosting.md) ·
-[Roadmap](./docs/roadmap.md) ·
-[Contributing](./CONTRIBUTING.md)
+---
 
-Zentrik Open CRM is built for founders, consultants, agencies, small B2B teams,
-and technical operators who sell, support, and build close to their users. It is
-a CRM you run yourself, on a folder you own, that your coding agent can work
-as well as you can.
+## Start in two minutes
+
+You need [Node 22.18 or newer](https://nodejs.org) (`node -v` to check). No
+database, no account, no API key.
+
+```bash
+git clone https://github.com/Zentrik-AI/zentrik-open-crm.git
+cd zentrik-open-crm && npm install
+
+npm run crm -- init ~/crm --demo     # a workspace folder with synthetic records
+cd ~/crm && ./crm ui                 # the visual CRM, on that folder
+```
+
+The app opens at `http://127.0.0.1:5178`. Use `./crm ui --port 5200` if that
+port is taken, and `crm.cmd` instead of `./crm` on Windows.
+
+Drop `--demo` to start empty; the app then asks for one real account.
+
+**Now hand the same folder to your agent:**
+
+```bash
+cd ~/crm
+claude        # or: codex, or open the folder in Cursor
+```
+
+Ask it to **run the daily review**. It reads `AGENTS.md`, runs `./crm status`,
+looks at the accounts that need attention, and proposes next actions that cite
+the notes behind them. Each proposal appears in the app under **Review** as it
+happens, and nothing changes until you approve it.
+
+Three more worth asking on day one:
+
+- *"Process the inbox"* after you drop a transcript or email into `inbox/`.
+- *"Prepare me for the Northstar call"* before a conversation.
+- *"Where is our memory thin?"* to get `./crm lint` in plain words.
+
+## Every fact shows its source
+
+What you know about an account is recorded as **claims**: needs, risks, goals,
+objections, commitments, facts. Each one cites the notes that say so. A claim
+without evidence is drawn as a hunch, everywhere it appears.
+
+Click any grounded line and the trace opens: the source, what we took from it,
+and what it led to.
+
+![Clicking a grounded claim opens its trace: the note and person it rests on, and the action it supports](https://raw.githubusercontent.com/Zentrik-AI/zentrik-open-crm/main/assets/demo/trace.gif)
+
+That is the whole bargain. An agent can write into these records, and you can
+always ask where a line came from.
+
+## A table when the question is a comparison
+
+Accounts has a list for recognizing an account beside its detail, and a table
+for comparing them: value, last verified contact, how much of what you know is
+grounded, what is due next. Unknown values sort last in both directions,
+because reversing a sort should never promote a record nobody has confirmed.
+
+![Switching Accounts to the table view and sorting by value, then by grounding](https://raw.githubusercontent.com/Zentrik-AI/zentrik-open-crm/main/assets/demo/table.gif)
+
+## Why Open CRM
+
+Most lightweight CRMs are easy to start but weak at remembering why an account
+matters. Most powerful CRMs become expensive administration systems. Open CRM is
+the middle path for small technical teams:
+
+- account memory stays tied to the calls, emails, support notes, and reviews
+  that produced it
+- next actions show the source that caused the recommendation
+- Claude Code, Codex, and Cursor work the same records you do, through a
+  checked command and an MCP server, and you approve what they change
+- your data is a folder on your computer: readable, diffable, yours
+- private by design, and yours to change: the model is small enough to read in
+  an afternoon, so you can shape it to how you understand your customers
+- sorted tables when you want to compare accounts, and the brief, the trace,
+  and the Book when a table is the wrong shape for the question
 
 ## What An ARM Is
 
@@ -51,61 +119,6 @@ work together, and the file has to hold up to both. Four things make it one:
 Open CRM is the first open one. Anything meeting those four is an ARM too; we
 would rather the category exist than be the only ones in it.
 
-## Why Open CRM
-
-Most lightweight CRMs are easy to start but weak at remembering why an account
-matters. Most powerful CRMs become expensive administration systems. Open CRM is
-the middle path for small technical teams:
-
-- account memory stays tied to the calls, emails, support notes, and reviews
-  that produced it
-- next actions show the source that caused the recommendation
-- Claude Code, Codex, and Cursor work the same records you do, through a
-  checked command and an MCP server, and you approve what they change
-- your data is a folder on your computer: readable, diffable, yours
-- private by design, and yours to change: the model is small enough to read in
-  an afternoon, so you can shape it to how you understand your customers
-- sorted tables when you want to compare accounts, and the brief, the trace,
-  and the Book when a table is the wrong shape for the question
-
-## Quick Start
-
-Needs Node 22.18 or newer.
-
-```bash
-git clone https://github.com/Zentrik-AI/zentrik-open-crm.git
-cd zentrik-open-crm && npm install
-
-npm run crm -- init ~/crm --demo     # a workspace folder with synthetic records
-cd ~/crm
-./crm ui                             # the visual CRM, on this folder
-```
-
-Drop `--demo` to start empty; the app asks for one real account.
-
-Now open the same folder in your agent:
-
-```bash
-cd ~/crm
-claude        # or: codex, or open the folder in Cursor
-```
-
-Ask it to **complete `docs/agent-setup.md`, then run one manual daily review**.
-`./crm setup` shows the local setup state; it creates no schedules. See
-[Agent setup and recovery](./docs/agent-setup.md) for manual operation and
-preserving local instructions during upgrades.
-
-The agent reads `AGENTS.md`, runs `./crm status`,
-reads the accounts that need attention, and proposes next actions that cite the
-notes behind them. Each proposal appears in the app under **Review** as it
-happens. Nothing changes until you approve it.
-
-Just looking? The [hosted demo](https://zentrik-ai.github.io/zentrik-open-crm/)
-is the same browser edition, or run it yourself with `npm run dev` at
-[http://127.0.0.1:5177](http://127.0.0.1:5177). Either way it keeps data in that
-browser's local storage and can export a one-way Markdown snapshot for an agent
-to read.
-
 ## How People And Agents Share A Workspace
 
 ```text
@@ -118,6 +131,8 @@ to read.
   inbox/           drop transcripts and emails here; "process the inbox"
   drafts/          customer-facing drafts the agent writes for your review
   playbooks/       daily review, inbox, call prep, follow-up
+  docs/            the agent setup and routine contract, installed locally
+  sources/         appears with your first `./crm source add`; files kept by content hash
   .mcp.json        MCP server config for Claude Code (.cursor/mcp.json for Cursor)
 ```
 
@@ -127,11 +142,6 @@ to read.
 - **Review by default.** An agent's change is checked, then held as a proposal.
   You approve or reject it in the app. Switch a workspace to direct mode when
   you trust the loop; every direct change is logged with the agent's name.
-- **Grounded memory.** What you know about an account is recorded as claims
-  (needs, risks, goals, objections, commitments, facts), each citing the notes
-  that say so. The app draws a solid underline under grounded work and a
-  dashed one under a hunch, and any line opens its trace: source, what we took
-  from it, what it led to.
 - **Before you talk to them.** Every account computes what changed since the
   last real contact, what each side owes, who decides and who is missing, and
   the questions worth asking. `./crm brief <account>` is the same page for an
@@ -178,54 +188,35 @@ for who this is built for and the moments it is built around.
 - Optional in-app AI with your own Anthropic key
 - Improve: local feedback about Open CRM itself, kept separate from your CRM data
 
-## Development And Release Flow
+## Your Data
 
-`main` is the protected branch. Feature branches start from `origin/main` and
-open pull requests into `main`; the same checks run for every pull request. See
-[Releasing](./docs/releasing.md) for the checks and the pre-tag review.
+Everything lives in the workspace folder you created. `workspace.json` is the
+whole record set; the Markdown beside it is generated from that file and safe to
+delete. Back it up by copying the folder, or keep it in git and get a history of
+every change for free.
 
-## Validate Changes
+The browser-only edition (`npm run dev`, or the
+[hosted demo](https://zentrik-ai.github.io/zentrik-open-crm/)) keeps records in
+that browser's local storage instead. A CLI agent cannot see them; use
+**Settings → Agent workspace** to export a one-way Markdown snapshot, or move to
+a folder workspace when you want the agent loop.
 
-```bash
-npm run typecheck
-npm test            # core operations, the crm command, MCP, and the local API
-npm run build
-npm run test:package # pack, install with production dependencies, check CLI/agent kit/MCP/UI
-npm run test:e2e    # browser edition, plus the live agent-to-Review loop on a folder
-```
+Nothing is sent anywhere. There is no account and no telemetry, and the app makes
+no outbound request at all unless you add your own Anthropic key for the optional
+in-app AI, which then talks to Anthropic and nobody else.
 
-`npm pack` runs the build through `prepack` and includes the UI bundle and
-compiled JavaScript CLI. An installed tarball runs without build tools.
-`test:package` uses temporary synthetic workspaces, disables install scripts, and removes its
-temporary install after the check; dependency installation needs npm registry access.
+## If Something Goes Wrong
 
-## Current Version
+| Symptom | What it means |
+| --- | --- |
+| `Open CRM needs Node 22.18 or newer` | Install a current Node from [nodejs.org](https://nodejs.org), then rerun. |
+| `Port 5178 is not available. Pass --port <number>.` | Something else holds the port: `./crm ui --port 5200`. |
+| The agent cannot find your accounts | It is reading a folder workspace; the browser edition's data is in the browser. Run `./crm init` and work from that folder. |
+| `./crm` is not executable | On Windows use `crm.cmd`. On macOS or Linux, `chmod +x crm`. |
+| A proposal will not approve | It builds on an earlier proposal, or the record changed since it was prepared. Review shows which; approve them in order, or reject and ask again. |
 
-1.0 is a Vite React app with two homes for its data: browser local storage, or a
-workspace folder served on loopback by `crm ui`. The repository carries
-synthetic demo data only — no API keys, no customer records. See
-[CHANGELOG.md](./CHANGELOG.md).
-
-## Repository Guardrails
-
-This repository is public-product code. Private operating data or customer data
-must never enter this repo.
-
-Read [Privacy Boundaries](./docs/privacy-boundaries.md) before importing data or
-building integrations.
-
-## License And Trademarks
-
-Zentrik Open CRM is licensed under the
-[Apache License 2.0](./LICENSE). Contributions intentionally submitted to this
-repository are accepted under the same license unless stated otherwise before
-inclusion.
-
-Zentrik AI reserves its trademarks, product names, hosted services, private
-APIs, private workspaces, product intelligence systems, runtime credentials, and
-proprietary platform code. See [NOTICE](./NOTICE),
-[Trademark Policy](./TRADEMARKS.md), and
-[Licensing And IP](./docs/licensing-and-ip.md).
+Anything else, [open a discussion](https://github.com/Zentrik-AI/zentrik-open-crm/discussions)
+with what you ran and what happened.
 
 ## Docs
 
@@ -247,6 +238,23 @@ proprietary platform code. See [NOTICE](./NOTICE),
 [Feedback and Support](./docs/feedback-and-support.md) ·
 [Licensing and IP](./docs/licensing-and-ip.md) · [Releasing](./docs/releasing.md)
 
+## Contributing
+
+Issues and pull requests are welcome, and so is telling us where the first five
+minutes were confusing. Start with [CONTRIBUTING.md](./CONTRIBUTING.md), and run
+the checks before opening a pull request:
+
+```bash
+npm run typecheck
+npm test             # core operations, the crm command, MCP, the local API
+npm run build
+npm run test:package # pack, install without dev dependencies, check CLI/MCP/UI
+npm run test:e2e     # the browser edition and the agent-to-Review loop on a folder
+```
+
+`main` is protected and every pull request runs the same checks. See
+[Releasing](./docs/releasing.md).
+
 ## Product Feedback
 
 **Improve** saves a local draft and, when you choose to share it, prepares a
@@ -254,3 +262,23 @@ public-safe bundle or a GitHub issue that you submit yourself. It never reads
 your CRM records and nothing is sent automatically. See
 [Feedback and support](./docs/feedback-and-support.md), and keep customer
 records and security reports out of public issues.
+
+## Repository Guardrails
+
+This repository is public product code. Private operating data and customer data
+must never enter it. Read [Privacy Boundaries](./docs/privacy-boundaries.md)
+before importing data or building an integration, and report vulnerabilities
+through [SECURITY.md](./SECURITY.md) rather than a public issue.
+
+## License And Trademarks
+
+Zentrik Open CRM is licensed under the
+[Apache License 2.0](./LICENSE). Contributions intentionally submitted to this
+repository are accepted under the same license unless stated otherwise before
+inclusion.
+
+Zentrik AI reserves its trademarks, product names, hosted services, private
+APIs, private workspaces, product intelligence systems, runtime credentials, and
+proprietary platform code. See [NOTICE](./NOTICE),
+[Trademark Policy](./TRADEMARKS.md), and
+[Licensing And IP](./docs/licensing-and-ip.md).

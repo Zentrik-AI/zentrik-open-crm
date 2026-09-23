@@ -17,10 +17,19 @@ npm run test:package  # pack, install without dev dependencies, check CLI/MCP/UI
 npm run test:e2e      # browser edition and the agent-to-Review loop on a folder
 ```
 
-Pushing to `main` redeploys the [hosted demo](https://zentrik-ai.github.io/zentrik-open-crm/)
-from `.github/workflows/demo.yml`, built with `OPEN_CRM_BASE` set to the project
-path. It is the browser edition: no server, no records anywhere but the
-visitor's own browser.
+Pushing to `main` redeploys the hosted demo at
+`https://zentrik-ai.github.io/zentrik-open-crm/` from `.github/workflows/demo.yml`,
+built with `OPEN_CRM_BASE` set to the project path. It is the browser edition:
+no server, no records anywhere but the visitor's own browser.
+
+Do not make that URL a headline call to action. Chrome shows a lookalike-domain
+interstitial for it ("The site you just tried to visit looks fake"), because the
+label `zentrik-ai` reads as the domain `zentrik.ai` with the dot replaced by a
+hyphen, which is the pattern Chrome's target-embedding check looks for. The fix
+is a custom domain: add a `CNAME` record for `demo` pointing at
+`zentrik-ai.github.io.`, then set it on the Pages configuration
+(`gh api -X PUT repos/Zentrik-AI/zentrik-open-crm/pages -f cname=demo.zentrik.ai`).
+Promote the demo again once that resolves.
 
 The browser suite covers first use, account work, claims and the brief, review,
 task ownership, responsive layout, theme contrast, feedback export, and storage

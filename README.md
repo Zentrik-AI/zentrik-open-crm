@@ -231,6 +231,7 @@ with what you ran and what happened.
 
 **How it is built:** [Architecture](./docs/architecture.md) ·
 [Design System](./docs/design-system.md) ·
+[Launch film brief](./docs/launch-film-creative-brief.md) ·
 [Account work here, product work in Zentrik](./docs/product-work.md) ·
 [Roadmap](./docs/roadmap.md)
 

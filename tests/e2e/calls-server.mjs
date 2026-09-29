@@ -15,7 +15,12 @@ globalThis.fetch = async (input, init) => {
     if(url.endsWith("models")) return Response.json({models:[]});
     const body=JSON.parse(init.body);
     if (JSON.stringify(body.state).includes("FAILING_FIXTURE")) return new Response("test only",{status:401});
-    return Response.json({model:"fixture-provider (test only)",answers:Object.fromEntries(Object.keys(body.questions).map(k=>[k,{type:"choice",choice:k.endsWith("certainty")?(k.startsWith("s1")?"conditional":"explicit"):(k.startsWith("s1")?"commitment":"need"),confidence:0.87}]))});
+    // Deterministic test answers for the fictional workshop corpus, not inference.
+    return Response.json({model:"fixture-provider (test only)",answers:Object.fromEntries(Object.keys(body.questions).map(k=>{
+      const text=body.state.transcriptPassages.find(p=>p.id===k.split("_")[0])?.text ?? "";
+      const kind=/We need/i.test(text)?"need":/could pilot|I will /i.test(text)?"commitment":/Our goal/i.test(text)?"goal":/no approved budget|different versions/i.test(text)?"risk":"ignore";
+      return [k,{type:"choice",choice:k.endsWith("certainty")?(/if |after you|could pilot/i.test(text)?"conditional":"explicit"):kind,confidence:0.87}];
+    }))});
   }
   if(url.startsWith("https://public-api.granola.ai/")) {
     if(url.includes("not_")) return Response.json({title:"Synthetic pilot call",transcript:[{speaker:{source:"speaker"},text:"We need a clearer audit trail."},{speaker:{source:"speaker"},text:"We could pilot if security approves."}]});

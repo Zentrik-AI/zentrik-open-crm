@@ -111,7 +111,7 @@ export function createApi(dir: string) {
         const endpoint = url.pathname.slice("/api/calls".length);
         const body = req.method === "POST" ? object(await readJson(req)) : {};
         let result: unknown;
-        if (req.method === "GET" && endpoint === "") { const state = calls.state(); result = { ...state, calls: state.calls.map(call => ({ ...call, transcript: "", findingCount: call.findings.length, findings: [] })) }; }
+        if (req.method === "GET" && endpoint === "") { const state = calls.state(); result = { ...state, calls: state.calls.map(call => ({ ...call, transcript: "", findingCount: call.findings.length, findingKinds: [...new Set(call.findings.map(f => f.kind))], findings: [] })) }; }
         else if (req.method === "GET" && endpoint === "/call") result = calls.get(url.searchParams.get("id") ?? "");
         else if (req.method === "POST" && endpoint === "/connect") result = await calls.connect(body.provider as "jev" | "granola", body.key as string);
         else if (req.method === "POST" && endpoint === "/disconnect") result = calls.disconnect(body.provider as "jev" | "granola");

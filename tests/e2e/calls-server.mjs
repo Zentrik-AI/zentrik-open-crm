@@ -15,6 +15,20 @@ globalThis.fetch = async (input, init) => {
     if(url.endsWith("models")) return Response.json({models:[]});
     const body=JSON.parse(init.body);
     if (JSON.stringify(body.state).includes("FAILING_FIXTURE")) return new Response("test only",{status:401});
+    if(body.state.purpose === "match_accounts" || body.state.purpose === "decide_updates") {
+      if(process.env.RECORD_INVESTIGATION === "1")await new Promise(r=>setTimeout(r,600));
+      const answers={};
+      if(body.state.purpose === "match_accounts")for(const p of body.state.passages){
+        const choice=p.text.startsWith("Northstar")?"acct_northstar":p.text.startsWith("Meridian")?"acct_meridian":p.text.startsWith("Fieldstack")?"acct_fieldstack":p.text.startsWith("CivicGrid")?"acct_civicgrid":"ambiguous";
+        answers[p.id]={type:"choice",choice,confidence:0.98};
+      } else {
+        const text=body.state.passage.text;
+        const choice=text.startsWith("Northstar")?"complete_task_northstar_security":text.startsWith("Meridian")?"resolve_claim_meridian_security":text.startsWith("Fieldstack")?"known_claim_fieldstack_admin":"add_need";
+        answers.action={type:"choice",choice,confidence:0.98};
+        answers.qualification={type:"choice",choice:text.includes("if approved")?"conditional":"explicit",confidence:0.98};
+      }
+      return Response.json({model:"fixture-provider (test only)",answers});
+    }
     // Deterministic test answers for the fictional workshop corpus, not inference.
     return Response.json({model:"fixture-provider (test only)",answers:Object.fromEntries(Object.keys(body.questions).map(k=>{
       const text=body.state.transcriptPassages.find(p=>p.id===k.split("_")[0])?.text ?? "";

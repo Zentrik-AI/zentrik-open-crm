@@ -62,6 +62,7 @@ import { SettingsView, type AiTest } from "./views/SettingsView";
 import { ImproveView } from "./views/ImproveView";
 import { ReviewView } from "./views/ReviewView";
 import { BookView } from "./views/BookView";
+import { InvestigationView } from "./views/InvestigationView";
 import { brand } from "./lib/brand";
 import { OnboardingView, type WorkspaceSetupDraft } from "./views/OnboardingView";
 import { seedWorkspace } from "./data/seed";
@@ -78,6 +79,7 @@ const viewTitles: Record<View, string> = {
   contacts: "Contacts",
   tasks: "Tasks",
   calls: "Calls",
+  updates: "Update accounts",
   notes: "Notes",
   review: "Review",
   settings: "Settings",
@@ -987,6 +989,7 @@ function AppInner() {
             <div data-view="tasks" className={cn(view !== "tasks" && "hidden")}>
               <TasksView tasks={workspace.tasks} accounts={workspace.accounts} accountsById={accountsById} notesById={notesById} onToggleTask={toggleTask} onAddTask={addTask} onUpdateTask={(taskId, patch) => Boolean(dispatch({ type: "task.update", taskId, patch }))} onSelectAccount={selectAccountAndOpen} onExportICS={exportTasksICS} onTrace={setTraceId} />
             </div>
+            <div data-view="updates" className={cn(view !== "updates" && "hidden")}><InvestigationView workspace={workspace} active={view === "updates"} onOpenAccount={selectAccountAndOpen}/></div>
             <div data-view="calls" className={cn(view !== "calls" && "hidden")}><CallsView workspace={workspace} active={view === "calls"} onOpenAccount={selectAccountAndOpen} /></div>
             <div data-view="notes" className={cn(view !== "notes" && "hidden")}>
               <NotesView notes={workspace.notes} accounts={workspace.accounts} accountsById={accountsById} onAddNote={addNote} groundsById={groundsById} onTrace={setTraceId} />

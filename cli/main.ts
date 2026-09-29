@@ -47,6 +47,10 @@ Sources
   sources                                    every source on file
   calls list | show <id> | import <file>       inspect or import transcripts
   calls process <id>... --send-to-typesafe     classify selected calls with Jev
+  calls investigation                       inspect the latest account update plan
+  calls investigate <id>... --send-to-typesafe  compare calls with account records
+  calls investigate --file <file> --send-to-typesafe  investigate mixed account notes
+  calls apply-update <run> <decision> --approved-by "<person>"
   calls save <id> --account <id> --spans s0,s1 --approved-by "<person>"
                                              save explicitly reviewed quotes
 
@@ -261,12 +265,22 @@ async function run(argv: string[]) {
   if (command === "init") return init(rest);
 
   if (command === "calls") {
-    const { flags, rest: args } = parse(rest.slice(1), { "send-to-typesafe": { type: "boolean" }, account: { type: "string" }, spans: { type: "string" }, "approved-by": { type: "string" } });
+    const { flags, rest: args } = parse(rest.slice(1), { "send-to-typesafe": { type: "boolean" }, account: { type: "string" }, spans: { type: "string" }, "approved-by": { type: "string" }, file: { type: "string" } });
     const { createCallService } = await import("./calls.ts");
     const service = createCallService(resolveWorkspaceDir(text(flags, "workspace")));
     try {
       let result: unknown;
-      if (sub === "list") result = service.state().calls.map(({ transcript: _transcript, findings: _findings, ...call }) => call);
+      if (sub === "investigation") result = service.investigation.snapshot() ?? null;
+      else if (sub === "investigate") {
+        const file = text(flags,"file");
+        if(flags["send-to-typesafe"] !== true) throw new OpError("consent_required","Use --send-to-typesafe to send source and account context.");
+        const records = file ? [service.ingest({title:path.basename(file),transcript:fs.readFileSync(file,"utf8"),source:"file"}).call] : args.map(id=>service.get(id));
+        service.investigation.start(records,true);
+        while (["matching","checking"].includes(service.investigation.snapshot()?.status ?? "")) await new Promise(r=>setTimeout(r,200));
+        result=service.investigation.snapshot();
+      }
+      else if (sub === "apply-update") { decider(flags); result=service.investigation.apply(args[0],args[1]); }
+      else if (sub === "list") result = service.state().calls.map(({ transcript: _transcript, findings: _findings, ...call }) => call);
       else if (sub === "show") result = service.get(args[0]);
       else if (sub === "import") result = service.ingest({ title: path.basename(args[0]), transcript: fs.readFileSync(args[0], "utf8"), source: "file" });
       else if (sub === "process") {
@@ -274,7 +288,7 @@ async function run(argv: string[]) {
         while (service.state().job && !service.state().job?.finishedAt) await new Promise(r => setTimeout(r, 200));
         result = service.state().job;
       } else if (sub === "save") result = service.commit(args[0], required(flags, "account"), required(flags, "spans").split(","), decider(flags));
-      else throw new OpError("bad_usage", "Use calls list, show, import, process, or save.");
+      else throw new OpError("bad_usage", "Use calls list, show, import, process, save, investigation, investigate, or apply-update.");
       return emit(flags, result, () => JSON.stringify(result, null, 2));
     } finally { service.close(); }
   }

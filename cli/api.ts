@@ -112,6 +112,19 @@ export function createApi(dir: string) {
         const body = req.method === "POST" ? object(await readJson(req)) : {};
         let result: unknown;
         if (req.method === "GET" && endpoint === "") { const state = calls.state(); result = { ...state, calls: state.calls.map(call => ({ ...call, transcript: "", findingCount: call.findings.length, findingKinds: [...new Set(call.findings.map(f => f.kind))], findings: [] })) }; }
+        else if (req.method === "GET" && endpoint === "/investigation") result = calls.investigation.snapshot() ?? null;
+        else if (req.method === "POST" && endpoint === "/investigate") {
+          if (body.consent !== true) throw new OpError("consent_required", "Confirm sending notes and account context to TypeSafe.");
+          let records;
+          if (typeof body.text === "string" && body.text.trim()) records = [calls.ingest({title:"Account investigation notes",transcript:body.text,source:"file"}).call];
+          else {
+            if(!Array.isArray(body.ids)||body.ids.length>50||body.ids.some(id=>typeof id!=="string")) throw new OpError("invalid_value","Select up to 50 imported calls.");
+            records = [...new Set(body.ids as string[])].map(id=>calls.get(id));
+          }
+          result = calls.investigation.start(records,true);
+        }
+        else if (req.method === "POST" && endpoint === "/stop-investigation") result = calls.investigation.cancel();
+        else if (req.method === "POST" && endpoint === "/apply-update") { result = calls.investigation.apply(body.runId as string,body.decisionId as string); announce(); }
         else if (req.method === "GET" && endpoint === "/call") result = calls.get(url.searchParams.get("id") ?? "");
         else if (req.method === "POST" && endpoint === "/connect") result = await calls.connect(body.provider as "jev" | "granola", body.key as string);
         else if (req.method === "POST" && endpoint === "/disconnect") result = calls.disconnect(body.provider as "jev" | "granola");

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { createInvestigation } from "./investigation.ts";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { applyChange, newChange, OpError } from "../src/core/ops.ts";
@@ -72,8 +73,9 @@ export function createCallService(dir: string, fetcher: Fetcher = fetch, options
     save(call);
     return { call, duplicate: false };
   }
+  const investigation = createInvestigation(dir, { key: () => requireKey("jev"), fetcher, acquire, release, recover: options.recover && !liveLock() });
   return {
-    get, ingest,
+    get, ingest, investigation,
     state(): CallsState { return { calls: records(), job: job && { ...job, elapsedMs: job.finishedAt ? job.elapsedMs : Date.now() - Date.parse(job.startedAt) }, connections: { jev: !!keys.jev, granola: !!keys.granola } }; },
     async connect(provider: "jev" | "granola", key: string) {
       if (!["jev", "granola"].includes(provider) || typeof key !== "string" || !key.trim() || key.length > 2048 || /[\r\n]/.test(key)) throw new OpError("invalid_value", "Enter a valid provider key.");
@@ -183,7 +185,7 @@ export function createCallService(dir: string, fetcher: Fetcher = fetch, options
       save({ ...call, status: "saved", savedNoteId: noteId, savedAccountId: accountId, savedSpanIds: result.result.savedSpanIds });
       return result.result;
     },
-    close() { cancelled = true; keys = { jev: "", granola: "" }; },
+    close() { investigation.close(); cancelled = true; keys = { jev: "", granola: "" }; },
   };
 }
 export type CallService = ReturnType<typeof createCallService>;

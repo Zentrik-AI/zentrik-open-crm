@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  ScanLine,
   Mic,
   Bot,
   Building2,
@@ -21,6 +22,7 @@ export type View =
   | "contacts"
   | "tasks"
   | "calls"
+  | "updates"
   | "notes"
   | "review"
   | "settings"
@@ -37,6 +39,7 @@ export const primaryNav: NavEntry[] = [
   { id: "contacts", label: "Contacts", icon: Contact },
   { id: "tasks", label: "Tasks", icon: ListChecks },
   { id: "calls", label: "Calls", icon: Mic },
+  { id: "updates", label: "Update accounts", icon: ScanLine },
   { id: "notes", label: "Notes", icon: StickyNote },
   { id: "review", label: "Review", icon: Bot },
 ];

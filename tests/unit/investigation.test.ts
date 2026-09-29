@@ -1,0 +1,40 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { createCallService } from "../../cli/calls.ts";
+import { createDemoWorkspace } from "../../src/core/demo.ts";
+import { readWorkspace, writeWorkspace, updateWorkspace } from "../../cli/store.ts";
+
+const notes="Northstar Robotics: We sent the local-first security explainer and workspace checklist.\nMeridian Health: Security review is cleared for the renewal.\nFieldstack: We still need to avoid bloated CRM administration.\nCivicGrid: We need offline access for field visits.\nThey approved it.";
+const mock:typeof fetch=async(_url,init)=>{
+  if(!init?.body)return Response.json({models:[]});
+  const {state,questions}=JSON.parse(String(init.body));
+  const answers:Record<string,unknown>={};
+  if(state.purpose==="match_accounts")for(const p of state.passages){const id=p.text.startsWith("Northstar")?"acct_northstar":p.text.startsWith("Meridian")?"acct_meridian":p.text.startsWith("Fieldstack")?"acct_fieldstack":p.text.startsWith("CivicGrid")?"acct_civicgrid":"ambiguous";answers[p.id]={type:"choice",choice:id,confidence:0.98};}
+  else {
+    const text=state.passage.text;
+    const choice=text.startsWith("Northstar")?"complete_task_northstar_security":text.startsWith("Meridian")?"resolve_claim_meridian_security":text.startsWith("Fieldstack")?"known_claim_fieldstack_admin":"add_need";
+    answers.action={type:"choice",choice,confidence:0.98};answers.qualification={type:"choice",choice:text.includes("if approved")?"conditional":"explicit",confidence:0.98};
+    assert.ok(questions.action.criteria[choice]);
+  }
+  return Response.json({model:"investigation-test-fixture",answers});
+};
+function setup(t:{after:(fn:()=>void)=>void},fetcher=mock){const dir=fs.mkdtempSync(path.join(os.tmpdir(),"crm-investigation-"));writeWorkspace(dir,createDemoWorkspace());const service=createCallService(dir,fetcher);t.after(()=>{service.close();fs.rmSync(dir,{recursive:true,force:true});});return{dir,service};}
+async function run(service:ReturnType<typeof createCallService>,text=notes){await service.connect("jev","fixture-key");const call=service.ingest({title:"Fictional account updates",transcript:text,source:"file"}).call;service.investigation.start([call],true);for(let i=0;i<200&&["matching","checking"].includes(service.investigation.snapshot()!.status);i++)await new Promise(r=>setTimeout(r,5));return service.investigation.snapshot()!;}
+test("mixed sources produce real add, replace, complete, unchanged and clarification decisions without writing",async t=>{const{dir,service}=setup(t);const before=readWorkspace(dir).workspace;const result=await run(service);assert.equal(result.status,"ready");assert.deepEqual(new Set(result.decisions.map(d=>d.kind)),new Set(["add","replace","complete","unchanged","clarify"]));assert.equal(result.accounts?.length,4);assert.deepEqual(readWorkspace(dir).workspace,before);for(const d of result.decisions)assert.equal(notes.slice(d.start,d.end),d.quote);
+ for(const d of result.decisions.filter(d=>d.op)){service.investigation.apply(result.id,d.id);service.investigation.apply(result.id,d.id);}
+ const after=readWorkspace(dir).workspace;assert.equal(after.tasks.find(t=>t.id==="task_northstar_security")?.status,"done");assert.match(after.tasks.find(t=>t.id==="task_northstar_security")?.reason??"",/Completion source: note_investigation/);assert.equal(after.claims!.find(c=>c.id==="claim_meridian_security")?.status,"superseded");assert.equal(after.notes.length,before.notes.length+3);assert.ok(after.claims!.find(c=>c.accountId==="acct_civicgrid"&&c.text.includes("offline access"))?.evidence.length);assert.ok(!JSON.stringify(service.investigation.snapshot()).includes("fixture-key"));
+ const rerun=await run(service);assert.equal(rerun.decisions.filter(d=>d.op).length,0);
+});
+test("an account changed after investigation cannot be overwritten",async t=>{const{dir,service}=setup(t);const result=await run(service);const d=result.decisions.find(d=>d.kind==="add")!;updateWorkspace(dir,({workspace})=>({workspace:{...workspace,accounts:workspace.accounts.map(a=>a.id===d.accountId?{...a,owner:"Another person"}:a)},result:null}));assert.throws(()=>service.investigation.apply(result.id,d.id),/changed after investigation/);});
+test("conditional completion requires clarification, consent and known targets",async t=>{const{service}=setup(t);const call=service.ingest({title:"Conditional",transcript:"Northstar Robotics: We will send the explainer if approved.",source:"file"}).call;assert.throws(()=>service.investigation.start([call],false),/Confirm sending/);const result=await run(service,call.transcript);assert.equal(result.decisions[0].kind,"clarify");assert.equal(result.decisions[0].op,undefined);assert.throws(()=>service.investigation.apply(result.id,result.decisions[0].id),/actionable/);});
+test("invalid provider choice stops investigation without CRM changes",async t=>{const{dir,service}=setup(t,async(_url,init)=>!init?.body?Response.json({models:[]}):Response.json({model:"fixture",answers:{}}));const before=readWorkspace(dir).workspace;const result=await run(service);assert.equal(result.status,"error");assert.deepEqual(readWorkspace(dir).workspace,before);});
+test("independent services read durable decisions and applied receipts",async t=>{const{dir,service}=setup(t);const result=await run(service);const other=createCallService(dir,mock);try{assert.equal(other.investigation.snapshot()?.id,result.id);const d=result.decisions.find(d=>d.kind==="add")!;other.investigation.apply(result.id,d.id);assert.ok(service.investigation.snapshot()?.decisions.find(v=>v.id===d.id)?.appliedAt);}finally{other.close();}});
+
+test("older transcript cannot resolve a newer claim",async t=>{const{service}=setup(t);await service.connect("jev","fixture-key");const call=service.ingest({title:"Old fictional call",transcript:"Meridian Health: Security review is cleared for the renewal.",source:"file",occurredAt:"2020-01-01T00:00:00Z"}).call;service.investigation.start([call],true);for(let i=0;i<100&&service.investigation.snapshot()?.status!=="ready";i++)await new Promise(r=>setTimeout(r,5));const d=service.investigation.snapshot()!.decisions[0];assert.equal(d.kind,"clarify");assert.match(d.title,/predates/);assert.equal(d.op,undefined);});
+test("a single dictated paragraph splits into grounded account decisions",async t=>{const{service}=setup(t);const result=await run(service,notes.replace(/\n/g," "));assert.equal(result.total,5);assert.equal(result.accounts?.length,4);assert.equal(result.decisions.filter(d=>d.op).length,3);});
+
+test("cancellation leaves records unchanged and releases the shared job lock",async t=>{const{dir,service}=setup(t,async(u,i)=>{await new Promise(r=>setTimeout(r,15));return mock(u,i);});await service.connect("jev","fixture-key");const call=service.ingest({title:"Cancel",transcript:notes,source:"file"}).call;const before=readWorkspace(dir).workspace;service.investigation.start([call],true);service.investigation.cancel();for(let i=0;i<100&&["matching","checking"].includes(service.investigation.snapshot()!.status);i++)await new Promise(r=>setTimeout(r,5));assert.equal(service.investigation.snapshot()?.status,"error");assert.deepEqual(readWorkspace(dir).workspace,before);assert.equal(fs.existsSync(path.join(dir,".open-crm/calls/processing.lock")),false);});
+test("a stopped server marks its incomplete investigation for retry",async t=>{const{dir,service}=setup(t);await run(service);const file=path.join(dir,".open-crm/investigation.json");const saved=JSON.parse(fs.readFileSync(file,"utf8"));saved.run.status="checking";fs.writeFileSync(file,JSON.stringify(saved));const restored=createCallService(dir,mock,{recover:true});try{assert.equal(restored.investigation.snapshot()?.status,"error");assert.match(restored.investigation.snapshot()?.error??"",/server stopped/);}finally{restored.close();}});

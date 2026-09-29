@@ -987,7 +987,7 @@ function AppInner() {
             <div data-view="tasks" className={cn(view !== "tasks" && "hidden")}>
               <TasksView tasks={workspace.tasks} accounts={workspace.accounts} accountsById={accountsById} notesById={notesById} onToggleTask={toggleTask} onAddTask={addTask} onUpdateTask={(taskId, patch) => Boolean(dispatch({ type: "task.update", taskId, patch }))} onSelectAccount={selectAccountAndOpen} onExportICS={exportTasksICS} onTrace={setTraceId} />
             </div>
-            <div data-view="calls" className={cn(view !== "calls" && "hidden")}><CallsView workspace={workspace} active={view === "calls"} /></div>
+            <div data-view="calls" className={cn(view !== "calls" && "hidden")}><CallsView workspace={workspace} active={view === "calls"} onOpenAccount={selectAccountAndOpen} /></div>
             <div data-view="notes" className={cn(view !== "notes" && "hidden")}>
               <NotesView notes={workspace.notes} accounts={workspace.accounts} accountsById={accountsById} onAddNote={addNote} groundsById={groundsById} onTrace={setTraceId} />
             </div>

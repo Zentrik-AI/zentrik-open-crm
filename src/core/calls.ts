@@ -11,6 +11,7 @@ export interface CallRecord {
   id: string; title: string; transcript: string; source: "file" | "granola";
   externalId?: string; occurredAt?: string; sourceRef: string; importedAt: string;
   status: "ready" | "processing" | "review" | "error" | "saved";
+  findingKinds?: ClaimKind[];
   findings: CallFinding[]; findingCount?: number; model?: string; processingMs?: number; error?: string;
   savedAccountId?: string; savedNoteId?: string; savedSpanIds?: string[];
 }

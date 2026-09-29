@@ -1,6 +1,6 @@
 {
   "name": "zentrik-open-crm",
-  "version": "1.1.1",
+  "version": "1.2.0-producttank.0",
   "private": false,
   "type": "module",
   "description": "Open-source, local-first CRM that people and their coding agents work together: every fact shows its source, agents propose and people approve, and what several accounts are saying is handed on as product evidence.",
@@ -43,7 +43,8 @@
     "LICENSE",
     "TRADEMARKS.md",
     "NOTICE",
-    "THIRD_PARTY_NOTICES.txt"
+    "THIRD_PARTY_NOTICES.txt",
+    "examples/calls"
   ],
   "scripts": {
     "dev": "vite",
@@ -56,7 +57,8 @@
     "crm": "node bin/open-crm.js",
     "test": "node --test \"tests/unit/*.test.ts\" \"tests/unit/*.test.mjs\"",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:calls": "playwright test --config tests/e2e/calls.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",

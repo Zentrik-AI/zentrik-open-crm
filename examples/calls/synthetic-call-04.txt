@@ -1,0 +1,14 @@
+SYNTHETIC WORKSHOP CALL 04 — fictional company Meadow 04. Domain: meadow-04.invalid.
+Operator: What would make your weekly customer review easier?
+Customer: We need review before changing account records. Today we keep it in a spreadsheet.
+Operator: Can you describe the last time that caused a problem?
+Customer: During review 4, two colleagues had different versions of the same call notes. We could not tell which one was current.
+Customer: Our goal is to enter the next conversation knowing what we promised and what still needs an answer.
+Operator: What would prevent you from trying a new workflow?
+Customer: Security approval is still pending. We could pilot next month if security approves. This is not a commitment to buy.
+Customer: I will send an example of our current review sheet on Friday. It will contain invented data.
+Operator: I will prepare a demonstration using that example after you send it.
+Customer: Please keep the original wording visible. A summary that drops a condition can mislead the account owner.
+Operator: We will leave dates and owners for review when the conversation does not make them clear.
+Customer: There is no approved budget yet. The review team is three people.
+Operator: Thanks. We can use the next call to check the unresolved security question.

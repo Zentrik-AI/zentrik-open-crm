@@ -56,6 +56,7 @@ import { PipelineView } from "./views/PipelineView";
 import { AccountsView, type AiViewState } from "./views/AccountsView";
 import { ContactsView } from "./views/ContactsView";
 import { TasksView } from "./views/TasksView";
+import { CallsView } from "./views/CallsView";
 import { NotesView } from "./views/NotesView";
 import { SettingsView, type AiTest } from "./views/SettingsView";
 import { ImproveView } from "./views/ImproveView";
@@ -76,6 +77,7 @@ const viewTitles: Record<View, string> = {
   accounts: "Accounts",
   contacts: "Contacts",
   tasks: "Tasks",
+  calls: "Calls",
   notes: "Notes",
   review: "Review",
   settings: "Settings",
@@ -985,6 +987,7 @@ function AppInner() {
             <div data-view="tasks" className={cn(view !== "tasks" && "hidden")}>
               <TasksView tasks={workspace.tasks} accounts={workspace.accounts} accountsById={accountsById} notesById={notesById} onToggleTask={toggleTask} onAddTask={addTask} onUpdateTask={(taskId, patch) => Boolean(dispatch({ type: "task.update", taskId, patch }))} onSelectAccount={selectAccountAndOpen} onExportICS={exportTasksICS} onTrace={setTraceId} />
             </div>
+            <div data-view="calls" className={cn(view !== "calls" && "hidden")}><CallsView workspace={workspace} active={view === "calls"} /></div>
             <div data-view="notes" className={cn(view !== "notes" && "hidden")}>
               <NotesView notes={workspace.notes} accounts={workspace.accounts} accountsById={accountsById} onAddNote={addNote} groundsById={groundsById} onTrace={setTraceId} />
             </div>

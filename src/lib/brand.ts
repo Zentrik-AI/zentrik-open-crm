@@ -15,7 +15,7 @@ export const brand = {
   /** The claim, in one sentence. Keep every surface saying this. */
   claim: "The first open ARM: a CRM people and their agents work together.",
   /** Kept equal to package.json by tests/unit/cli.test.ts. */
-  version: "1.1.1",
+  version: "1.2.0-producttank.0",
   maker: "Zentrik",
   makerUrl: "https://zentrik.ai",
   /** Where to send people who want their account evidence to become product decisions. */

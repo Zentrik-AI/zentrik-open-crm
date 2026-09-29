@@ -15,6 +15,8 @@ export interface InvestigationRun {
   accounts?: {id:string;name:string;passages:number}[];
   total: number; matched: number; checked: number; decisions: InvestigationDecision[];
   currentAccount?: string; error?: string;
+  activeAccounts?: string[];
+  events?: { id: number; at: string; label: string; accountId?: string; decisionId?: string }[];
 }
 export const investigationKinds: Record<ClaimKind,string> = {
   need: "Customer need", risk: "Risk", objection: "Objection", goal: "Goal", commitment: "Commitment", fact: "Account fact",

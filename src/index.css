@@ -247,3 +247,12 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Motion follows received records. It never delays provider work or CRM writes. */
+@keyframes investigation-arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.investigation-arrive { animation: investigation-arrive 220ms ease-out both; }
+.investigation-progress { transition: width 280ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .investigation-arrive { animation: none; }
+  .investigation-progress { transition: none; }
+}

@@ -65,3 +65,16 @@ Before committing, review staged changes for:
 - exported JSON
 - hidden `.env` or runtime files
 - screenshots or binary assets with private content
+
+## Calls connections
+
+Calls keys are held in the local server process, with password inputs cleared
+after submission. They are not part of CRM exports, call history, source files
+or browser storage. The process may load explicit provider environment variables.
+Disconnect clears its in-memory key; a later process can reload its environment.
+
+Granola import downloads selected content. Processing sends selected transcript
+passages to TypeSafe after explicit confirmation. Local CRM storage is not local
+model inference. Accepted quotes become normal CRM records and appear in account
+Markdown and workspace exports. Call history and originals require a whole-folder
+backup. See [the complete data flow](calls.md#what-leaves-the-computer).

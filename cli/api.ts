@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import { importCallSamples } from "./call-samples.ts";
+import { createCallService } from "./calls.ts";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
 import type { Change, Workspace } from "../src/types.ts";
@@ -42,6 +44,7 @@ function object(value: unknown): Record<string, unknown> {
  *  Loopback hosts only (defeats DNS rebinding), same-origin writes only, and
  *  JSON bodies only (so a cross-site form post cannot reach a handler). */
 function trusted(req: IncomingMessage): boolean {
+  if (req.headers["sec-fetch-site"] === "cross-site") return false;
   const host = (req.headers.host ?? "").replace(/:\d+$/, "");
   if (!["127.0.0.1", "localhost", "[::1]"].includes(host)) return false;
   const origin = req.headers.origin;
@@ -57,6 +60,7 @@ function trusted(req: IncomingMessage): boolean {
 }
 
 export function createApi(dir: string) {
+  const calls = createCallService(dir, fetch, { recover: true });
   const listeners = new Set<ServerResponse>();
   // Per-client state: a GET or another client's write must not consume events.
   const states = new Map<ServerResponse, string>();
@@ -103,7 +107,24 @@ export function createApi(dir: string) {
     }
 
     try {
-      if (req.method === "GET" && url.pathname === "/api/workspace") {
+      if (url.pathname.startsWith("/api/calls")) {
+        const endpoint = url.pathname.slice("/api/calls".length);
+        const body = req.method === "POST" ? object(await readJson(req)) : {};
+        let result: unknown;
+        if (req.method === "GET" && endpoint === "") { const state = calls.state(); result = { ...state, calls: state.calls.map(call => ({ ...call, transcript: "", findingCount: call.findings.length, findings: [] })) }; }
+        else if (req.method === "GET" && endpoint === "/call") result = calls.get(url.searchParams.get("id") ?? "");
+        else if (req.method === "POST" && endpoint === "/connect") result = await calls.connect(body.provider as "jev" | "granola", body.key as string);
+        else if (req.method === "POST" && endpoint === "/disconnect") result = calls.disconnect(body.provider as "jev" | "granola");
+        else if (req.method === "GET" && endpoint === "/granola") result = await calls.listGranola(url.searchParams.get("cursor") ?? undefined);
+        else if (req.method === "POST" && endpoint === "/import-granola") result = await calls.importGranola(body.ids as string[]);
+        else if (req.method === "POST" && endpoint === "/samples") result = importCallSamples(calls, body.count as number);
+        else if (req.method === "POST" && endpoint === "/import") result = calls.ingest({ title: body.title as string, transcript: body.transcript as string, source: "file" });
+        else if (req.method === "POST" && endpoint === "/process") result = calls.start(body.ids as string[], body.consent === true);
+        else if (req.method === "POST" && endpoint === "/cancel") result = calls.cancel();
+        else if (req.method === "POST" && endpoint === "/save") { result = calls.commit(body.id as string, body.accountId as string, body.spanIds as string[]); announce(); }
+        else { send(res, 404, { error: { message: "No such calls endpoint." } }); return true; }
+        send(res, 200, result);
+      } else if (req.method === "GET" && url.pathname === "/api/workspace") {
         const loaded = readWorkspace(dir);
         send(res, 200, { ...loaded, dir, folder: path.basename(dir) });
       } else if (req.method === "GET" && url.pathname === "/api/events") {
@@ -151,6 +172,7 @@ export function createApi(dir: string) {
   return {
     handle,
     close() {
+      calls.close();
       watcher.close();
       clearTimeout(timer);
       clearInterval(heartbeat);

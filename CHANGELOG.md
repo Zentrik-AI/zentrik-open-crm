@@ -2,6 +2,16 @@
 
 Notable user-facing changes, newest first.
 
+## 1.2.0-producttank.0 (workshop prerelease)
+
+- Add Calls in folder mode: import Granola transcripts or text files, classify
+  verbatim passages with Jev, and save human-selected quotes as account evidence.
+- Keep connection keys in local server memory. Show where transcript content is
+  sent, require processing consent, and preserve conditions and source offsets.
+- Add progress, retryable failures, cancellation, restart recovery, CLI/MCP access,
+  and 50 clearly fictional call samples. Real-provider rehearsal is still required
+  before making quality or throughput claims.
+
 ## 1.1.1
 
 - The MCP server reported version 0.2.0 to its clients while the package was

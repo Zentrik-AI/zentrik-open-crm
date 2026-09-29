@@ -45,6 +45,10 @@ Sources
   source add <file> [--kind transcript|email|calendar|ticket|export|document] [--external-id <id>] [--occurred-at DATE]
                                              keep a file under sources/ by content hash; cite it in a note as --ref source:<id>
   sources                                    every source on file
+  calls list | show <id> | import <file>       inspect or import transcripts
+  calls process <id>... --send-to-typesafe     classify selected calls with Jev
+  calls save <id> --account <id> --spans s0,s1 --approved-by "<person>"
+                                             save explicitly reviewed quotes
 
 Write
   note add --account <account> --title "<t>" --body "<text or - for stdin>"
@@ -255,6 +259,25 @@ async function run(argv: string[]) {
 
   if (!command || command === "help" || command === "--help" || command === "-h") return process.stdout.write(HELP);
   if (command === "init") return init(rest);
+
+  if (command === "calls") {
+    const { flags, rest: args } = parse(rest.slice(1), { "send-to-typesafe": { type: "boolean" }, account: { type: "string" }, spans: { type: "string" }, "approved-by": { type: "string" } });
+    const { createCallService } = await import("./calls.ts");
+    const service = createCallService(resolveWorkspaceDir(text(flags, "workspace")));
+    try {
+      let result: unknown;
+      if (sub === "list") result = service.state().calls.map(({ transcript: _transcript, findings: _findings, ...call }) => call);
+      else if (sub === "show") result = service.get(args[0]);
+      else if (sub === "import") result = service.ingest({ title: path.basename(args[0]), transcript: fs.readFileSync(args[0], "utf8"), source: "file" });
+      else if (sub === "process") {
+        service.start(args, flags["send-to-typesafe"] === true);
+        while (service.state().job && !service.state().job?.finishedAt) await new Promise(r => setTimeout(r, 200));
+        result = service.state().job;
+      } else if (sub === "save") result = service.commit(args[0], required(flags, "account"), required(flags, "spans").split(","), decider(flags));
+      else throw new OpError("bad_usage", "Use calls list, show, import, process, or save.");
+      return emit(flags, result, () => JSON.stringify(result, null, 2));
+    } finally { service.close(); }
+  }
 
   if (command === "mcp") {
     const { flags } = parse(rest);

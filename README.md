@@ -60,6 +60,17 @@ Three more worth asking on day one:
 - *"Prepare me for the Northstar call"* before a conversation.
 - *"Where is our memory thin?"* to get `./crm lint` in plain words.
 
+## Calls into CRM evidence
+
+In a folder workspace, open **Calls** to import selected Granola transcripts or
+text files. Jev classifies verbatim passages; you review the quotes and choose
+which account receives them. A batch can process up to 50 calls, with progress,
+per-call errors, source links and review before CRM writes.
+
+Connection keys stay in the local server's memory. Jev processing sends selected
+transcript content to TypeSafe after you confirm it. Try the included synthetic
+calls before importing your own. [Setup, data flow and batch guide](docs/calls.md).
+
 ## Every fact shows its source
 
 What you know about an account is recorded as **claims**: needs, risks, goals,
@@ -201,9 +212,11 @@ that browser's local storage instead. A CLI agent cannot see them; use
 **Settings → Agent workspace** to export a one-way Markdown snapshot, or move to
 a folder workspace when you want the agent loop.
 
-Nothing is sent anywhere. There is no account and no telemetry, and the app makes
-no outbound request at all unless you add your own Anthropic key for the optional
-in-app AI, which then talks to Anthropic and nobody else.
+There is no Open CRM account or telemetry. Optional in-app AI sends requests to
+Anthropic when configured. In folder mode, optional Calls connections read from
+Granola and send selected transcript content to TypeSafe when you choose to
+process it. [Calls data flow](docs/calls.md#what-leaves-the-computer) explains
+which information each provider receives.
 
 ## If Something Goes Wrong
 

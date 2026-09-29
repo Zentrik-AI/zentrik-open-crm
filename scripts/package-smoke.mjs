@@ -14,6 +14,8 @@ const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const env = { ...process.env, OPEN_CRM_ACTOR: "package-smoke" };
 delete env.OPEN_CRM_WORKSPACE;
 delete env.NODE_PATH;
+delete env.TYPESAFE_API_KEY;
+delete env.GRANOLA_API_KEY;
 // npm run adds the checkout's dev tools to PATH. Do not lend them to the install.
 env.PATH = (env.PATH ?? "").split(path.delimiter).filter(p => !p.replaceAll("\\", "/").includes("node_modules/.bin")).join(path.delimiter);
 
@@ -125,6 +127,13 @@ try {
   }
   const api = await (await get("/api/workspace")).json();
   assert.deepEqual(api.workspace, JSON.parse(records));
+  const calls = await (await get("/api/calls")).json();
+  assert.deepEqual(calls.connections, { jev: false, granola: false });
+  const samples = await fetch(new URL("/api/calls/samples", url), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ count: 50 }) });
+  assert.equal(samples.status, 200);
+  assert.equal((await samples.json()).ids.length, 50);
+  assert.equal(JSON.parse(cli("calls", "list", "--json")).length, 50);
+  assert.equal(fs.readFileSync(path.join(workspace,"workspace.json"),"utf8"), records);
   assert.equal(JSON.parse(cli("check", "--json")).ok, true);
   assert.equal(fs.readFileSync(index, "utf8"), htmlBefore);
   assert.doesNotMatch(stderr, /[Bb]uilding|[Rr]ebuilding/);

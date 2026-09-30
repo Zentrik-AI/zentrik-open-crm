@@ -43,3 +43,23 @@ test("repeated task completion refers to the pending proposal, not completed CRM
  const fetcher:typeof fetch=async(u,i)=>{if(!i?.body)return mock(u,i);const b=JSON.parse(String(i.body));if(b.state.purpose!=="decide_updates")return mock(u,i);const choice=b.questions.action.criteria.complete_task_northstar_security?"complete_task_northstar_security":Object.keys(b.questions.action.criteria).find(k=>k.startsWith("known_pending_"));assert.ok(choice);return Response.json({model:"test",answers:{action:{type:"choice",choice,confidence:0.98},qualification:{type:"choice",choice:"explicit",confidence:0.98}}});};
  const{dir,service}=setup(t,fetcher);const before=readWorkspace(dir).workspace;const line="Northstar Robotics: We sent the local-first security explainer and workspace checklist.";const result=await run(service,line+"\n"+line);const repeated=result.decisions.find(d=>d.dependsOn)!;assert.ok(repeated);assert.equal(repeated.title,"Already covered by another proposed update");assert.equal(repeated.dependsOn,result.decisions.find(d=>d.kind==="complete")!.id);assert.deepEqual(readWorkspace(dir).workspace,before);
 });
+
+test("pasted notes read each line in its own context; transcripts keep the wider window",async t=>{
+ const contexts:string[]=[];const fetcher:typeof fetch=async(u,i)=>{if(i?.body){const b=JSON.parse(String(i.body));if(b.state.purpose==="match_accounts")for(const p of b.state.passages)contexts.push(p.context);}return mock(u,i);};
+ const{service}=setup(t,fetcher);await service.connect("jev","fixture-key");
+ const call=service.ingest({title:"Account investigation notes",transcript:notes,source:"file"}).call;service.investigation.start([call],true,{scope:"line"});
+ for(let i=0;i<200&&["matching","checking"].includes(service.investigation.snapshot()!.status);i++)await new Promise(r=>setTimeout(r,5));
+ assert.equal(contexts[0],notes.split("\n")[0]);assert.ok(!contexts[0].includes("Meridian"));
+ contexts.length=0;const other=service.ingest({title:"Transcript",transcript:notes,source:"file"}).call;service.investigation.start([other],true);
+ for(let i=0;i<200&&["matching","checking"].includes(service.investigation.snapshot()!.status);i++)await new Promise(r=>setTimeout(r,5));
+ assert.ok(contexts[0].includes("Meridian"));
+});
+
+test("a lower-confidence change from a direct statement is proposed for individual review; tentative wording still asks",async t=>{
+ const fetcher=(conf:number,qual:string):typeof fetch=>async(u,i)=>{if(!i?.body)return mock(u,i);const b=JSON.parse(String(i.body));if(b.state.purpose!=="decide_updates")return mock(u,i);return Response.json({model:"test",answers:{action:{type:"choice",choice:"complete_task_northstar_security",confidence:conf},qualification:{type:"choice",choice:qual,confidence:0.95}}});};
+ const line="Northstar Robotics: We sent the local-first security explainer and workspace checklist.";
+ {const{service}=setup(t,fetcher(0.72,"explicit"));const r=await run(service,line);const d=r.decisions[0];assert.equal(d.kind,"complete");assert.equal(d.review,"check");assert.equal(d.confidence,0.72);assert.ok(d.op);}
+ {const{service}=setup(t,fetcher(0.72,"conditional"));const r=await run(service,line);assert.equal(r.decisions[0].kind,"clarify");assert.equal(r.decisions[0].op,undefined);}
+ {const{service}=setup(t,fetcher(0.5,"explicit"));const r=await run(service,line);assert.equal(r.decisions[0].kind,"clarify");}
+ {const{service}=setup(t,fetcher(0.9,"explicit"));const r=await run(service,line);assert.equal(r.decisions[0].review,undefined);}
+});

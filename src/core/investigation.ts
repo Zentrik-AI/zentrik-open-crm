@@ -9,6 +9,8 @@ export interface InvestigationDecision {
   qualification?: "explicit" | "conditional" | "unclear";
   dependsOn?: string;
   model?: string; op?: Op; appliedAt?: string; noteId?: string;
+  /** "check": the model's choice was below the usual bar; a person must review it on its own. */
+  review?: "check"; confidence?: number;
 }
 export interface InvestigationRun {
   id: string; status: InvestigationStatus; startedAt: string; finishedAt?: string;

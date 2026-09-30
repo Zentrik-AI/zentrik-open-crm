@@ -85,7 +85,12 @@ export function createInvestigation(
     if (!active && fs.existsSync(file)) saved = JSON.parse(fs.readFileSync(file, "utf8"));
     return saved?.run;
   }
-  function start(calls: CallRecord[], consent: boolean) {
+  /**
+   * `scope: "line"` is for pasted notes, where each line is one account update:
+   * a passage is read in the context of its own line, so neighbouring lines about
+   * other accounts cannot make it look ambiguous. Transcripts keep ±600 characters.
+   */
+  function start(calls: CallRecord[], consent: boolean, startOptions: { scope?: "line" | "window" } = {}) {
     snapshot();
     if (!consent)
       throw new OpError("consent_required", "Confirm sending the selected sources and account context to TypeSafe.");
@@ -167,6 +172,16 @@ export function createInvestigation(
       accountId: p.accountId,
       accountName: accounts.find((a) => a.id === p.accountId)?.name,
     });
+    const context = (p: Passage) => {
+      const t = p.call.transcript;
+      let from = Math.max(0, p.start - 600), to = p.end + 600;
+      if (startOptions.scope === "line") {
+        from = Math.max(from, t.lastIndexOf("\n", p.start - 1) + 1);
+        const lineEnd = t.indexOf("\n", p.end);
+        to = Math.min(to, lineEnd < 0 ? t.length : lineEnd);
+      }
+      return t.slice(from, to);
+    };
     const investigate = async () => {
       for (let offset = 0; offset < passages.length; offset += 12) {
         if (stopped) throw new OpError("cancelled", "Investigation stopped. Run it again when ready.");
@@ -186,7 +201,7 @@ export function createInvestigation(
               id: p.id,
               text: p.text,
               source: p.call.title,
-              context: p.call.transcript.slice(Math.max(0, p.start - 600), p.end + 600),
+              context: context(p),
             })),
           },
           Object.fromEntries(
@@ -318,7 +333,7 @@ export function createInvestigation(
                       text: p.text,
                       source: p.call.title,
                       occurredAt: p.call.occurredAt ?? null,
-                      context: p.call.transcript.slice(Math.max(0, p.start - 600), p.end + 600),
+                      context: context(p),
                     },
                     claims,
                     tasks,
@@ -362,7 +377,11 @@ export function createInvestigation(
                 );
                 if (older) d.title = "Source predates this record — clarify first";
                 const text = q.choice === "explicit" ? p.text : `[${q.choice}] ${p.text}`;
-                if (!older && a.confidence >= 0.8 && q.confidence >= 0.8 && q.choice !== "unclear") {
+                // A concrete change the model leans towards, from a direct statement, is shown
+                // for individual review instead of hidden behind "clarify". Approval is still required.
+                const change = /^(add|replace|resolve|complete)_/.test(a.choice);
+                const check = change && a.confidence < 0.8 && a.confidence >= 0.6 && q.choice === "explicit";
+                if (!older && (a.confidence >= 0.8 || check) && q.confidence >= 0.8 && q.choice !== "unclear") {
                   if (a.choice === "ignore" || a.choice.startsWith("known_")) {
                     d.kind = "unchanged";
                     d.title = a.choice === "ignore" ? "No CRM update needed" : "Already known — leave unchanged";
@@ -425,6 +444,10 @@ export function createInvestigation(
                     };
                     task.status = "done";
                     task.id = `pending_${p.id}`;
+                  }
+                  if (check && d.op) {
+                    d.review = "check";
+                    d.confidence = Math.round(a.confidence * 100) / 100;
                   }
                 }
                 run.decisions.push(d);

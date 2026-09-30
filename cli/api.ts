@@ -116,12 +116,13 @@ export function createApi(dir: string) {
         else if (req.method === "POST" && endpoint === "/investigate") {
           if (body.consent !== true) throw new OpError("consent_required", "Confirm sending notes and account context to TypeSafe.");
           let records;
-          if (typeof body.text === "string" && body.text.trim()) records = [calls.ingest({title:"Account investigation notes",transcript:body.text,source:"file"}).call];
+          const notes = typeof body.text === "string" && body.text.trim();
+          if (notes) records = [calls.ingest({title:"Account investigation notes",transcript:body.text as string,source:"file"}).call];
           else {
             if(!Array.isArray(body.ids)||body.ids.length>50||body.ids.some(id=>typeof id!=="string")) throw new OpError("invalid_value","Select up to 50 imported calls.");
             records = [...new Set(body.ids as string[])].map(id=>calls.get(id));
           }
-          result = calls.investigation.start(records,true);
+          result = calls.investigation.start(records,true,{scope:notes?"line":"window"});
         }
         else if (req.method === "POST" && endpoint === "/stop-investigation") result = calls.investigation.cancel();
         else if (req.method === "POST" && endpoint === "/apply-update") { result = calls.investigation.apply(body.runId as string,body.decisionId as string); announce(); }

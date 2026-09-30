@@ -276,7 +276,7 @@ async function run(argv: string[]) {
         const file = text(flags,"file");
         if(flags["send-to-typesafe"] !== true) throw new OpError("consent_required","Use --send-to-typesafe to send source and account context.");
         const records = file ? [service.ingest({title:path.basename(file),transcript:fs.readFileSync(file,"utf8"),source:"file"}).call] : args.map(id=>service.get(id));
-        service.investigation.start(records,true);
+        service.investigation.start(records,true,{scope:file?"line":"window"});
         while (["matching","checking"].includes(service.investigation.snapshot()?.status ?? "")) await new Promise(r=>setTimeout(r,200));
         result=service.investigation.snapshot();
       }

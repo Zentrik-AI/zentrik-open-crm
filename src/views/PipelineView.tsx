@@ -4,14 +4,11 @@ import type { Account, Deal } from "../types";
 import type { DealDraft } from "../lib/drafts";
 import { dealStages } from "../lib/drafts";
 import { dealStageMeta, pipelineColumns, isOpenDeal } from "../lib/meta";
-import { splitCurrency } from "../lib/utils";
-import { Badge } from "../components/ui/badge";
+import { cn, formatCurrency, splitCurrency } from "../lib/utils";
 import { Button } from "../components/ui/button";
 import { Field, Input, Select } from "../components/ui/field";
 import { Card, CardContent } from "../components/ui/card";
-import { ArrValue } from "../components/account-bits";
 import { DealCard } from "../components/deal-card";
-import { Stat } from "../components/ui/stat";
 import { Private } from "../components/ui/privacy";
 
 export function PipelineView({
@@ -59,23 +56,25 @@ export function PipelineView({
   }
 
   return (
-    <div className="grid gap-5">
-      <h1 className="font-serif text-h1 text-foreground">Pipeline</h1>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex items-center gap-6">
-          <Stat
-            label="Weighted pipeline"
-            value={
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-7">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0">
+          <h1 className="text-h1 text-foreground">Pipeline</h1>
+          <p className="mt-1 text-body-sm text-muted-foreground">
+            <span>
               <Private redactedLabel="hidden">
-                <span>
+                <span className="tnum font-medium text-foreground">
                   {w.lead}
-                  {w.unit && <span className="text-[0.72em] text-muted-foreground">{w.unit}</span>}
+                  {w.unit}
                 </span>
-              </Private>
-            }
-            size="xl"
-          />
-          <Stat label="Open deals" value={openCount} size="xl" />
+              </Private>{" "}
+              weighted pipeline
+            </span>
+            <span className="text-faint-foreground" aria-hidden> · </span>
+            <span>
+              <span className="tnum font-medium text-foreground">{openCount}</span> open deals
+            </span>
+          </p>
         </div>
         <Button variant="primary" size="sm" onClick={() => setAdding((v) => !v)}>
           <Plus />
@@ -85,7 +84,7 @@ export function PipelineView({
 
       {adding && (
         <Card className="animate-settle">
-          <CardContent className="pt-4">
+          <CardContent className="pt-5">
             <form className="grid items-end gap-3 md:grid-cols-[1.4fr_1fr_120px_140px_auto]" onSubmit={submit}>
               <Field label="Deal name">
                 <Input value={draft.name} onChange={(e) => setDraft((c) => ({ ...c, name: e.target.value }))} placeholder="Acme — platform pilot" />
@@ -119,24 +118,33 @@ export function PipelineView({
         </Card>
       )}
 
-      <div className="flex gap-4 overflow-x-auto pb-2">
-        {pipelineColumns.map((stage) => {
+      <div className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:scroll-px-0 sm:px-0">
+        {pipelineColumns.map((stage, index) => {
           const colDeals = deals.filter((d) => d.stage === stage);
           const colSum = colDeals.reduce((s, d) => s + d.value, 0);
+          const won = stage === "won";
           return (
-            <div key={stage} className="flex w-[280px] shrink-0 flex-col">
-              <div className="mb-2.5 flex items-center justify-between px-0.5">
-                <Badge tone={dealStageMeta[stage].tone} dot>
-                  {dealStageMeta[stage].label}
-                </Badge>
-                <div className="flex items-center gap-2 text-[12px] text-faint-foreground">
-                  <span className="font-mono tabular-nums">{colDeals.length}</span>
-                  {colSum > 0 && <ArrValue value={colSum} className="text-[12px]" />}
+            <section
+              key={stage}
+              aria-label={dealStageMeta[stage].label}
+              className="flex min-w-[256px] flex-1 shrink-0 snap-start flex-col rounded-xl bg-surface-sunken/70 p-1.5 animate-settle"
+              style={{ animationDelay: `${index * 40}ms` }}
+            >
+              <div className="flex h-9 items-center justify-between gap-2 px-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", won ? "bg-success" : "bg-faint-foreground/60")} aria-hidden />
+                  <span className="truncate text-body-sm font-medium text-foreground">{dealStageMeta[stage].label}</span>
+                  <span className="tnum text-body-sm text-faint-foreground">{colDeals.length}</span>
                 </div>
+                {colSum > 0 && (
+                  <Private redactedLabel="hidden">
+                    <span className="tnum text-label text-muted-foreground">{formatCurrency(colSum)}</span>
+                  </Private>
+                )}
               </div>
-              <div className="flex-1 space-y-2.5 rounded-lg border border-dashed border-border bg-surface-sunken/40 p-2">
+              <div className="flex flex-1 flex-col gap-1.5">
                 {colDeals.length === 0 ? (
-                  <div className="px-2 py-6 text-center text-[12px] text-faint-foreground">No deals</div>
+                  <div className="flex min-h-[88px] items-center justify-center text-label text-faint-foreground">No deals</div>
                 ) : (
                   colDeals.map((deal) => (
                     <DealCard
@@ -150,7 +158,7 @@ export function PipelineView({
                   ))
                 )}
               </div>
-            </div>
+            </section>
           );
         })}
       </div>

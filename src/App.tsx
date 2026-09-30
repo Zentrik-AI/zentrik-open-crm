@@ -3,7 +3,7 @@ import { Eye, Layers3, Lock, Moon, Search, Sun } from "lucide-react";
 import { createDemoWorkspace, getStorageIssue, getStoredWorkspaceText, hasStoredWorkspace, loadWorkspace, recoverWorkspace, saveWorkspace, touchWorkspace } from "./lib/storage";
 import { loadOnboardingState, saveOnboardingState, type OnboardingMode, type OnboardingState } from "./lib/onboarding";
 import { cn, makeId } from "./lib/utils";
-import { primaryNav, secondaryNav, allNav, type View } from "./lib/nav";
+import { primaryNav, secondaryNav, allNav, navGroups, type View } from "./lib/nav";
 import { isOpenDeal, pipelineColumns } from "./lib/meta";
 import { newChange, pendingProposals, resolveProposal, submitChange } from "./core/ops.ts";
 import { normalizeWorkspace, parseWorkspace } from "./core/validate.ts";
@@ -769,7 +769,7 @@ function AppInner() {
       <div className="flex min-h-screen items-center justify-center bg-background p-6">
         {folder.error ? (
           <div className="max-w-xl space-y-2">
-            <h1 className="font-serif text-h2 text-foreground">This workspace folder could not be opened</h1>
+            <h1 className="text-h2 text-foreground">This workspace folder could not be opened</h1>
             <pre className="whitespace-pre-wrap rounded-md border border-border bg-surface-sunken p-3 font-mono text-[12px] leading-5 text-muted-foreground">{folder.error}</pre>
             <p className="text-body-sm text-muted-foreground">Fix the file, or restore it from a backup, then reload. <code className="font-mono">./crm check</code> lists every problem.</p>
           </div>
@@ -783,7 +783,7 @@ function AppInner() {
   if (recoveryRequired) {
     return <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
       <section className="max-w-xl space-y-4 rounded-xl border border-border bg-surface p-6">
-        <h1 className="font-serif text-h1">Recover your saved workspace</h1>
+        <h1 className="text-h1">Recover your saved workspace</h1>
         <p role="alert" className="text-body-sm text-destructive">{storageIssue}</p>
         <p className="text-body-sm text-muted-foreground">No demo or new records have replaced your data. Download the stored original for inspection, or import a valid Open CRM backup. Import preserves the original before replacement.</p>
         <Button onClick={downloadStoredOriginal}>Download stored original</Button>
@@ -814,53 +814,49 @@ function AppInner() {
   return (
     <PrivacyProvider shareSafe={shareSafe}>
       <div className="app-grid bg-background">
-        <aside className="sticky top-0 hidden h-screen flex-col border-r border-border bg-surface/60 px-3.5 py-5 lg:flex">
-          <div className="mb-7 flex items-center gap-2.5 px-1.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Layers3 className="h-[18px] w-[18px]" />
+        <aside className="sticky top-0 hidden h-screen flex-col border-r border-border bg-surface-sunken/60 px-3 py-4 lg:flex">
+          <div className="mb-5 flex items-center gap-2.5 px-2 pt-1">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-e1">
+              <Layers3 className="h-4 w-4" />
             </span>
-            <div className="font-serif text-[15px] font-medium text-foreground">{brand.name}</div>
+            <div className="text-[15px] font-semibold tracking-[-0.02em] text-foreground">{brand.name}</div>
           </div>
 
-          <nav aria-label="Primary" className="space-y-0.5">
-            {primaryNav.map((item) => (
-              <NavItem key={item.id} icon={item.icon} label={item.label} active={view === item.id} count={countFor(item.id)} attention={item.id === "review"} onClick={() => navigate(item.id)} />
+          <nav aria-label="Primary" className="space-y-5">
+            {navGroups.map((group, i) => (
+              <div key={group.label ?? i} className="space-y-0.5">
+                {group.label && <div className="px-2.5 pb-1 text-label text-faint-foreground">{group.label}</div>}
+                {group.items.map((id) => {
+                  const item = allNav.find((entry) => entry.id === id)!;
+                  return <NavItem key={id} icon={item.icon} label={item.label} active={view === id} count={countFor(id)} attention={id === "review"} onClick={() => navigate(id)} />;
+                })}
+              </div>
             ))}
           </nav>
 
-          <div className="my-3 border-t border-border" />
-
-          <nav aria-label="Workspace" className="space-y-0.5">
-            {secondaryNav.map((item) => (
-              <NavItem key={item.id} icon={item.icon} label={item.label} active={view === item.id} onClick={() => navigate(item.id)} />
-            ))}
-          </nav>
-
-          <div className="mt-auto space-y-3">
-            <details className="px-2 text-body-sm text-muted-foreground">
-              <summary className="cursor-pointer rounded-sm focus-visible:outline-none focus-visible:focus-ring">{folderBacked ? "Saved to this computer" : "Saved in this browser"}</summary>
-              <p className="mt-2 leading-relaxed">
-                {folderBacked
-                  ? "Records are stored in your workspace folder. Connected agents use the providers you choose."
-                  : "Export a backup in Settings. AI requests go to your chosen provider when you use AI features."}
-              </p>
-            </details>
-            <div className="border-t border-border px-1 pt-3">
+          <div className="mt-auto space-y-0.5">
+            <NavItem icon={secondaryNav[0].icon} label={secondaryNav[0].label} active={view === "settings"} onClick={() => navigate("settings")} />
+            <NavItem icon={secondaryNav[1].icon} label="Improve Open CRM" active={view === "improve"} onClick={() => navigate("improve")} />
+            <div className="mt-3 space-y-2.5 border-t border-border px-2.5 pt-3">
+              <span className="flex items-center gap-2 text-label text-faint-foreground" title={folderBacked ? "Records are stored in your workspace folder. Connected agents use the providers you choose." : "Records are stored in this browser. Export a backup in Settings."}>
+                <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
+                {folderBacked ? "Saved to this computer" : "Saved in this browser"}
+              </span>
               <ZentrikMark />
             </div>
           </div>
         </aside>
 
         <main className="min-w-0">
-          <header className="sticky top-0 z-20 border-b border-border bg-background/85 backdrop-blur-md">
-            <div className="flex flex-wrap items-center gap-3 px-4 py-3 lg:px-6">
+          <header className="sticky top-0 z-20 border-b border-border/80 bg-background/80 backdrop-blur-xl">
+            <div className="flex h-14 flex-wrap items-center gap-2.5 px-4 lg:px-7">
               <div className="flex min-w-0 flex-1 items-center gap-2.5">
                 <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground lg:hidden">
                   <Layers3 className="h-[18px] w-[18px]" />
                 </span>
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
-                    <div className="truncate text-body font-medium text-foreground">{workspace.name}</div>
+                    <div className="truncate text-body-sm font-medium text-muted-foreground">{workspace.name}</div>
                   </div>
                 </div>
               </div>
@@ -868,17 +864,17 @@ function AppInner() {
               <button
                 onClick={() => setPaletteOpen(true)}
                 aria-label="Open command palette"
-                className="hidden h-9 min-w-[240px] items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 text-body-sm text-muted-foreground transition-colors duration-fast ease-out hover:border-border-strong focus-visible:outline-none focus-visible:focus-ring sm:flex"
+                className="hidden h-9 min-w-[280px] items-center gap-2 rounded-lg border border-border bg-surface-raised px-3 text-body-sm text-faint-foreground shadow-e1 transition-colors duration-fast ease-out hover:border-border-strong hover:text-muted-foreground focus-visible:outline-none focus-visible:focus-ring sm:flex"
               >
                 <Search className="h-4 w-4" />
-                <span>Search accounts, deals, tasks…</span>
+                <span>Search or jump to…</span>
                 <Kbd keys={["⌘", "K"]} className="ml-auto" />
               </button>
 
               <Button size="icon" variant="ghost" onClick={() => setPaletteOpen(true)} className="h-9 w-9 sm:hidden" aria-label="Search">
                 <Search />
               </Button>
-              <Button size="sm" variant={shareSafe ? "accent" : "secondary"} onClick={toggleShareSafe}>
+              <Button size="sm" variant={shareSafe ? "accent" : "ghost"} onClick={toggleShareSafe} className="h-9">
                 {shareSafe ? <Eye /> : <Lock />}
                 {shareSafe ? "Share-safe" : "Private"}
               </Button>
@@ -917,7 +913,7 @@ function AppInner() {
 
           <div
             className={cn(
-              "mx-auto max-w-7xl px-4 py-6 transition-[opacity,transform] duration-base ease-out lg:px-6 motion-reduce:transition-none",
+              "mx-auto max-w-[1360px] px-4 py-7 transition-[opacity,transform] duration-base ease-out lg:px-8 motion-reduce:transition-none",
               entering ? "translate-y-1.5 opacity-0" : "translate-y-0 opacity-100",
             )}
           >

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { ClipboardCopy, LayoutGrid, Plus, Rows3 } from "lucide-react";
+import { ChevronRight, ClipboardCopy, LayoutGrid, Plus, Rows3 } from "lucide-react";
 import type { Account, AccountPatch, Deal, Note, Op, Task, Workspace } from "../types";
 import type { AccountMemory } from "../core/memory";
 import { accountStages, priorities, type AccountDraft, type ContactDraft } from "../lib/drafts";
@@ -13,7 +13,7 @@ import { Ring } from "../components/ui/ring";
 import { Meter } from "../components/ui/meter";
 import { EmptyState } from "../components/ui/empty-state";
 import { Private, useShareSafe } from "../components/ui/privacy";
-import { AccountListCard, ArrValue, StageRail } from "../components/account-bits";
+import { AccountListCard, ArrValue, StageRail, stageTone } from "../components/account-bits";
 import { KnowledgeList } from "../components/claims";
 import { CommitteeMap } from "../components/committee";
 import { PrepareCard } from "../components/prepare";
@@ -28,17 +28,20 @@ function AccountMaintenance({ account, onUpdate, onArchive }: { account: Account
   const [name, setName] = useState(account.name);
   const [owner, setOwner] = useState(account.owner);
   const [reason, setReason] = useState("");
-  return <details className="rounded-lg border border-border p-3">
-    <summary className="cursor-pointer text-body-sm">Edit account / archive</summary>
-    <form className="mt-3 grid gap-3 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); onUpdate({ name, owner }); }}>
+  return <details className="group rounded-xl border border-border bg-card px-5 py-3 shadow-e1 open:pb-5">
+    <summary className="flex cursor-pointer list-none items-center gap-2 rounded-sm text-body-sm text-muted-foreground transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:focus-ring [&::-webkit-details-marker]:hidden">
+      <ChevronRight className="h-3.5 w-3.5 transition-transform duration-fast group-open:rotate-90" aria-hidden />
+      Edit account / archive
+    </summary>
+    <form className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); onUpdate({ name, owner }); }}>
       <Field label="Account name"><Input aria-label="Account name" required value={name} onChange={e => setName(e.target.value)} /></Field>
       <Field label="Account owner"><Input aria-label="Account owner" required value={owner} onChange={e => setOwner(e.target.value)} /></Field>
       <Button type="submit" className="justify-self-start">Save account</Button>
     </form>
-    <form className="mt-3 flex flex-wrap items-end gap-3 border-t border-border pt-3" onSubmit={e => { e.preventDefault(); if (onArchive(!account.archivedAt, reason)) setReason(""); }}>
+    <form className="mt-4 flex flex-wrap items-end gap-3 border-t border-border pt-4" onSubmit={e => { e.preventDefault(); if (onArchive(!account.archivedAt, reason)) setReason(""); }}>
       <Field label="Archive / restore reason" className="min-w-0 flex-1"><Input aria-label="Archive reason" required value={reason} onChange={e => setReason(e.target.value)} /></Field>
       <Button type="submit">{account.archivedAt ? "Restore account" : "Archive account"}</Button>
-      <p className="w-full text-[12px] text-muted-foreground">History stays available. Archived accounts and their work leave the daily queue; restoring makes unfinished work visible again.</p>
+      <p className="w-full text-label font-normal text-faint-foreground">History stays. Archived work leaves the daily queue until restored.</p>
     </form>
   </details>;
 }
@@ -131,15 +134,16 @@ export function AccountsView({
   const notesById = new Map(notes.map((n) => [n.id, n]));
   const openPipeline = acctDeals.filter((d) => isOpenDeal(d.stage)).reduce((s, d) => s + d.value, 0);
 
+  const activeCount = accounts.filter((a) => !a.archivedAt).length;
   const archivedToggle = (
-    <label className="flex items-center gap-2 text-body-sm">
-      <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
+    <label className="flex w-fit cursor-pointer items-center gap-2 text-label font-normal text-muted-foreground hover:text-foreground">
+      <input type="checkbox" className="accent-[hsl(var(--accent))]" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
       Include archived accounts
     </label>
   );
 
   return (
-    <div className={cn("min-w-0", layout === "list" && "grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]")}>
+    <div className={cn("min-w-0", layout === "list" && "grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]")}>
       <h1 className="sr-only">Accounts</h1>
       <div className="min-w-0 space-y-4">
         {addingAccount && (
@@ -155,15 +159,17 @@ export function AccountsView({
         )}
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-label uppercase text-muted-foreground">Accounts</span>
-              <span className="font-mono text-[11px] tabular-nums text-faint-foreground">{includeArchived ? `${accounts.length} total` : `${accounts.filter(a => !a.archivedAt).length} active · ${accounts.length} total`}</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-h2 text-foreground">Accounts</span>
+              <span className="tnum text-label font-normal text-faint-foreground" title={`${activeCount} active · ${accounts.length} total`}>
+                {includeArchived ? accounts.length : activeCount}
+              </span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-7"
+                className="h-7 px-2"
                 aria-pressed={layout === "table"}
                 onClick={() => setLayout(layout === "table" ? "list" : "table")}
                 title={layout === "table" ? "Back to the list and the open account" : "Compare every account on one grid"}
@@ -172,16 +178,15 @@ export function AccountsView({
                 {layout === "table" ? "List" : "Table"}
               </Button>
               {!addingAccount && (
-                <Button size="sm" variant="ghost" onClick={() => setAddingAccount(true)}>
+                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setAddingAccount(true)}>
                   <Plus />
                   New
                 </Button>
               )}
             </div>
           </div>
-          {archivedToggle}
           {accounts.length === 0 ? (
-            <EmptyState title="No accounts yet." hint="Add a local account above to get started." />
+            <EmptyState title="No accounts yet" hint="Add one above to get started." />
           ) : layout === "table" ? (
             <AccountTable
               workspace={workspace}
@@ -193,155 +198,165 @@ export function AccountsView({
               }}
             />
           ) : (
-            <div className="space-y-3">
+            <div className="-mx-1 space-y-1">
               {visible.map((account) => (
                 <AccountListCard key={account.id} account={account} selected={acct?.id === account.id} onSelect={() => onSelectAccount(account.id)} />
               ))}
             </div>
           )}
+          {accounts.length > 0 && <div className="pt-1">{archivedToggle}</div>}
         </div>
       </div>
 
       {layout === "table" ? null : acct ? (
-        <div className="min-w-0 space-y-5">
-          <Card>
-            <CardHeader className="gap-3 border-b border-border pb-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <CardTitle className="font-serif text-h1">{acct.name}</CardTitle>
-                  {acct.archivedAt && <p className="text-body-sm text-muted-foreground">Archived · <Private>{acct.archiveReason}</Private></p>}
-                  <p className="mt-1 text-body-sm text-muted-foreground">
-                    <Private redactedLabel="domain hidden">{acct.domain}</Private>
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={stageMeta[acct.stage].tone} dot>
+        <div key={acct.id} className="min-w-0 space-y-8 animate-view-enter">
+          <header className="space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="break-words text-h1 text-foreground">{acct.name}</h2>
+                <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-body-sm text-muted-foreground">
+                  <Badge tone={stageTone(acct.stage)} dot>
                     {stageMeta[acct.stage].label}
                   </Badge>
-                  <Badge tone="account">{acct.owner}</Badge>
-                  <Badge tone="signal" dot>
-                    {acct.sourceConfidence === null ? "Evidence confidence unknown" : `${acct.sourceConfidence}% recorded confidence`}
-                  </Badge>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7"
-                    onClick={onCopyMarkdown}
-                    disabled={shareSafe}
-                    title={shareSafe ? "Switch to Private view before copying account data" : undefined}
-                  >
-                    <ClipboardCopy />
-                    Copy as Markdown
-                  </Button>
+                  <span className="min-w-0">
+                    <Private redactedLabel="domain hidden">{acct.domain}</Private>
+                    <span className="px-1.5 text-faint-foreground" aria-hidden>·</span>
+                    {acct.owner}
+                    <span className="px-1.5 text-faint-foreground" aria-hidden>·</span>
+                    <span className="tnum" title="Recorded evidence confidence">
+                      {acct.sourceConfidence === null ? "Confidence unknown" : `${acct.sourceConfidence}% confidence`}
+                    </span>
+                  </span>
                 </div>
+                {acct.archivedAt && (
+                  <p className="mt-2 text-body-sm text-muted-foreground">
+                    Archived · <Private>{acct.archiveReason}</Private>
+                  </p>
+                )}
               </div>
-              <div className="pt-1">
-                <StageRail stage={acct.stage} />
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onCopyMarkdown}
+                disabled={shareSafe}
+                title={shareSafe ? "Switch to Private view before copying account data" : undefined}
+              >
+                <ClipboardCopy />
+                Copy as Markdown
+              </Button>
+            </div>
+            <StageRail stage={acct.stage} />
+          </header>
+
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border shadow-e1 xl:grid-cols-4">
+            <Metric label="Health">
+              <div className="flex items-center justify-between gap-3">
+                <span className="tnum text-h1 text-foreground">{acct.health === null ? "—" : acct.health}</span>
+                <Ring value={acct.health} size="xs" showValue={false} label="Health" />
               </div>
-            </CardHeader>
+            </Metric>
+            <Metric label="Fit">
+              <span className="tnum text-h1 text-foreground">{acct.fit}</span>
+              <Meter value={acct.fit} tone="neutral" ticks={false} weak={false} label="Fit" className="mt-2" />
+            </Metric>
+            <Metric label="ARR">
+              <ArrValue value={acct.arr} className="text-h1 font-semibold" />
+            </Metric>
+            <Metric label="Open pipeline">
+              <ArrValue value={openPipeline} className="text-h1 font-semibold" />
+            </Metric>
+          </div>
 
-            <CardContent className="space-y-5 pt-5">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3">
-                  <Ring value={acct.health} size="lg" label="Health" />
-                  <div>
-                    <div className="text-label uppercase text-muted-foreground">Health</div>
-                  </div>
-                </div>
-                <div className="rounded-lg border border-border bg-surface p-3">
-                  <div className="text-label uppercase text-muted-foreground">Fit</div>
-                  <div className="mt-2">
-                    <Meter value={acct.fit} tone="account" display={`${acct.fit}`} label="Fit" />
-                  </div>
-                </div>
-                <div className="rounded-lg border border-border bg-surface p-3">
-                  <div className="text-label uppercase text-muted-foreground">ARR</div>
-                  <div className="mt-1.5 text-stat-xl">
-                    <ArrValue value={acct.arr} />
-                  </div>
-                </div>
-                <div className="rounded-lg border border-border bg-surface p-3">
-                  <div className="text-label uppercase text-muted-foreground">Open pipeline</div>
-                  <div className="mt-1.5 text-stat-xl">
-                    <ArrValue value={openPipeline} />
-                  </div>
-                </div>
+          {memory && <PrepareCard memory={memory} onTrace={onTrace} onCopyBrief={onCopyBrief} />}
+
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            {memory && <KnowledgeList memory={memory} notes={acctNotes} notesById={notesById} onTrace={onTrace} onAdd={onAddClaim} onResolve={(id, reason) => onResolveClaim(id, reason)} />}
+            {memory && <CommitteeMap lanes={memory.committee} draftContact={draftContact} setDraftContact={setDraftContact} onAddContact={onAddContact} />}
+          </div>
+
+          {acctDeals.length > 0 && (
+            <section className="min-w-0">
+              <SectionTitle title="Deals" count={acctDeals.length} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {acctDeals.map((deal) => (
+                  <DealCard key={deal.id} deal={deal} accountName={acct.name} onAdvance={() => onAdvanceDeal(deal.id)} onLose={() => onLoseDeal(deal.id)} />
+                ))}
               </div>
+            </section>
+          )}
 
-              {memory && <PrepareCard memory={memory} onTrace={onTrace} onCopyBrief={onCopyBrief} />}
-
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-                {memory && <KnowledgeList memory={memory} notes={acctNotes} notesById={notesById} onTrace={onTrace} onAdd={onAddClaim} onResolve={(id, reason) => onResolveClaim(id, reason)} />}
-                {memory && <CommitteeMap lanes={memory.committee} draftContact={draftContact} setDraftContact={setDraftContact} onAddContact={onAddContact} />}
-              </div>
-
-              {acctDeals.length > 0 && (
-                <div>
-                  <div className="mb-2 text-label uppercase text-muted-foreground">Deals</div>
-                  <div className="grid gap-2.5 sm:grid-cols-2">
-                    {acctDeals.map((deal) => (
-                      <DealCard key={deal.id} deal={deal} accountName={acct.name} onAdvance={() => onAdvanceDeal(deal.id)} onLose={() => onLoseDeal(deal.id)} />
-                    ))}
+          {acctTasks.length > 0 && (
+            <section className="min-w-0">
+              <SectionTitle title="Tasks" count={acctTasks.length} />
+              <div className="-mx-2 divide-y divide-border/70">
+                {acctTasks.map((task) => (
+                  <div key={task.id} className="py-0.5">
+                    <TaskRow task={task} notesById={notesById} onTrace={onTrace} onToggle={() => onToggleTask(task.id)} />
                   </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <div className="grid gap-8 lg:grid-cols-2">
+            <section className="min-w-0">
+              <SectionTitle title="Activity" />
+              <AccountTimeline notes={acctNotes} tasks={acctTasks} deals={acctDeals} />
+            </section>
+            <section className="min-w-0">
+              <SectionTitle title="Notes" count={acctNotes.length || undefined} />
+              {acctNotes.length === 0 ? (
+                <p className="text-body-sm text-faint-foreground">No notes yet. Capture one from Notes.</p>
+              ) : (
+                <div className="space-y-3">
+                  {acctNotes.slice(0, 4).map((note) => (
+                    <NoteCard key={note.id} note={note} />
+                  ))}
                 </div>
               )}
+            </section>
+          </div>
 
-              {acctTasks.length > 0 && (
-                <div>
-                  <div className="mb-2 text-label uppercase text-muted-foreground">Tasks</div>
-                  <div className="space-y-2.5">
-                    {acctTasks.map((task) => (
-                      <TaskRow key={task.id} task={task} notesById={notesById} onTrace={onTrace} onToggle={() => onToggleTask(task.id)} />
-                    ))}
-                  </div>
-                </div>
-              )}
+          <AiPanel
+            shareSafe={shareSafe}
+            hasKey={ai.hasKey}
+            modelLabel={ai.modelLabel}
+            noteCount={acctNotes.length}
+            busy={ai.busy}
+            result={ai.result}
+            copied={ai.copied}
+            error={ai.error}
+            onGenerate={onAiGenerate}
+            onAsk={onAiAsk}
+            onCopy={onAiCopy}
+            onClear={onAiClear}
+            onOpenSettings={onOpenSettings}
+            onCopyAgentHandoff={onCopyAgentHandoff}
+          />
 
-              <div className="grid gap-5 lg:grid-cols-2">
-                <div>
-                  <div className="mb-3 text-label uppercase text-muted-foreground">Activity</div>
-                  <AccountTimeline notes={acctNotes} tasks={acctTasks} deals={acctDeals} />
-                </div>
-                <div>
-                  <div className="mb-3 text-label uppercase text-muted-foreground">Notes</div>
-                  {acctNotes.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-border p-4 text-body-sm text-muted-foreground">
-                      No notes yet. Capture one from the Notes tab.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {acctNotes.slice(0, 4).map((note) => (
-                        <NoteCard key={note.id} note={note} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <AiPanel
-                shareSafe={shareSafe}
-                hasKey={ai.hasKey}
-                modelLabel={ai.modelLabel}
-                noteCount={acctNotes.length}
-                busy={ai.busy}
-                result={ai.result}
-                copied={ai.copied}
-                error={ai.error}
-                onGenerate={onAiGenerate}
-                onAsk={onAiAsk}
-                onCopy={onAiCopy}
-                onClear={onAiClear}
-                onOpenSettings={onOpenSettings}
-                onCopyAgentHandoff={onCopyAgentHandoff}
-              />
-
-              {!shareSafe && <AccountMaintenance key={JSON.stringify([acct.id, acct.name, acct.owner, acct.archivedAt])} account={acct} onUpdate={patch => onUpdateAccount(acct.id, patch)} onArchive={(archived, reason) => onArchiveAccount(acct.id, archived, reason)} />}
-            </CardContent>
-          </Card>
+          {!shareSafe && <AccountMaintenance key={JSON.stringify([acct.id, acct.name, acct.owner, acct.archivedAt])} account={acct} onUpdate={patch => onUpdateAccount(acct.id, patch)} onArchive={(archived, reason) => onArchiveAccount(acct.id, archived, reason)} />}
         </div>
       ) : (
-        <EmptyState title="No account selected." hint="Pick an account on the left, or add one." />
+        <EmptyState title="No account selected" hint="Pick one from the list, or add one." />
       )}
+    </div>
+  );
+}
+
+function Metric({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0 bg-card px-4 py-3.5">
+      <div className="mb-1 text-label text-faint-foreground">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function SectionTitle({ title, count }: { title: string; count?: number }) {
+  return (
+    <div className="mb-3 flex items-baseline gap-2">
+      <h2 className="text-h2 text-foreground">{title}</h2>
+      {count != null && <span className="tnum text-label font-normal text-faint-foreground">{count}</span>}
     </div>
   );
 }
@@ -364,7 +379,7 @@ function AccountSetupCard({
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Add account</CardTitle>
-            <p className="mt-1 text-body-sm text-muted-foreground">Start with the context you need now. Add the rest later.</p>
+            <p className="mt-0.5 text-body-sm text-muted-foreground">Add the rest later.</p>
           </div>
           {onCancel && (
             <Button size="sm" variant="ghost" onClick={onCancel}>

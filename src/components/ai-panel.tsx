@@ -1,5 +1,5 @@
 import { Fragment, useState, type ReactNode } from "react";
-import { ArrowUp, Check, Copy, FileText, KeyRound, Mail, Sparkles, X } from "lucide-react";
+import { ArrowUp, Check, Copy, EyeOff, FileText, Mail, Sparkles, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Input } from "./ui/field";
@@ -74,38 +74,34 @@ export function AiPanel({
     setQuestion("");
   }
   return (
-    <section className="relative overflow-hidden rounded-lg border border-agent/50 bg-agent-bg/40 [box-shadow:inset_2px_0_0_hsl(var(--agent))]">
-      <div className="flex items-center justify-between gap-3 border-b border-agent/30 px-4 py-2.5">
+    <section aria-label="Agent assist" className="rounded-xl border border-border bg-card shadow-e1">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-agent" />
-          <span className="font-serif text-h3 text-foreground">Agent assist</span>
+          <Sparkles className="h-4 w-4 text-agent" aria-hidden />
+          <h2 className="text-h3 text-foreground">Agent assist</h2>
         </div>
         {hasKey && <Badge tone="agent" dot>{modelLabel}</Badge>}
       </div>
 
-      <div className="p-4">
+      <div className="px-5 py-4">
         {shareSafe && (
-          <div className="mb-3 rounded-md border border-accent/40 bg-accent-bg/35 px-3 py-2.5 text-body-sm text-accent-fg">
-            Agent actions are paused in Share-safe view so hidden account data cannot be copied or sent accidentally.
-          </div>
+          <p className="mb-3 flex items-center gap-2 text-body-sm text-muted-foreground">
+            <EyeOff className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            Paused in Share-safe view.
+          </p>
         )}
         {!hasKey ? (
-          <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
-            <div className="flex gap-2.5">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-agent-bg text-agent-fg">
-                <Copy className="h-4 w-4" />
-              </span>
-              <div>
-                <div className="text-h3 text-foreground">Use any agent with explicit context</div>
-                <p className="mt-1 text-body-sm text-muted-foreground">
-                  Copy this account's notes, open work, and review guardrails into Codex, Claude, or another agent. No API key is required.
-                </p>
-                <button className="mt-2 text-[12px] text-agent-fg hover:underline focus-visible:outline-none focus-visible:focus-ring" onClick={onOpenSettings}>
-                  Or add an Anthropic key for in-browser drafts
-                </button>
-              </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <div className="text-body font-medium text-foreground">Use any agent with explicit context</div>
+              <p className="mt-0.5 text-body-sm text-muted-foreground">
+                Hand notes, open work and guardrails to any agent. No key needed.
+              </p>
+              <button className="mt-1.5 rounded-sm text-label font-normal text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:focus-ring" onClick={onOpenSettings}>
+                Or add an Anthropic key for in-app drafts
+              </button>
             </div>
-            <Button variant="agent" size="sm" onClick={onCopyAgentHandoff} disabled={shareSafe}>
+            <Button variant="agent" size="sm" className="self-start sm:self-center" onClick={onCopyAgentHandoff} disabled={shareSafe}>
               <Copy />
               Copy agent handoff
             </Button>
@@ -140,24 +136,24 @@ export function AiPanel({
             </form>
 
             {busy && (
-              <div className="flex items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 py-2.5 text-body-sm text-muted-foreground animate-settle">
+              <div className="flex items-center gap-2 rounded-lg bg-surface-sunken px-3 py-2.5 text-body-sm text-muted-foreground animate-settle">
                 <LiveDot tone="agent" />
                 Reading {noteCount} {noteCount === 1 ? "note" : "notes"} and drafting…
               </div>
             )}
 
             {error && (
-              <div className="rounded-md border border-destructive/40 bg-destructive-bg/40 px-3 py-2.5 text-body-sm text-destructive-fg">
+              <div className="rounded-lg bg-destructive-bg px-3 py-2.5 text-body-sm text-destructive-fg">
                 {error}
               </div>
             )}
 
             {result && !busy && (
-              <div className="rounded-md border border-border bg-surface p-3.5 animate-settle">
+              <div className="rounded-lg bg-surface-sunken p-4 animate-settle">
                 <MarkdownLite text={result.text} />
                 <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-2.5">
-                  <span className="text-[11px] text-faint-foreground">
-                    Grounded in {noteCount} {noteCount === 1 ? "note" : "notes"} · review before sending
+                  <span className="tnum text-label font-normal text-faint-foreground">
+                    From {noteCount} {noteCount === 1 ? "note" : "notes"} · review before sending
                   </span>
                   <div className="flex items-center gap-1.5">
                     <Button size="sm" variant="ghost" className="h-7" onClick={onCopy}>

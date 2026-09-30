@@ -8,7 +8,7 @@ Structure alternatives:
 - Chat panel: flexible, but obscures batch state and exact writes. Reject for this bounded job.
 - Calls inbox with detail/review: selected. A list shows progress; the detail shows verbatim evidence and explicit account assignment before saving.
 
-Design language: preserve Open CRM's editorial paper, Fraunces headings, semantic teal selection and violet agent work. Exempt from a new visual language exploration because this extends the established workspace.
+Design language: follow the "Clear" system in `docs/design-system.md`: cool neutral surfaces, Inter headings, teal selection and violet agent work.
 
 Reuse: Button, Field, Select, existing navigation, source registry and core mutation operations. On narrow screens stack list above detail. No modal required to inspect a quote. Share-safe mode suppresses call content and connection inputs entirely.
 

@@ -107,7 +107,7 @@ function ToastCard({ item, onDone }: { item: ToastItem; onDone: () => void }) {
       <span className={cn("absolute inset-y-0 left-0 w-1", toneSolidBg[item.tone])} aria-hidden />
       <Icon className={cn("mt-px h-4 w-4 shrink-0", toneText[item.tone])} aria-hidden />
       <div className="min-w-0 flex-1 text-body-sm text-foreground">{item.title}</div>
-      <span className="shrink-0 font-mono text-[11px] tabular-nums text-faint-foreground">{stamp}</span>
+      <span className="shrink-0 tnum text-label text-faint-foreground">{stamp}</span>
       <span
         className="absolute bottom-0 left-0 h-0.5 bg-accent/70"
         style={{ animation: `shrink-x ${item.duration}ms linear forwards` }}

@@ -1,74 +1,106 @@
-# Product and launch design
+# Open CRM design system · "Clear" v2
 
-The workspace helps a small team recognize a relationship, inspect its evidence,
-and choose the next action. Content leads; color identifies state or kind.
+The workspace helps a small team recognize an account, see what is true about it
+and where that came from, and choose the next action. The interface should feel
+calm, fast and precise: content leads, chrome recedes, and colour appears only
+when it means something.
 
-## Shared foundations
+## Principles
 
-`src/tokens.css` owns the light/dark palette, font families, type scale, spacing,
-radii and motion. `src/fonts.css` bundles licensed fonts locally: Fraunces for
-page/section headings, Inter for controls and prose, IBM Plex Mono for numbers
-and identifiers. The app and launch composition import these same sources.
-Font loading does not require Google or another external service.
-The class merger in `src/lib/utils.ts` registers the custom font-size names;
-otherwise it mistakes them for colors and drops size or foreground utilities.
+1. **One thing to notice per surface.** A page has one title, at most one line of
+   supporting text, and one primary action. Everything else is secondary.
+2. **Show, don't explain.** Replace explanatory paragraphs with the thing itself:
+   a state, a count, an example, an empty state with one sentence and one action.
+   Help text belongs in a tooltip, a disclosure or the docs.
+3. **Colour is meaning.** Neutral by default. Teal marks selection and the
+   source-backed state. Violet marks agent work only. Green, amber and red describe
+   real outcomes. Never use colour as decoration.
+4. **No cards inside cards.** A card holds rows, not more cards. Use dividers,
+   spacing and a quiet sunken well instead of nested borders.
+5. **Motion confirms, it never waits.** Things arrive with a short rise and fade,
+   and state changes animate in place. Nothing delays work to show an animation.
 
-Use `text-display` for a page greeting, `text-h1` for a route/account heading,
-`text-h2` for a section and `text-body` for work. Labels use a readable 12px
-floor. Keep paragraphs sentence case. Body metrics do not inherit display
-tracking. Align primary content to the shared 24px gutter and 20px panel inset.
+## Foundations
 
-Surfaces use quiet dividers. Form controls retain a stronger boundary so users
-can distinguish inputs from information. Teal identifies selection and primary
-actions; violet identifies agent work; green/red describe actual outcomes.
-Unknown values remain unknown. Counts render their real value immediately.
+`src/tokens.css` owns every value. Tailwind reads them as `hsl(var(--token) / α)`.
 
-## Review decisions
+| Role | Light | Dark | Use |
+|---|---|---|---|
+| `background` | near-white, cool | near-black, cool | page |
+| `surface` / `card` | white | raised charcoal | cards, panels |
+| `surface-sunken` | faint grey | deeper black | sidebar, wells, inputs at rest |
+| `border` | 90% grey | 17% grey | every divider and card edge |
+| `foreground` | ink | near-white | titles and primary text |
+| `muted-foreground` | 38% grey | 66% grey | secondary text |
+| `faint-foreground` | 46% grey | 58% grey | metadata, labels, timestamps |
+| `primary` | ink | near-white | the one primary button per surface |
+| `accent` | teal | teal | selection, source-backed, links |
+| `agent` | violet | violet | agent proposals and agent state only |
+| `success` / `warning` / `destructive` | green / amber / red | same | outcomes |
 
-User/job: founders and operators moving between accounts, sources, actions and
-agent proposals. Failure: cramped account names, repeated summary meters, weak
-type hierarchy, external font dependency, and launch fragments using a second
-visual language. Must notice first: the account name, next action and source.
+Every semantic ramp ships `DEFAULT` (marks, dots, icons), `-bg` (tinted chips)
+and `-fg` (text on the tint, AA contrast).
 
-Design-language comparison used the same Home fixture at 1440×1000:
+### Type
 
-- Editorial: retain warm paper and serif headings; quiet borders; use compact
-  sans-serif controls. Selected for legibility and continuity with the product.
-- Utilitarian: all sans-serif, square cards, narrower navigation. Rejected as
-  the primary character because section titles lost hierarchy; retain its
-  immediate numeric values and compact navigation.
-- Nocturne: dark green substrate and light ink. Rejected as the default because
-  source/state colors competed; preserve the existing semantic dark theme.
+Inter everywhere, with its display optical size for headings (bundled locally,
+no network). Numbers use tabular figures (`tnum`). `font-mono` is for code,
+commands and paths only.
 
-Account-list structure comparison:
+| Token | Size | Weight | Use |
+|---|---|---|---|
+| `text-display` | 30px | 600, -0.03em | one greeting or page hero |
+| `text-h1` | 24px | 600, -0.025em | page and account titles |
+| `text-h2` | 17px | 600 | section titles |
+| `text-h3` | 15px | 600 | card and row titles |
+| `text-body` | 14px | 400 | reading text |
+| `text-body-sm` | 13px | 400/500 | controls, rows, secondary text |
+| `text-label` | 12px | 500 | metadata, group labels, badges |
 
-- Metric cards (existing): health ring, fit bar, value and priority competed with
-  the name. Reject repeated metrics; retain detail-view metrics.
-- Dense table: good cross-account comparison, poor fit beside a selected account
-  at laptop widths. Kept, but as its own full-width mode on Accounts rather than
-  in the sidebar: the list recognizes an account, the table compares them, and
-  opening a row returns to the list with that account selected. Unknown values
-  sort last in both directions so a reversed sort cannot promote a record
-  nobody has confirmed.
-- Relationship list: full wrapping names, segment, stage/owner and value. Selected
-  for recognition and enough room for the detail panel.
+- 12px is the floor. Never `text-[10px]` or `text-[11px]` for readable text.
+- Sentence case everywhere. No uppercase eyebrows or letter-spaced labels.
+- Headings do not end with a full stop, except the greeting.
 
-Subtracted: redundant demo badge, permanent storage marketing card, low-context
-metric bars, list-level health/fit repetitions, and an extra “vitality” label.
-Storage detail stays accessible through disclosure. “Next actions” replaces
-“Today” because the list includes future work. Feedback history is labeled local,
-not a live shared roadmap.
+### Shape, depth and space
 
-## Verification contract
+- Radius: controls `rounded-lg` (8px), cards `rounded-xl` (12px), pills `rounded-full`.
+- Depth: cards carry `shadow-e1` (hairline), popovers `shadow-e2`, dialogs `shadow-e3`.
+- Page gutter 32px desktop, 16px mobile. Card padding 20px. Row height 44px.
+- Sections are separated by 28px. Inside a card, rows are separated by dividers.
 
-Exercise onboarding, Home, Accounts, Tasks, Review and Improve at desktop and
-390px width, light/dark, reduced motion, and offline font delivery. Check actual
-proposal approval, stale proposal rejection, feedback export scope, full account
-name visibility, no horizontal document overflow and keyboard focus. Compare
-equivalent synthetic records; keep task-specific screenshots in ignored `tmp/`.
+## Components
 
-Launch assets are illustrative and say so. Share the real fonts/tokens and show
-source → proposal → individual approval → record change. Do not imply bulk
-approval, automatic customer messaging, connected cloud feedback, or a released
-feature when only a local draft exists. The exported film uses its own fixed
-frame clock; playback controls honor reduced motion and never autoplay audio.
+- **Button:** `primary` (ink) once per surface; `secondary` (white, hairline,
+  shadow) for everything else; `ghost` in toolbars; `accent`/`agent` only when the
+  action is about a source or an agent.
+- **Badge:** 22px tall, `rounded-md`, tinted `-bg` with `-fg` text. One badge per
+  row unless the second carries a different meaning.
+- **Card:** `Card` with an optional `CardHeader` (title + one line) and rows. No
+  explanatory paragraph under a card title unless the card is empty.
+- **Navigation:** grouped sidebar (Home · Accounts · Capture), neutral active
+  state, counts in faint tabular numbers, the review count as a violet pill
+  because something waits for a person.
+- **Empty states:** icon, one sentence, one action.
+- **Source links:** the teal underline marks a source-backed fact; a dashed
+  underline marks a hunch. Keep it on facts, not on every link.
+
+## Copy
+
+- Titles name the thing: "Accounts", "Bring your accounts up to date".
+- Supporting text is one line, 12 words or fewer, and only when it changes what
+  the reader does next.
+- Labels are nouns, buttons are verbs ("Investigate notes", "Apply this change").
+- Say what happened, not what the system is ("3 changes saved", not "The system
+  has successfully saved your changes").
+
+## Motion
+
+Tokens: `--d-fast` 140ms, `--d-base` 220ms, `--d-slow` 360ms; `--ease-out` for
+arrivals, `--ease-in-out` for moves. Arrivals rise 4–6px and fade. Lists stagger
+by 40ms, capped at 8 items. Everything honours `prefers-reduced-motion`.
+
+## Contracts that must not change
+
+End-to-end tests and the ProductTank demo script depend on accessible names and
+visible labels (`tests/e2e/*.spec.ts`, `docs/account-investigation.md`). Keep
+those strings, or update the tests and the script in the same change.

@@ -12,11 +12,11 @@ export function Card({ className, interactive, selected, ...props }: CardProps) 
   return (
     <section
       className={cn(
-        "rounded-lg border border-border bg-card text-card-foreground transition-[border-color,box-shadow,transform] duration-fast ease-out",
+        "rounded-xl border border-border bg-card text-card-foreground shadow-e1 transition-[border-color,box-shadow,transform] duration-fast ease-out",
         interactive &&
-          "cursor-pointer hover:-translate-y-px hover:border-border-strong hover:shadow-e1",
+          "cursor-pointer hover:border-border-strong hover:shadow-e2",
         selected &&
-          "border-border-strong bg-accent-bg/30 shadow-e1 [box-shadow:inset_2px_0_0_hsl(var(--accent)),var(--e-1)]",
+          "border-accent/60 shadow-e2 ring-1 ring-accent/25",
         className,
       )}
       {...props}
@@ -25,7 +25,7 @@ export function Card({ className, interactive, selected, ...props }: CardProps) 
 }
 
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex flex-col gap-1 px-5 pt-4 pb-3", className)} {...props} />;
+  return <div className={cn("flex flex-col gap-1 px-5 pt-5 pb-3", className)} {...props} />;
 }
 
 export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
@@ -40,7 +40,7 @@ export function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDi
 export function Well({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("rounded-md border border-border bg-surface-sunken p-3", className)}
+      className={cn("rounded-lg border border-border bg-surface-sunken p-3", className)}
       {...props}
     />
   );

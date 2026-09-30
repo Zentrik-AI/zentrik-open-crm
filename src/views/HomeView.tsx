@@ -1,4 +1,4 @@
-import { Activity, ArrowRight, Check, ClipboardList, Columns3, Database, Play, ShieldAlert } from "lucide-react";
+import { Activity, ArrowRight, Check, ClipboardList, Columns3, Database, Play, ScanLine, ShieldAlert } from "lucide-react";
 import type { Account, Task, Workspace } from "../types";
 import type { View } from "../lib/nav";
 import { splitCurrency } from "../lib/utils";
@@ -62,20 +62,53 @@ export function HomeView({
   const showGettingStarted = onboardingMode !== "demo" && (!progress.hasSource || !progress.hasAction);
 
   return (
-    <div className="grid gap-6">
-      <div>
-        <h1 className="font-serif text-display text-foreground">{greeting()}.</h1>
-        <p className="mt-1 text-body text-muted-foreground">
-          {metrics.openTasks === 0
-            ? "No open tasks — you're all caught up."
-            : `${metrics.openTasks} open ${metrics.openTasks === 1 ? "task" : "tasks"}, ${metrics.dueSoon} due soon.`}
-        </p>
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-7">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-display text-foreground">{greeting()}.</h1>
+          <p className="mt-1.5 text-body text-muted-foreground">
+            {metrics.openTasks === 0
+              ? "No open tasks — you're all caught up."
+              : `${metrics.openTasks} open ${metrics.openTasks === 1 ? "task" : "tasks"}, ${metrics.dueSoon} due soon.`}
+          </p>
+        </div>
+        {onboardingMode === "demo" && (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-surface-raised px-3 text-label text-muted-foreground shadow-e1">
+              <span className="h-1.5 w-1.5 rounded-full bg-highlight" aria-hidden />
+              Synthetic demo workspace
+            </span>
+            <Button size="sm" onClick={onOpenOnboarding}>
+              Start with my data
+              <ArrowRight />
+            </Button>
+          </div>
+        )}
       </div>
 
+      <button
+        type="button"
+        onClick={() => onNavigate("updates")}
+        className="group flex w-full items-center gap-4 rounded-xl border border-border bg-surface-raised px-5 py-4 text-left shadow-e1 transition-[border-color,box-shadow] duration-fast hover:border-border-strong hover:shadow-e2 focus-visible:outline-none focus-visible:focus-ring"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-agent-bg text-agent">
+          <ScanLine className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-h3 text-foreground">Paste what happened after your calls</span>
+          <span className="mt-0.5 block text-body-sm text-muted-foreground">Open CRM matches each line to an account and proposes the update.</span>
+        </span>
+        <span className="hidden items-center gap-1.5 text-body-sm font-medium text-foreground sm:flex">
+          Update accounts
+          <ArrowRight className="h-4 w-4 transition-transform duration-fast group-hover:translate-x-0.5" />
+        </span>
+      </button>
+
       {waiting.length > 0 && (
-        <section className="flex flex-col gap-3 border-y border-agent/40 bg-agent-bg/25 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-body-sm text-foreground">
-            <span className="text-agent-fg">{waiting.length}</span> {waiting.length === 1 ? "change" : "changes"} ready for review.
+        <section className="flex flex-col gap-3 rounded-xl border border-agent/30 bg-agent-bg/60 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-center gap-2 text-body-sm text-foreground">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-agent px-1.5 text-[11px] font-semibold text-white tnum">{waiting.length}</span>
+            {waiting.length === 1 ? "change" : "changes"} ready for review.
           </p>
           <Button variant="agent" size="sm" onClick={() => onNavigate("review")} className="self-start sm:self-auto">
             Review
@@ -84,42 +117,34 @@ export function HomeView({
         </section>
       )}
 
-      {onboardingMode === "demo" ? (
-        <section className="flex flex-col gap-4 border-y border-accent/40 bg-accent-bg/25 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-label uppercase text-accent-fg">Synthetic demo workspace</div>
+      {onboardingMode !== "demo" && showGettingStarted ? (
+        <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-e1">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="text-label text-accent-fg">First useful loop</p>
+              <h2 className="mt-0.5 text-h2 text-foreground">Turn context into action</h2>
+            </div>
+            <p className="text-label text-faint-foreground">Any order · your data stays local</p>
           </div>
-          <Button variant="accent" size="sm" onClick={onOpenOnboarding} className="self-start sm:self-auto">
-            Start with my data
-            <ArrowRight />
-          </Button>
-        </section>
-      ) : showGettingStarted ? (
-        <section className="grid gap-4 border-y border-border py-4 lg:grid-cols-[220px_1fr]">
-          <div>
-            <div className="text-label uppercase text-accent-fg">First useful loop</div>
-            <h2 className="mt-1 font-serif text-h2 text-foreground">Turn context into action</h2>
-            <p className="mt-1 text-body-sm text-muted-foreground">Complete these in any order. Your data stays local.</p>
-          </div>
-          <div className="divide-y divide-border border-y border-border lg:border-y-0">
+          <div className="mt-3 divide-y divide-border">
             <StartRow
               done={progress.hasAccount}
               label="Add an account"
-              detail="The company or client whose context you need to remember."
+              detail="The company whose context you need to remember."
               action="Accounts"
               onClick={() => onNavigate("accounts")}
             />
             <StartRow
               done={progress.hasSource}
               label="Capture a source note"
-              detail="Record what happened and where it came from."
+              detail="What happened, and where it came from."
               action="Capture"
               onClick={() => onNavigate("notes")}
             />
             <StartRow
               done={progress.hasAction}
               label="Choose the next action"
-              detail="Keep human judgment explicit before work moves."
+              detail="Keep the decision with a person."
               action="Tasks"
               onClick={() => onNavigate("tasks")}
             />
@@ -161,13 +186,16 @@ export function HomeView({
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
         <Card>
-          <CardHeader>
-            <CardTitle className="font-serif text-h2">Next actions</CardTitle>
-            <p className="text-body-sm text-muted-foreground">Open work, ordered by due date.</p>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle className="text-h2">Next actions</CardTitle>
+            <Button size="sm" variant="ghost" onClick={() => onNavigate("tasks")}>
+              All tasks
+              <ArrowRight />
+            </Button>
           </CardHeader>
-          <CardContent className="space-y-2.5">
+          <CardContent className="divide-y divide-border/70">
             {openTasks.length === 0 ? (
               <EmptyState title="No open tasks" hint="Add a next action from an account or the Tasks view." />
             ) : (
@@ -188,11 +216,8 @@ export function HomeView({
 
         <Card>
           <CardHeader className="flex-row items-center justify-between">
-            <div>
-              <CardTitle className="font-serif text-h2">Recent activity</CardTitle>
-              <p className="text-body-sm text-muted-foreground">The latest notes across your accounts.</p>
-            </div>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-h2">Recent activity</CardTitle>
+            <Activity className="h-4 w-4 text-faint-foreground" />
           </CardHeader>
           <CardContent className="space-y-3">
             {recentNotes.map((note) => (
@@ -200,7 +225,7 @@ export function HomeView({
             ))}
             <button
               onClick={() => onNavigate("notes")}
-              className="w-full rounded-md py-1.5 text-center text-body-sm text-accent-fg hover:underline focus-visible:outline-none focus-visible:focus-ring"
+              className="w-full rounded-lg py-2 text-center text-body-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:focus-ring"
             >
               View all notes →
             </button>
@@ -228,7 +253,7 @@ function StartRow({
     <div className="flex min-w-0 items-center gap-3 py-3 first:pt-0 last:pb-0">
       <span
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
-          done ? "border-success bg-success-bg text-success-fg" : "border-border bg-surface text-faint-foreground"
+          done ? "border-success bg-success text-white" : "border-border bg-surface text-faint-foreground"
         }`}
         aria-label={done ? "Complete" : "Not complete"}
       >

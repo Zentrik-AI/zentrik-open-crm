@@ -59,7 +59,7 @@ export function Tooltip({
           <span
             id={id}
             role="tooltip"
-            className="pointer-events-none fixed z-[120] -translate-x-1/2 rounded-md border border-border bg-surface-raised px-2.5 py-1.5 text-[12px] leading-snug text-foreground shadow-e2 animate-settle"
+            className="pointer-events-none fixed z-[120] -translate-x-1/2 rounded-md border border-border bg-surface-raised px-2.5 py-1.5 text-label leading-snug text-foreground shadow-e2 animate-settle"
             style={{
               top: coords.top,
               left: coords.left,

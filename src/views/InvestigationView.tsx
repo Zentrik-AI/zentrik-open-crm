@@ -1,10 +1,25 @@
-import { useEffect, useState } from "react";
-import { ArrowRight, Check, CheckCheck, HelpCircle, Loader2, ScanLine, ShieldCheck } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  ArrowRight,
+  Check,
+  CheckCheck,
+  CircleDashed,
+  GitCompareArrows,
+  HelpCircle,
+  Loader2,
+  Lock,
+  Plus,
+  Quote,
+  ScanLine,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import type { Workspace } from "../types";
 import type { CallsState } from "../core/calls";
 import type { InvestigationDecision, InvestigationRun } from "../core/investigation";
 import { Button } from "../components/ui/button";
 import { Input, Textarea } from "../components/ui/field";
+import { Monogram } from "../components/ui/monogram";
 import { useShareSafe } from "../components/ui/privacy";
 import { folderBacked } from "../lib/backend";
 import { cn } from "../lib/utils";
@@ -25,6 +40,63 @@ async function request<T>(endpoint: string, body?: unknown): Promise<T> {
   return value;
 }
 const actionable = (d: InvestigationDecision) => !!d.op;
+const needsInput = (d: InvestigationDecision) => d.kind === "clarify" || d.kind === "error";
+const stagger = (i: number) => ({ animationDelay: `${Math.min(i, 8) * 45}ms` });
+
+type StepState = "idle" | "active" | "done";
+
+/** One segment of the three-step progress rail. */
+function Step({ n, state, label, progress }: { n: number; state: StepState; label: ReactNode; progress?: number }) {
+  return (
+    <div className="min-w-0 flex-1">
+      <div className="h-1 overflow-hidden rounded-full bg-secondary">
+        <div
+          className={cn(
+            "investigation-progress h-full rounded-full",
+            state === "done" ? "bg-foreground/80" : "bg-agent",
+          )}
+          style={{ width: state === "done" ? "100%" : state === "active" ? `${Math.max(n === 3 ? 0 : 6, progress ?? 0)}%` : "0%" }}
+        />
+      </div>
+      <div className="mt-2 flex items-center gap-1.5 text-body-sm">
+        <span
+          className={cn(
+            "flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold tnum",
+            state === "done"
+              ? "bg-foreground text-background"
+              : state === "active"
+                ? "bg-agent text-white"
+                : "border border-border-strong text-faint-foreground",
+          )}
+          aria-hidden
+        >
+          {state === "done" ? <Check className="h-2.5 w-2.5" strokeWidth={3} /> : n}
+        </span>
+        <span className={cn("truncate", state === "idle" ? "text-faint-foreground" : "font-medium text-foreground")}>
+          {label}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Small outcome chip used on account rows and in the outcome list. */
+function Chip({ tone, children }: { tone: "change" | "saved" | "known" | "ask"; children: ReactNode }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex h-[22px] items-center gap-1 rounded-md px-1.5 text-label font-medium",
+        tone === "change" && "bg-agent-bg text-agent-fg",
+        tone === "saved" && "bg-success-bg text-success-fg",
+        tone === "known" && "bg-secondary text-muted-foreground",
+        tone === "ask" && "bg-warning-bg text-warning-fg",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function InvestigationView({
   active,
   workspace,
@@ -109,21 +181,20 @@ export function InvestigationView({
   }
   if (shareSafe)
     return (
-      <div className="py-16 text-center">
-        <ShieldCheck className="mx-auto mb-3 h-8 w-8" />
-        <h1 className="font-display text-h1">Account investigation is hidden</h1>
-        <p className="mt-3 text-muted-foreground">Turn off share-safe view to work with account notes.</p>
+      <div className="py-20 text-center">
+        <ShieldCheck className="mx-auto mb-4 h-8 w-8 text-faint-foreground" />
+        <h1 className="text-h1">Account investigation is hidden</h1>
+        <p className="mt-2 text-body-sm text-muted-foreground">Turn off share-safe view to work with account notes.</p>
       </div>
     );
   if (!folderBacked)
     return (
       <div className="max-w-xl py-12">
-        <h1 className="font-display text-h1">Bring your CRM up to date.</h1>
+        <h1 className="text-h1">Bring your CRM up to date</h1>
         <p className="my-4 text-body text-muted-foreground">
-          Run Open CRM with a local workspace folder to investigate notes and imported calls against your account
-          records.
+          Run Open CRM on a workspace folder to check notes and calls against your account records.
         </p>
-        <pre className="rounded-lg bg-secondary p-4 text-body-sm">
+        <pre className="rounded-lg border border-border bg-surface-sunken p-4 font-mono text-body-sm">
           npm run crm -- init ~/my-crm{"\n"}cd ~/my-crm{"\n"}./crm ui
         </pre>
       </div>
@@ -146,44 +217,58 @@ export function InvestigationView({
   const changes = run?.decisions.filter(actionable) ?? [];
   const applied = changes.filter((d) => d.appliedAt).length;
   const unchanged = run?.decisions.filter((d) => d.kind === "unchanged").length ?? 0;
-  const questions = run?.decisions.filter((d) => d.kind === "clarify" || d.kind === "error").length ?? 0;
+  const questions = run?.decisions.filter(needsInput).length ?? 0;
   const displayed = decisions.filter(
-    (d) => filter === "all" || (filter === "changes" ? actionable(d) : d.kind === "clarify" || d.kind === "error"),
+    (d) => filter === "all" || (filter === "changes" ? actionable(d) : needsInput(d)),
   );
+  const matchState: StepState = !run ? "idle" : run.status === "matching" ? "active" : "done";
+  const checkState: StepState = !run || run.status === "matching" ? "idle" : run.status === "checking" ? "active" : "done";
+  const reviewState: StepState = run?.status === "ready" ? (changes.length === applied ? "done" : "active") : "idle";
+  const connected = !!calls?.connections.jev;
+  const openAccountGroup = (id: string) => {
+    setAccountId(id);
+    setOverview(false);
+    setFilter("all");
+  };
+
   return (
     <section
-      className="flex flex-col gap-4 lg:h-[calc(100dvh-112px)] lg:min-h-[500px]"
+      className="flex flex-col gap-5 lg:h-[calc(100dvh-112px)] lg:min-h-[520px]"
       aria-label="Account investigation"
     >
-      <header className="flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <header className="flex shrink-0 flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-h1">Bring your accounts up to date.</h1>
-          <p className="mt-1 text-body-sm text-muted-foreground">
-            Give the CRM your notes. See what needs to change, and what can stay.
-          </p>
+          <h1 className="text-h1">Bring your accounts up to date</h1>
+          <p className="mt-1 text-body-sm text-muted-foreground">Paste what happened. Approve only what should change.</p>
         </div>
-        <Button size="sm" onClick={() => setShowContext(!showContext)}>
+        <Button size="sm" onClick={() => setShowContext(!showContext)} aria-expanded={showContext || !connected}>
+          <span
+            className={cn("h-1.5 w-1.5 rounded-full", connected ? "bg-success" : "bg-warning")}
+            aria-hidden
+          />
           Data & connection
         </Button>
       </header>
+
       {error && (
-        <p
-          role="alert"
-          className="rounded-md border border-destructive bg-destructive-bg px-3 py-2 text-body-sm shrink-0"
-        >
+        <p role="alert" className="shrink-0 rounded-lg border border-destructive/40 bg-destructive-bg px-3 py-2 text-body-sm text-destructive-fg">
           {error}
         </p>
       )}
-      {(showContext || !calls?.connections.jev) && (
-        <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface-raised p-3 shrink-0">
-          <p className="flex-1 text-body-sm text-muted-foreground">
-            {calls?.connections.jev ? "Jev connected for this server session." : "Connect Jev for this session."}{" "}
-            Selected notes, account names, active claims and task records go to TypeSafe. Keys stay in server memory.
+
+      {(showContext || !connected) && (
+        <div className="investigation-arrive flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 shadow-e1">
+          <Lock className="h-4 w-4 shrink-0 text-faint-foreground" aria-hidden />
+          <p className="min-w-[240px] flex-1 text-body-sm text-muted-foreground">
+            <span className="font-medium text-foreground">
+              {connected ? "Jev connected for this server session." : "Connect Jev for this session."}
+            </span>{" "}
+            After you consent, the note and related account records go to TypeSafe. Keys stay in server memory.
           </p>
-          {!calls?.connections.jev && (
-            <>
+          {!connected && (
+            <div className="flex w-full gap-2 sm:w-auto">
               <Input
-                className="max-w-64"
+                className="sm:w-64"
                 type="password"
                 aria-label="Jev API key"
                 autoComplete="off"
@@ -192,6 +277,7 @@ export function InvestigationView({
                 onChange={(e) => setKey(e.target.value)}
               />
               <Button
+                variant="primary"
                 disabled={!key.trim() || busy}
                 onClick={() =>
                   void act(async () => {
@@ -204,127 +290,138 @@ export function InvestigationView({
               >
                 Connect Jev
               </Button>
-            </>
+            </div>
           )}
         </div>
       )}
-      <div
-        role="status"
-        aria-live="polite"
-        className="flex flex-wrap items-center justify-between gap-2 border-y border-border py-3 shrink-0 text-body-sm"
-      >
-        <div className="flex items-center gap-3">
-          <span className={cn("flex items-center gap-2", running ? "text-agent-fg" : "text-muted-foreground")}>
-            {running ? (
-              <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
-            ) : run ? (
-              <CheckCheck className="h-4 w-4" />
-            ) : (
-              <ScanLine className="h-4 w-4" />
-            )}
-            {!run
-              ? "Notes"
-              : run.status === "matching"
-                ? `Matching accounts · ${run.matched}/${run.total}`
-                : run.matched === run.total
-                  ? "Accounts matched"
-                  : `Matched ${run.matched}/${run.total}`}
-          </span>
-          <ArrowRight className="h-3 w-3 text-faint-foreground" />
-          <span className={run?.status === "checking" ? "text-agent-fg" : "text-muted-foreground"}>
-            {run?.status === "checking" ? `Checking records · ${run.checked}/${run.total}` : "Compare records"}
-          </span>
-          <ArrowRight className="h-3 w-3 text-faint-foreground" />
-          <span>
-            {run?.status === "ready"
-              ? `${changes.length} changes · ${unchanged} unchanged · ${questions} to clarify`
-              : run?.status === "error"
-                ? "Investigation stopped"
-                : "Review changes"}
-          </span>
-        </div>
-        {running && (
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={busy}
-            onClick={() =>
-              void act(async () => {
-                await request("/stop-investigation", {});
-              })
+
+      <div role="status" aria-live="polite" className="shrink-0">
+        <div className="flex items-start gap-3">
+          <Step
+            n={1}
+            state={matchState}
+            progress={run?.total ? (100 * run.matched) / run.total : 0}
+            label={
+              !run
+                ? "Match accounts"
+                : run.status === "matching"
+                  ? `Matching accounts · ${run.matched}/${run.total}`
+                  : run.matched === run.total
+                    ? "Accounts matched"
+                    : `Matched ${run.matched}/${run.total}`
             }
-          >
-            Stop investigation
-          </Button>
-        )}
-        {applied > 0 && <span className="text-accent-fg">{applied} applied to CRM</span>}
+          />
+          <Step
+            n={2}
+            state={checkState}
+            progress={run?.total ? (100 * run.checked) / run.total : 0}
+            label={run?.status === "checking" ? `Checking records · ${run.checked}/${run.total}` : "Compare records"}
+          />
+          <Step
+            n={3}
+            state={reviewState}
+            progress={changes.length ? (100 * applied) / changes.length : 0}
+            label={
+              run?.status === "ready"
+                ? `${changes.length} changes · ${unchanged} unchanged · ${questions} to clarify`
+                : run?.status === "error"
+                  ? "Investigation stopped"
+                  : "Review changes"
+            }
+          />
+          {running && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="-mt-1"
+              disabled={busy}
+              onClick={() =>
+                void act(async () => {
+                  await request("/stop-investigation", {});
+                })
+              }
+            >
+              Stop investigation
+            </Button>
+          )}
+        </div>
+        <div className="mt-2 flex min-h-[20px] items-center justify-between gap-3 text-label text-faint-foreground">
+          <div className="flex min-w-0 items-center gap-2" aria-label="Live investigation activity">
+            {run && (
+              <>
+                {running ? (
+                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-agent motion-reduce:animate-none" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                )}
+                <span className="truncate">
+                  {applying
+                    ? "Saving the approved change…"
+                    : running
+                      ? run.status === "matching"
+                        ? "Finding the right accounts"
+                        : `Checking ${run.activeAccounts?.length ?? 0} accounts in parallel`
+                      : run.status === "error"
+                        ? "Review interrupted"
+                        : changes.length === applied
+                          ? changes.length
+                            ? "All proposed changes saved"
+                            : "No new changes needed"
+                          : "Your update plan is ready"}
+                </span>
+                {running &&
+                  run.events?.slice(-1).map((event) => (
+                    <span key={`${run.id}_${event.id}`} className="investigation-arrive hidden truncate md:inline">
+                      ·{" "}
+                      {event.accountId && (
+                        <span className="text-muted-foreground">
+                          {run.accounts?.find((a) => a.id === event.accountId)?.name}{" "}
+                        </span>
+                      )}
+                      {event.label}
+                    </span>
+                  ))}
+              </>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            {run && <span className="tnum">{run.checked}/{run.total} passages checked</span>}
+            {applied > 0 && <span className="font-medium text-success-fg">{applied} applied to CRM</span>}
+          </div>
+        </div>
       </div>
       {run?.error && (
-        <p role="alert" className="text-body-sm text-destructive-fg shrink-0">
+        <p role="alert" className="shrink-0 text-body-sm text-destructive-fg">
           {run.error}
         </p>
       )}
-      {run && (
-        <div
-          className="investigation-activity shrink-0 rounded-lg border border-border bg-surface-raised px-4 py-3"
-          aria-label="Live investigation activity"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-body-sm font-medium">
-              {applying
-                ? "Saving the approved change…"
-                : running
-                  ? run.status === "matching"
-                    ? "Finding the right accounts"
-                    : `Checking ${run.activeAccounts?.length ?? 0} accounts in parallel`
-                  : run.status === "error"
-                    ? "Review interrupted"
-                    : changes.length === applied
-                      ? changes.length
-                        ? "All proposed changes saved"
-                        : "No new changes needed"
-                      : "Your update plan is ready"}
-            </p>
-            <span className="text-label text-muted-foreground">
-              {run.checked}/{run.total} passages checked
-            </span>
-          </div>
-          {running && (
-            <div className="mt-2 h-1 overflow-hidden rounded bg-secondary">
-              <div
-                className="investigation-progress h-full bg-agent"
-                style={{
-                  width: `${run.total ? (100 * run.checked) / run.total : 0}%`,
-                }}
-              />
-            </div>
-          )}
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-label text-muted-foreground">
-            {run.events?.slice(-3).map((event) => (
-              <span key={`${run.id}_${event.id}`} className="investigation-arrive">
-                {event.accountId && (
-                  <span className="text-foreground">
-                    {run.accounts?.find((a) => a.id === event.accountId)?.name} ·{" "}
-                  </span>
-                )}
-                {event.label}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(180px,0.9fr)_minmax(150px,0.7fr)_minmax(0,1.6fr)]">
+
+      <div className="grid min-h-0 flex-1 gap-5 lg:grid-cols-[minmax(260px,340px)_minmax(220px,280px)_minmax(0,1fr)]">
+        {/* 1 · The note */}
         <section
-          className="flex min-h-0 flex-col gap-3 rounded-xl border border-border bg-surface-raised p-4"
+          className="flex min-h-0 flex-col gap-3 rounded-xl border border-border bg-surface-raised p-4 shadow-e1"
           aria-label="Investigation input"
         >
-          <div className="flex gap-2">
-            <Button size="sm" variant={mode === "notes" ? "primary" : "ghost"} onClick={() => setMode("notes")}>
-              Notes
-            </Button>
-            <Button size="sm" variant={mode === "calls" ? "primary" : "ghost"} onClick={() => setMode("calls")}>
-              Imported calls
-            </Button>
+          <div className="flex rounded-lg bg-secondary p-0.5" role="group" aria-label="Source">
+            {(
+              [
+                ["notes", "Notes"],
+                ["calls", "Imported calls"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setMode(value)}
+                aria-pressed={mode === value}
+                className={cn(
+                  "h-8 flex-1 rounded-md text-body-sm font-medium transition-[background-color,color,box-shadow] duration-fast focus-visible:outline-none focus-visible:focus-ring",
+                  mode === value ? "bg-surface-raised text-foreground shadow-e1" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {label}
+              </button>
+            ))}
           </div>
           {mode === "notes" ? (
             <>
@@ -333,23 +430,19 @@ export function InvestigationView({
               </label>
               <Textarea
                 id="investigation-notes"
-                className="min-h-40 flex-1 resize-none"
-                placeholder={
-                  "Name the account, then say what changed. Use one thought per line.\n\nPaste notes or use your computer’s dictation."
-                }
+                className="min-h-40 flex-1 resize-none border-transparent bg-surface-sunken text-body leading-7 shadow-none focus:bg-surface-raised"
+                placeholder={"Northstar: sent the security checklist.\nMeridian: review cleared for renewal.\n\nOne account and one thought per line."}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 maxLength={200000}
                 disabled={!!running}
               />
-              <p className="text-label text-muted-foreground">
-                Text or system dictation. No audio is recorded by this app.
-              </p>
+              <p className="text-label text-faint-foreground">Type, paste or dictate. No audio is recorded.</p>
             </>
           ) : (
             <div className="min-h-40 flex-1 overflow-y-auto">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-body-sm">{ids.length} selected</span>
+                <span className="text-body-sm text-muted-foreground tnum">{ids.length} selected</span>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -359,31 +452,31 @@ export function InvestigationView({
                 </Button>
               </div>
               {calls?.calls.length ? (
-                calls.calls.map((c) => (
-                  <label key={c.id} className="flex gap-2 border-b border-border py-3 text-body-sm">
-                    <input
-                      type="checkbox"
-                      className="mt-1 h-4 w-4 shrink-0"
-                      checked={ids.includes(c.id)}
-                      disabled={!!running}
-                      onChange={() =>
-                        setIds((v) => (v.includes(c.id) ? v.filter((id) => id !== c.id) : [...v, c.id].slice(0, 50)))
-                      }
-                    />
-                    <span className="break-words">{c.title}</span>
-                  </label>
-                ))
+                <div className="divide-y divide-border">
+                  {calls.calls.map((c) => (
+                    <label key={c.id} className="flex cursor-pointer gap-2.5 py-2.5 text-body-sm">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--foreground))]"
+                        checked={ids.includes(c.id)}
+                        disabled={!!running}
+                        onChange={() =>
+                          setIds((v) => (v.includes(c.id) ? v.filter((id) => id !== c.id) : [...v, c.id].slice(0, 50)))
+                        }
+                      />
+                      <span className="break-words">{c.title}</span>
+                    </label>
+                  ))}
+                </div>
               ) : (
-                <p className="text-body-sm text-muted-foreground">
-                  Import transcripts in Calls, then return here to compare them with account records.
-                </p>
+                <p className="py-6 text-body-sm text-muted-foreground">Import transcripts in Calls to check them here.</p>
               )}
             </div>
           )}
-          <label className="flex gap-2 text-label text-muted-foreground">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border px-3 py-2.5 text-body-sm text-muted-foreground transition-colors has-[:checked]:border-accent/50 has-[:checked]:bg-accent-bg/50 has-[:checked]:text-foreground">
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 shrink-0"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--accent))]"
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
             />
@@ -391,13 +484,10 @@ export function InvestigationView({
           </label>
           <Button
             className="w-full"
+            size="lg"
             variant="primary"
             disabled={
-              busy ||
-              !!running ||
-              !consent ||
-              !calls?.connections.jev ||
-              (mode === "notes" ? !text.trim() : !ids.length)
+              busy || !!running || !consent || !connected || (mode === "notes" ? !text.trim() : !ids.length)
             }
             onClick={() =>
               void act(async () => {
@@ -425,90 +515,126 @@ export function InvestigationView({
             )}
           </Button>
         </section>
-        <section className="min-h-0 overflow-y-auto" aria-label="Affected accounts">
-          <h2 className="mb-3 text-body-sm font-medium">
-            Affected accounts{" "}
-            <span className="text-muted-foreground">{groups.filter((g) => g.id !== "unmatched").length || ""}</span>
+
+        {/* 2 · The accounts it touches */}
+        <section className="flex min-h-0 flex-col" aria-label="Affected accounts">
+          <h2 className="mb-2.5 flex items-baseline gap-2 px-1 text-body-sm font-semibold">
+            Affected accounts
+            <span className="font-normal text-faint-foreground tnum">
+              {groups.filter((g) => g.id !== "unmatched").length || ""}
+            </span>
           </h2>
-          {run?.status === "ready" && (
-            <button
-              onClick={() => setOverview(true)}
-              aria-pressed={overview}
-              className={cn(
-                "mb-3 w-full rounded-lg border p-3 text-left text-body-sm",
-                overview ? "border-accent bg-accent-bg" : "border-border bg-surface-raised",
-              )}
-            >
-              <span className="block font-medium">All account outcomes</span>
-              <span className="mt-1 block text-label text-muted-foreground">
-                {changes.length - applied} awaiting approval · {applied} saved
-              </span>
-            </button>
-          )}
-          {!groups.length ? (
-            <div className="border-l-2 border-border pl-4 py-6 text-body-sm text-muted-foreground">
-              {running ? "Reading the sources and matching account names…" : "Account matches will appear here."}
-            </div>
-          ) : (
-            groups.map((a) => {
-              const ds = run?.decisions.filter((d) => (d.accountId ?? "unmatched") === a.id) ?? [];
-              const proposals = ds.filter(actionable);
-              const done = proposals.filter((d) => d.appliedAt).length;
-              return (
-                <button
-                  key={a.id}
-                  onClick={() => {
-                    setAccountId(a.id);
-                    setOverview(false);
-                    setFilter("all");
-                  }}
-                  aria-pressed={!overview && selected?.id === a.id}
-                  className={cn(
-                    "investigation-arrive mb-2 w-full rounded-lg border p-2.5 text-left transition-colors motion-reduce:transition-none",
-                    !overview && selected?.id === a.id
-                      ? "border-accent bg-accent-bg"
-                      : "border-border bg-surface-raised hover:bg-secondary",
-                  )}
-                >
-                  <span className="flex items-center gap-2 break-words text-body-sm font-medium">
-                    {run?.activeAccounts?.includes(a.id) && running && (
-                      <Loader2 className="h-3 w-3 shrink-0 animate-spin motion-reduce:animate-none text-agent-fg" />
+          <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+            {run?.status === "ready" && (
+              <button
+                onClick={() => setOverview(true)}
+                aria-pressed={overview}
+                className={cn(
+                  "investigation-arrive w-full rounded-xl border p-3 text-left transition-[border-color,box-shadow,background-color] duration-fast",
+                  overview
+                    ? "border-foreground/80 bg-surface-raised shadow-e2"
+                    : "border-border bg-surface-raised shadow-e1 hover:border-border-strong",
+                )}
+              >
+                <span className="flex items-center gap-2 text-body-sm font-semibold">
+                  <GitCompareArrows className="h-4 w-4 text-faint-foreground" />
+                  All account outcomes
+                </span>
+                <span className="mt-1 block text-label text-muted-foreground tnum">
+                  {changes.length - applied} awaiting approval · {applied} saved
+                </span>
+              </button>
+            )}
+            {!groups.length ? (
+              <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border text-center text-body-sm text-faint-foreground">
+                {running ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-agent motion-reduce:animate-none" />
+                    Reading and matching accounts…
+                  </>
+                ) : (
+                  "Account matches will appear here."
+                )}
+              </div>
+            ) : (
+              groups.map((a, i) => {
+                const ds = run?.decisions.filter((d) => (d.accountId ?? "unmatched") === a.id) ?? [];
+                const proposals = ds.filter(actionable);
+                const done = proposals.filter((d) => d.appliedAt).length;
+                const pending = proposals.length - done;
+                const isSelected = !overview && selected?.id === a.id;
+                const checking = running && ds.length < a.passages;
+                return (
+                  <button
+                    key={a.id}
+                    style={stagger(i)}
+                    onClick={() => openAccountGroup(a.id)}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      "investigation-arrive group flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-[border-color,box-shadow,background-color] duration-fast motion-reduce:transition-none",
+                      isSelected
+                        ? "border-foreground/80 bg-surface-raised shadow-e2"
+                        : "border-border bg-surface-raised shadow-e1 hover:border-border-strong",
                     )}
-                    {a.name}
-                  </span>
-                  {running && (
-                    <div className="mt-2 h-0.5 bg-secondary">
-                      <div
-                        className="investigation-progress h-full bg-agent"
-                        style={{
-                          width: `${Math.min(100, (100 * ds.length) / a.passages)}%`,
-                        }}
-                      />
-                    </div>
-                  )}
-                  <span className="mt-2 block text-label text-muted-foreground">
-                    {done ? `${done} applied · ` : ""}
-                    {proposals.length - done} {proposals.length - done === 1 ? "change" : "changes"}
-                    {ds.some((d) => d.kind === "unchanged") ? " · already known" : ""}
-                    {ds.some((d) => d.kind === "clarify" || d.kind === "error") ? " · needs input" : ""}
-                    {running && ds.length < a.passages ? " · checking…" : ""}
-                  </span>
-                </button>
-              );
-            })
-          )}
+                  >
+                    {a.id === "unmatched" ? (
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-dashed border-warning text-warning-fg">
+                        <HelpCircle className="h-3.5 w-3.5" />
+                      </span>
+                    ) : (
+                      <Monogram name={a.name} size="sm" />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2 break-words text-body-sm font-medium">
+                        {a.name}
+                        {run?.activeAccounts?.includes(a.id) && running && (
+                          <Loader2 className="h-3 w-3 shrink-0 animate-spin text-agent motion-reduce:animate-none" />
+                        )}
+                      </span>
+                      {running ? (
+                        <span className="mt-2 block h-1 overflow-hidden rounded-full bg-secondary">
+                          <span
+                            className="investigation-progress block h-full rounded-full bg-agent"
+                            style={{ width: `${Math.min(100, (100 * ds.length) / a.passages)}%` }}
+                          />
+                        </span>
+                      ) : null}
+                      <span className="mt-1.5 flex flex-wrap gap-1">
+                        {done > 0 && (
+                          <Chip tone="saved">
+                            <Check className="h-3 w-3" /> {done} applied
+                          </Chip>
+                        )}
+                        {pending > 0 && (
+                          <Chip tone="change">
+                            {pending} {pending === 1 ? "change" : "changes"}
+                          </Chip>
+                        )}
+                        {ds.some((d) => d.kind === "unchanged") && <Chip tone="known">already known</Chip>}
+                        {ds.some(needsInput) && <Chip tone="ask">needs input</Chip>}
+                        {checking && <span className="text-label text-faint-foreground">checking…</span>}
+                        {!running && !ds.length && <span className="text-label text-faint-foreground">0 changes</span>}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
         </section>
+
+        {/* 3 · What should change */}
         <section
-          className="flex min-h-0 flex-col rounded-xl border border-border bg-surface-raised"
+          className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-surface-raised shadow-e1"
           aria-label="Account changes"
         >
-          <div className="shrink-0 border-b border-border p-4">
+          <div className="shrink-0 border-b border-border px-5 py-4">
             <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-label text-muted-foreground">
-                  {overview ? "INVESTIGATION OUTCOME" : "CURRENT RECORD → PROPOSED CHANGE"}
+              <div className="min-w-0">
+                <p className="text-label text-faint-foreground">
+                  {overview ? "Investigation outcome" : selected ? "Current record → proposed change" : "Proposed changes"}
                 </p>
-                <h2 className="mt-1 font-display text-h2">
+                <h2 className="mt-0.5 truncate text-h2">
                   {overview
                     ? applied === changes.length
                       ? `${applied} changes saved${questions ? ` · ${questions} need input` : ""}.`
@@ -524,7 +650,7 @@ export function InvestigationView({
               )}
             </div>
             {!overview && !!decisions.length && (
-              <div className="mt-3 flex flex-wrap gap-1">
+              <div className="mt-3 inline-flex rounded-lg bg-secondary p-0.5">
                 {(
                   [
                     ["all", "All decisions"],
@@ -532,212 +658,264 @@ export function InvestigationView({
                     ["questions", "Needs input"],
                   ] as const
                 ).map(([value, label]) => (
-                  <Button
+                  <button
                     key={value}
-                    size="sm"
-                    variant={filter === value ? "secondary" : "ghost"}
+                    type="button"
                     aria-pressed={filter === value}
                     onClick={() => setFilter(value)}
+                    className={cn(
+                      "h-7 rounded-md px-2.5 text-label font-medium transition-[background-color,color,box-shadow] duration-fast focus-visible:outline-none focus-visible:focus-ring",
+                      filter === value ? "bg-surface-raised text-foreground shadow-e1" : "text-muted-foreground hover:text-foreground",
+                    )}
                   >
                     {label}
-                  </Button>
+                  </button>
                 ))}
               </div>
             )}
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-4" aria-live="off">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4" aria-live="off">
             {overview ? (
-              <div className="investigation-arrive space-y-1">
-                <p className="text-body-sm text-muted-foreground">
-                  {applied} saved · {changes.length - applied} awaiting approval · {unchanged} unchanged · {questions}{" "}
-                  need clarification. Each saved change includes its source.
-                </p>
+              <div className="investigation-arrive">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {(
+                    [
+                      ["Saved", applied, "text-success-fg"],
+                      ["For approval", changes.length - applied, "text-agent-fg"],
+                      ["Unchanged", unchanged, "text-muted-foreground"],
+                      ["To clarify", questions, "text-warning-fg"],
+                    ] as const
+                  ).map(([label, value, tone]) => (
+                    <div key={label} className="rounded-lg bg-surface-sunken px-3 py-2.5">
+                      <div className={cn("text-[22px] font-semibold leading-none tracking-[-0.03em] tnum", tone)}>{value}</div>
+                      <div className="mt-1.5 text-label text-muted-foreground">{label}</div>
+                    </div>
+                  ))}
+                </div>
                 {questions > 0 && (
-                  <p className="text-label text-warning-fg">
-                    {questions} unclear {questions === 1 ? "note stays" : "notes stay"} unresolved; approval will not
-                    change those records.
+                  <p className="mt-3 flex items-center gap-2 text-label text-warning-fg">
+                    <HelpCircle className="h-3.5 w-3.5" />
+                    {questions} unclear {questions === 1 ? "note stays" : "notes stay"} unresolved; approval will not change
+                    those records.
                   </p>
                 )}
-                {groups.map((a) => {
-                  const ds = run!.decisions.filter((d) => (d.accountId ?? "unmatched") === a.id);
-                  return (
-                    <section key={a.id} className="border-b border-border py-1">
-                      <button
-                        className="text-body-sm font-medium hover:underline"
-                        onClick={() => {
-                          setAccountId(a.id);
-                          setOverview(false);
-                          setFilter("all");
-                        }}
-                      >
-                        {a.name} →
-                      </button>
-                      <div className="mt-1 space-y-2">
-                        {ds.map((d) => (
-                          <div
-                            key={d.id}
-                            className={cn(
-                              "investigation-arrive flex items-start justify-between gap-3 text-body-sm",
-                              d.appliedAt && "text-accent-fg",
-                            )}
-                          >
-                            <span>
-                              {d.title}
-                              {d.after && (
-                                <span className="block text-label">
-                                  → {d.after}
-                                  {d.kind === "complete" ? `: ${d.before}` : ""}
-                                </span>
-                              )}
-                            </span>
-                            <span className="shrink-0 text-label">
-                              {applying === d.id
-                                ? "Saving…"
-                                : d.appliedAt
-                                  ? "Saved ✓"
-                                  : d.op
-                                    ? "For approval"
-                                    : d.kind === "unchanged"
-                                      ? "No change"
-                                      : "Needs input"}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  );
-                })}
-
-                {questions > 0 && (
-                  <p className="text-label text-warning-fg">
-                    Unclear evidence stays unresolved. Clarify those notes and run another investigation.
-                  </p>
-                )}
+                <div className="mt-4 divide-y divide-border">
+                  {groups.map((a, i) => {
+                    const ds = run!.decisions.filter((d) => (d.accountId ?? "unmatched") === a.id);
+                    return (
+                      <section key={a.id} className="investigation-arrive py-3" style={stagger(i)}>
+                        <button
+                          className="flex items-center gap-1.5 text-body-sm font-semibold hover:underline"
+                          onClick={() => openAccountGroup(a.id)}
+                        >
+                          {a.name}
+                          <ArrowRight className="h-3.5 w-3.5 text-faint-foreground" />
+                        </button>
+                        <div className="mt-2 space-y-2">
+                          {ds.map((d) => (
+                            <div key={d.id} className="flex items-start justify-between gap-3 text-body-sm">
+                              <span className={cn("min-w-0", d.appliedAt && "text-muted-foreground")}>
+                                {d.title}
+                                {d.after && (
+                                  <span className="mt-0.5 block text-label text-faint-foreground">
+                                    → {d.after}
+                                    {d.kind === "complete" ? `: ${d.before}` : ""}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="shrink-0">
+                                {applying === d.id ? (
+                                  <Chip tone="change">Saving…</Chip>
+                                ) : d.appliedAt ? (
+                                  <Chip tone="saved">
+                                    <Check className="h-3 w-3" /> Saved
+                                  </Chip>
+                                ) : d.op ? (
+                                  <Chip tone="change">For approval</Chip>
+                                ) : d.kind === "unchanged" ? (
+                                  <Chip tone="known">No change</Chip>
+                                ) : (
+                                  <Chip tone="ask">Needs input</Chip>
+                                )}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
               </div>
             ) : !selected ? (
-              <div className="flex h-full min-h-48 flex-col justify-center px-4">
-                <ScanLine className="mb-4 h-8 w-8 text-agent-fg" />
-                <h3 className="font-display text-h2">A useful change. Or a reason to leave it alone.</h3>
-                <p className="mt-3 text-body text-muted-foreground">
-                  Match each note to an account. Check what is already known. Review the exact change before it reaches
-                  your CRM.
-                </p>
-                <div className="mt-6 space-y-2 text-body-sm text-muted-foreground">
-                  <p>Add a new need or commitment</p>
-                  <p>Replace outdated account knowledge</p>
-                  <p>Complete a task that was actually done</p>
-                  <p>Keep existing records when nothing changed</p>
+              <div className="flex h-full min-h-56 flex-col items-center justify-center text-center">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-agent-bg text-agent">
+                  <ScanLine className="h-5 w-5" />
+                </span>
+                <h3 className="mt-4 text-h2">A useful change, or a reason to leave it alone</h3>
+                <div className="mt-6 grid w-full max-w-md grid-cols-3 gap-2 text-left">
+                  {(
+                    [
+                      [CircleDashed, "Match each line to an account"],
+                      [GitCompareArrows, "Compare with what the CRM knows"],
+                      [CheckCheck, "Approve only what is right"],
+                    ] as const
+                  ).map(([Icon, label], i) => (
+                    <div key={label} className="rounded-lg border border-border p-3">
+                      <Icon className="h-4 w-4 text-faint-foreground" />
+                      <p className="mt-2 text-label text-muted-foreground">
+                        <span className="tnum text-faint-foreground">{i + 1}. </span>
+                        {label}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : !displayed.length ? (
-              <p className="py-8 text-body-sm text-muted-foreground">
-                {running ? "Comparing this account’s records with the source…" : "No decisions in this group."}
+              <p className="py-10 text-center text-body-sm text-muted-foreground">
+                {running ? "Comparing this account’s records with the note…" : "No decisions in this group."}
               </p>
             ) : (
-              displayed.map((d) => (
-                <article
-                  key={d.id}
-                  className="investigation-arrive mb-4 border-b border-border pb-4 last:border-0"
-                  aria-label={d.title}
-                >
-                  <div className="flex items-center gap-2 text-body-sm font-medium">
-                    {d.appliedAt ? (
-                      <Check className="h-4 w-4 text-accent-fg" />
-                    ) : d.kind === "unchanged" ? (
-                      <CheckCheck className="h-4 w-4 text-muted-foreground" />
-                    ) : d.kind === "clarify" || d.kind === "error" ? (
-                      <HelpCircle className="h-4 w-4 text-warning-fg" />
-                    ) : (
-                      <span className="h-2 w-2 rounded-full bg-agent" />
+              <div className="space-y-3">
+                {displayed.map((d, i) => (
+                  <article
+                    key={d.id}
+                    style={stagger(i)}
+                    className={cn(
+                      "investigation-arrive rounded-xl border p-4 transition-[border-color,background-color] duration-base",
+                      d.appliedAt ? "border-success/40 bg-success-bg/40" : needsInput(d) ? "border-warning/40" : "border-border",
                     )}
-                    <h3>
-                      {d.appliedAt ? "Applied · " : ""}
-                      {d.title}
-                    </h3>
-                  </div>
-                  {d.before && (
-                    <div className="mt-3 border-l-2 border-border pl-3">
-                      <p className="text-label text-muted-foreground">
-                        {d.dependsOn
-                          ? "Already proposed in this investigation"
-                          : d.kind === "unchanged"
-                            ? "Already in CRM"
-                            : "Before"}
+                    aria-label={d.title}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={cn(
+                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                          d.appliedAt
+                            ? "investigation-saved bg-success text-white"
+                            : d.kind === "unchanged"
+                              ? "bg-secondary text-muted-foreground"
+                              : needsInput(d)
+                                ? "bg-warning-bg text-warning-fg"
+                                : "bg-agent-bg text-agent",
+                        )}
+                        aria-hidden
+                      >
+                        {d.appliedAt ? (
+                          <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                        ) : d.kind === "unchanged" ? (
+                          <CheckCheck className="h-3.5 w-3.5" />
+                        ) : needsInput(d) ? (
+                          <HelpCircle className="h-3.5 w-3.5" />
+                        ) : d.kind === "add" ? (
+                          <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+                        ) : (
+                          <Sparkles className="h-3.5 w-3.5" />
+                        )}
+                      </span>
+                      <h3 className="text-h3">
+                        {d.appliedAt ? "Applied · " : ""}
+                        {d.title}
+                      </h3>
+                    </div>
+
+                    {(d.before || d.after || d.kind === "add") && (
+                      <div className="mt-3 grid gap-2">
+                        {d.before && (
+                          <div className="rounded-lg bg-surface-sunken px-3 py-2.5">
+                            <p className="text-label text-faint-foreground">
+                              {d.dependsOn
+                                ? "Already proposed in this investigation"
+                                : d.kind === "unchanged"
+                                  ? "Already in CRM"
+                                  : "Before"}
+                            </p>
+                            <p
+                              className={cn(
+                                "mt-1 text-body-sm",
+                                d.appliedAt && d.kind !== "unchanged" && "text-muted-foreground line-through decoration-muted-foreground/50",
+                              )}
+                            >
+                              {d.before}
+                            </p>
+                          </div>
+                        )}
+                        {d.kind === "add" && !d.before && (
+                          <p className="text-label text-faint-foreground">No matching knowledge found in this account.</p>
+                        )}
+                        {d.after && (
+                          <div
+                            className={cn(
+                              "rounded-lg border-l-2 px-3 py-2.5",
+                              d.appliedAt ? "border-success bg-success-bg/60" : "border-accent bg-accent-bg/50",
+                            )}
+                          >
+                            <p className={cn("text-label", d.appliedAt ? "text-success-fg" : "text-accent-fg")}>
+                              {d.appliedAt ? "Now in CRM" : "After approval"}
+                            </p>
+                            <p className="mt-1 whitespace-pre-wrap break-words text-body-sm">{d.after}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {(d.qualification === "conditional" || d.qualification === "unclear") && (
+                      <p className="mt-2 text-label text-warning-fg">
+                        {d.qualification} —{" "}
+                        {d.kind === "clarify" ? "clarify before changing this record" : "condition kept with the evidence"}
                       </p>
-                      <p className="mt-1 text-body-sm">{d.before}</p>
+                    )}
+                    {d.kind === "clarify" && (
+                      <p className="mt-2 text-body-sm text-muted-foreground">
+                        Name the account and what was confirmed, then investigate again.
+                      </p>
+                    )}
+
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                      <details className="group min-w-0 flex-1 text-body-sm">
+                        <summary className="flex cursor-pointer list-none items-center gap-1.5 text-label text-muted-foreground hover:text-foreground">
+                          <Quote className="h-3.5 w-3.5" />
+                          Source & decision path
+                        </summary>
+                        <blockquote className="mt-3 whitespace-pre-wrap break-words border-l-2 border-agent pl-3 text-body-sm">
+                          {d.quote}
+                        </blockquote>
+                        <p className="mt-2 text-label text-muted-foreground">
+                          Match account → compare existing records →{" "}
+                          {d.kind === "unchanged" ? "keep unchanged" : d.kind === "clarify" ? "ask for clarification" : "human review"}
+                        </p>
+                        <p className="mt-1 break-all font-mono text-[11.5px] text-faint-foreground">
+                          {d.sourceRef} · characters {d.start}–{d.end}
+                          {d.model ? ` · ${d.model}` : ""}
+                        </p>
+                      </details>
+                      {d.op && !d.appliedAt && (
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          disabled={
+                            busy ||
+                            run?.status !== "ready" ||
+                            !workspace.accounts.some((a) => a.id === d.accountId && !a.archivedAt)
+                          }
+                          onClick={() =>
+                            void act(async () => {
+                              await applyDecision(d.id);
+                            })
+                          }
+                        >
+                          {applying === d.id ? "Saving…" : "Apply this change"}
+                          <Check />
+                        </Button>
+                      )}
                     </div>
-                  )}
-                  {d.kind === "add" && (
-                    <p className="mt-3 text-label text-muted-foreground">
-                      No matching knowledge found in this account.
-                    </p>
-                  )}
-                  {d.after && (
-                    <div className="mt-3 border-l-2 border-accent pl-3">
-                      <p className="text-label text-accent-fg">{d.appliedAt ? "Now in CRM" : "After approval"}</p>
-                      <p className="mt-1 whitespace-pre-wrap break-words text-body-sm">{d.after}</p>
-                    </div>
-                  )}
-                  {(d.qualification === "conditional" || d.qualification === "unclear") && (
-                    <p className="mt-2 text-label text-warning-fg">
-                      {d.qualification} —{" "}
-                      {d.kind === "clarify"
-                        ? "clarify before changing this record"
-                        : "condition kept with the evidence"}
-                    </p>
-                  )}
-                  {d.kind === "clarify" && (
-                    <p className="mt-2 text-body-sm text-muted-foreground">
-                      Name one account and state what is confirmed, then investigate the clarified note.
-                    </p>
-                  )}
-                  <details className="mt-3 text-body-sm">
-                    <summary className="cursor-pointer text-muted-foreground">Source & decision path</summary>
-                    <blockquote className="mt-3 whitespace-pre-wrap break-words border-l-2 border-agent pl-3">
-                      {d.quote}
-                    </blockquote>
-                    <p className="mt-3 text-label text-muted-foreground">
-                      Match account → compare existing records →{" "}
-                      {d.kind === "unchanged"
-                        ? "keep unchanged"
-                        : d.kind === "clarify"
-                          ? "ask for clarification"
-                          : "human review"}
-                    </p>
-                    <p className="mt-2 break-all text-label text-faint-foreground">
-                      {d.sourceRef} · characters {d.start}–{d.end}
-                      {d.model ? ` · ${d.model}` : ""}
-                    </p>
-                  </details>
-                  {d.op && !d.appliedAt && (
-                    <Button
-                      className="mt-3"
-                      size="sm"
-                      variant="primary"
-                      disabled={
-                        busy ||
-                        run?.status !== "ready" ||
-                        !workspace.accounts.some((a) => a.id === d.accountId && !a.archivedAt)
-                      }
-                      onClick={() =>
-                        void act(async () => {
-                          await applyDecision(d.id);
-                        })
-                      }
-                    >
-                      {applying === d.id ? "Saving…" : "Apply this change"}
-                      <Check />
-                    </Button>
-                  )}
-                </article>
-              ))
+                  </article>
+                ))}
+              </div>
             )}
           </div>
           {overview && changes.some((d) => !d.appliedAt) && (
-            <div className="shrink-0 border-t border-border bg-surface-raised p-3">
-              <p className="mb-2 text-label text-muted-foreground">
-                Review each account before approval. Saves stop if a write fails.
-              </p>
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border bg-surface-raised px-5 py-3">
+              <p className="text-label text-muted-foreground">Review each account first. Saving stops if a write fails.</p>
               <Button
                 variant="primary"
                 disabled={busy || run?.status !== "ready"}

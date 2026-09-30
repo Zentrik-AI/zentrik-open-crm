@@ -80,7 +80,7 @@ export function Ring({
       {showValue && (
         <span
           className={cn(
-            "absolute inset-0 flex items-center justify-center font-mono font-medium tabular-nums",
+            "absolute inset-0 flex items-center justify-center tnum font-semibold",
             font,
           )}
         >

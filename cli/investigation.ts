@@ -376,7 +376,9 @@ export function createInvestigation(
                   Date.parse(p.call.occurredAt) < Date.parse(target.createdAt)
                 );
                 if (older) d.title = "Source predates this record — clarify first";
-                const text = q.choice === "explicit" ? p.text : `[${q.choice}] ${p.text}`;
+                const escaped = account.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                const said = p.text.replace(new RegExp(`^\\s*${escaped}\\s*[:\\-–]\\s*`, "i"), "");
+                const text = q.choice === "explicit" ? said : `[${q.choice}] ${said}`;
                 // A concrete change the model leans towards, from a direct statement, is shown
                 // for individual review instead of hidden behind "clarify". Approval is still required.
                 const change = /^(add|replace|resolve|complete)_/.test(a.choice);

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   Check,
@@ -121,6 +121,7 @@ export function InvestigationView({
   const [overview, setOverview] = useState(false);
   const [applying, setApplying] = useState("");
   const [filter, setFilter] = useState<"all" | "changes" | "questions">("all");
+  const noteRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (!active || shareSafe || !folderBacked) return;
     let live = true;
@@ -218,6 +219,8 @@ export function InvestigationView({
   const applied = changes.filter((d) => d.appliedAt).length;
   const unchanged = run?.decisions.filter((d) => d.kind === "unchanged").length ?? 0;
   const questions = run?.decisions.filter(needsInput).length ?? 0;
+  const bulk = changes.filter((d) => !d.appliedAt && d.review !== "check");
+  const toCheck = changes.filter((d) => !d.appliedAt && d.review === "check").length;
   const displayed = decisions.filter(
     (d) => filter === "all" || (filter === "changes" ? actionable(d) : needsInput(d)),
   );
@@ -430,6 +433,7 @@ export function InvestigationView({
               </label>
               <Textarea
                 id="investigation-notes"
+                ref={noteRef}
                 className="min-h-40 flex-1 resize-none border-transparent bg-surface-sunken text-body leading-7 shadow-none focus:bg-surface-raised"
                 placeholder={"Northstar: sent the security checklist.\nMeridian: review cleared for renewal.\n\nOne account and one thought per line."}
                 value={text}
@@ -496,6 +500,7 @@ export function InvestigationView({
                   consent,
                 });
                 setRun(next);
+                noteRef.current?.scrollTo({ top: 0 });
                 setAccountId("");
                 setOverview(false);
                 setFilter("all");
@@ -612,6 +617,7 @@ export function InvestigationView({
                         )}
                         {ds.some((d) => d.kind === "unchanged") && <Chip tone="known">already known</Chip>}
                         {ds.some(needsInput) && <Chip tone="ask">needs input</Chip>}
+                        {ds.some((d) => d.review === "check" && !d.appliedAt) && <Chip tone="ask">check closely</Chip>}
                         {checking && <span className="text-label text-faint-foreground">checking…</span>}
                         {!running && !ds.length && <span className="text-label text-faint-foreground">0 changes</span>}
                       </span>
@@ -730,6 +736,8 @@ export function InvestigationView({
                                   <Chip tone="saved">
                                     <Check className="h-3 w-3" /> Saved
                                   </Chip>
+                                ) : d.op && d.review === "check" ? (
+                                  <Chip tone="ask">Check closely</Chip>
                                 ) : d.op ? (
                                   <Chip tone="change">For approval</Chip>
                                 ) : d.kind === "unchanged" ? (
@@ -816,6 +824,11 @@ export function InvestigationView({
                         {d.appliedAt ? "Applied · " : ""}
                         {d.title}
                       </h3>
+                      {d.review === "check" && !d.appliedAt && (
+                        <span title="Jev chose this change with less than its usual confidence. Read the source before applying." className="ml-auto">
+                          <Chip tone="ask">Check closely · {Math.round((d.confidence ?? 0) * 100)}% sure</Chip>
+                        </span>
+                      )}
                     </div>
 
                     {(d.before || d.after || d.kind === "add") && (
@@ -913,19 +926,21 @@ export function InvestigationView({
               </div>
             )}
           </div>
-          {overview && changes.some((d) => !d.appliedAt) && (
+          {overview && bulk.length > 0 && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border bg-surface-raised px-5 py-3">
-              <p className="text-label text-muted-foreground">Review each account first. Saving stops if a write fails.</p>
+              <p className="text-label text-muted-foreground">
+                {toCheck ? `${toCheck} to check on its own account first. ` : ""}Saving stops if a write fails.
+              </p>
               <Button
                 variant="primary"
                 disabled={busy || run?.status !== "ready"}
                 onClick={() =>
                   void act(async () => {
-                    for (const d of changes.filter((d) => !d.appliedAt)) await applyDecision(d.id);
+                    for (const d of bulk) await applyDecision(d.id);
                   })
                 }
               >
-                Approve & save {changes.length - applied} changes
+                Approve & save {bulk.length} changes
                 <CheckCheck />
               </Button>
             </div>

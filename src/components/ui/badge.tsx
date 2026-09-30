@@ -30,8 +30,8 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 text-label font-medium",
-        ghost ? "border border-border-strong bg-transparent text-muted-foreground" : toneChip[tone],
+        "inline-flex h-[22px] items-center gap-1.5 rounded-md px-2 text-label font-medium",
+        ghost ? "border border-border bg-transparent text-muted-foreground" : toneChip[tone],
         className,
       )}
       {...props}

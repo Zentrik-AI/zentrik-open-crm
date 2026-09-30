@@ -3,7 +3,6 @@ import { Check, Plus, X } from "lucide-react";
 import type { Account, ClaimKind, Note, Op } from "../types";
 import type { AccountMemory, GroundedClaim } from "../core/memory";
 import { claimKindMeta, claimKindOrder } from "../lib/meta";
-import { toneSolidBg } from "../lib/tone";
 import { cn, formatRelative } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Field, Input, Select } from "./ui/field";
@@ -11,6 +10,16 @@ import { RedactedChip, useShareSafe } from "./ui/privacy";
 import { Grounding } from "./grounding";
 
 type ClaimAdd = Extract<Op, { type: "claim.add" }>;
+
+/** Only what stands in the way earns a colour; the rest stays neutral. */
+const kindDot: Record<ClaimKind, string> = {
+  need: "bg-border-strong",
+  goal: "bg-border-strong",
+  objection: "bg-warning",
+  risk: "bg-destructive",
+  commitment: "bg-border-strong",
+  fact: "bg-border-strong",
+};
 
 /** One thing we know: its text, how it is grounded, who said it, how old. */
 function ClaimRow({
@@ -30,25 +39,26 @@ function ClaimRow({
   const [reason, setReason] = useState("");
   const hidden = shareSafe && meta.sensitive;
   return (
-    <li className="group flex gap-2.5 rounded-md border border-border bg-surface p-3 transition-colors duration-fast hover:border-border-strong">
-      <span className={cn("mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full", toneSolidBg[meta.tone])} aria-hidden />
+    <li className="group flex gap-3 px-4 py-2.5 transition-colors duration-fast hover:bg-secondary/50">
       <div className="min-w-0 flex-1">
         {hidden ? (
           <RedactedChip label={`${meta.label.toLowerCase()} hidden in share-safe view`} />
         ) : (
           <>
-            <p className="text-body text-foreground">{g.claim.text}</p>
-            <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[12px] text-faint-foreground">
+            <p className="text-body text-foreground">
+              <span className={g.grounded ? "underline decoration-accent/45 decoration-[1.5px] underline-offset-[5px]" : "ground-dashed"}>{g.claim.text}</span>
+            </p>
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-label font-normal text-faint-foreground">
               <Grounding evidence={g.claim.evidence} notesById={notesById} onClick={() => onTrace(g.claim.id)} />
-              {g.contact && <span className="text-muted-foreground">{g.contact.name}</span>}
+              {g.contact && <span>{g.contact.name}</span>}
               {g.claim.kind === "commitment" && (
-                <span className={cn("font-mono tabular-nums", g.overdue ? "text-destructive-fg" : "text-muted-foreground")}>
+                <span className={cn("tnum", g.overdue ? "text-destructive-fg" : "text-muted-foreground")}>
                   {g.claim.owner === "them" ? "theirs" : "ours"}
                   {g.claim.due ? ` · ${g.overdue ? "was due" : "by"} ${formatRelative(g.claim.due)}` : ""}
                 </span>
               )}
               {g.latest && (
-                <span className={cn("font-mono tabular-nums", g.stale && "text-warning-fg")} title={g.stale ? "Evidence is older than 45 days; worth re-checking" : "Newest evidence"}>
+                <span className={cn("tnum", g.stale && "text-warning-fg")} title={g.stale ? "Evidence is older than 45 days; worth re-checking" : "Newest evidence"}>
                   {g.ageDays === 0 ? "today" : `${g.ageDays}d`}
                   {g.stale ? " · stale" : ""}
                 </span>
@@ -82,7 +92,7 @@ function ClaimRow({
           onClick={() => setResolving(true)}
           aria-label="Mark no longer true"
           title="No longer true"
-          className="h-6 w-6 shrink-0 rounded-sm text-faint-foreground opacity-0 transition-opacity duration-fast hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:focus-ring group-hover:opacity-100"
+          className="h-6 w-6 shrink-0 rounded-md text-faint-foreground opacity-0 transition-opacity duration-fast hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:focus-ring group-hover:opacity-100"
         >
           <X className="mx-auto h-3.5 w-3.5" />
         </button>
@@ -116,7 +126,7 @@ function AddClaim({ account, notes, onAdd, onDone }: { account: Account; notes: 
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-md border border-border bg-surface-sunken p-3">
+    <form onSubmit={submit} className="mb-3 space-y-3 rounded-xl bg-surface-sunken p-4 animate-settle">
       <div className="grid gap-3 sm:grid-cols-[140px_minmax(0,1fr)]">
         <Field label="Kind">
           <Select value={kind} onChange={(e) => setKind(e.target.value as ClaimKind)}>
@@ -132,13 +142,13 @@ function AddClaim({ account, notes, onAdd, onDone }: { account: Account; notes: 
         </Field>
       </div>
       <div>
-        <div className="mb-1.5 text-label uppercase text-muted-foreground">Which notes say so</div>
+        <div className="mb-1.5 text-label text-muted-foreground">Which notes say so</div>
         {recent.length === 0 ? (
-          <p className="text-[12px] text-faint-foreground">No notes on this account yet. Without one, this is recorded as a hunch.</p>
+          <p className="text-label font-normal text-faint-foreground">No notes yet, so this becomes a hunch.</p>
         ) : (
           <div className="grid gap-1.5 sm:grid-cols-2">
             {recent.map((note) => (
-              <label key={note.id} className="flex cursor-pointer items-start gap-2 rounded-sm px-1 py-0.5 text-[12px] text-muted-foreground hover:text-foreground">
+              <label key={note.id} className="flex cursor-pointer items-start gap-2 rounded-sm px-1 py-0.5 text-body-sm text-muted-foreground hover:text-foreground">
                 <input
                   type="checkbox"
                   className="mt-0.5"
@@ -184,7 +194,7 @@ function AddClaim({ account, notes, onAdd, onDone }: { account: Account; notes: 
         <Button type="button" variant="ghost" size="sm" onClick={onDone}>
           Cancel
         </Button>
-        <span className="text-[12px] text-faint-foreground">{evidence.length === 0 ? "No note selected: this will show as a hunch." : `${evidence.length} ${evidence.length === 1 ? "note" : "notes"} cited.`}</span>
+        <span className="tnum text-label font-normal text-faint-foreground">{evidence.length === 0 ? "No note: saved as a hunch" : `${evidence.length} ${evidence.length === 1 ? "note" : "notes"} cited`}</span>
       </div>
     </form>
   );
@@ -211,10 +221,10 @@ export function KnowledgeList({
   const groups = claimKindOrder.map((kind) => ({ kind, items: memory.byKind[kind] })).filter((g) => g.items.length > 0);
   return (
     <section aria-label="What we know" className="min-w-0">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-baseline gap-2">
-          <span className="text-label uppercase text-muted-foreground">What we know</span>
-          <span className="font-mono text-[11px] tabular-nums text-faint-foreground">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <h2 className="text-h2 text-foreground">What we know</h2>
+          <span className="tnum text-label font-normal text-faint-foreground">
             {memory.counts.grounded} grounded{memory.counts.hunches ? ` · ${memory.counts.hunches} ${memory.counts.hunches === 1 ? "hunch" : "hunches"}` : ""}
             {memory.counts.stale ? ` · ${memory.counts.stale} stale` : ""}
           </span>
@@ -228,18 +238,22 @@ export function KnowledgeList({
       </div>
       {adding && <AddClaim account={memory.account} notes={notes} onAdd={onAdd} onDone={() => setAdding(false)} />}
       {groups.length === 0 && !adding ? (
-        <div className="rounded-md border border-dashed border-border p-4 text-body-sm text-muted-foreground">
-          Nothing recorded yet. Capture a note, then record what it says: a need, a risk, a goal, an objection, a commitment, or a fact.
+        <div className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-body-sm text-muted-foreground">
+          Nothing recorded yet. Record what a note says.
         </div>
       ) : (
-        <div className={cn("space-y-4", adding && "mt-4")}>
+        <div className="divide-y divide-border rounded-xl border border-border bg-card shadow-e1">
           {groups.map(({ kind, items }) => (
-            <div key={kind}>
-              <div className="mb-1.5 flex items-baseline gap-2">
-                <span className={cn("text-[12px] font-medium", `text-${claimKindMeta[kind].tone}-fg`)}>{claimKindMeta[kind].plural}</span>
-                <span className="font-mono text-[11px] tabular-nums text-faint-foreground">{items.length}</span>
+            <div key={kind} className="py-1.5">
+              <div className="flex items-center gap-2 px-4 pb-0.5 pt-2">
+                <span
+                  className={cn("h-1.5 w-1.5 rounded-full", kindDot[kind])}
+                  aria-hidden
+                />
+                <span className="text-label text-muted-foreground">{claimKindMeta[kind].plural}</span>
+                <span className="tnum text-label font-normal text-faint-foreground">{items.length}</span>
               </div>
-              <ul className="space-y-2">
+              <ul>
                 {items.map((g) => (
                   <ClaimRow key={g.claim.id} g={g} notesById={notesById} onTrace={onTrace} onResolve={onResolve} />
                 ))}

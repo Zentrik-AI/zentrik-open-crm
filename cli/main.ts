@@ -10,7 +10,7 @@ import * as actions from "./actions.ts";
 import { StoreError, WORKSPACE_FILE, readWorkspace, resolveWorkspaceDir, writeWorkspace, replaceWorkspace, restoreWorkspace, repairViews } from "./store.ts";
 import { agentKitFiles } from "./agent-kit.ts";
 import { brand } from "../src/lib/brand.ts";
-import { agentsMd, claudeMd, cmdWrapper, gitignore, inboxReadme, mcpConfig, playbooks, shWrapper } from "./templates.ts";
+import { agentsMd, claudeMd, cmdWrapper, gitignore, inboxReadme, mcpConfig, playbooks, shWrapper, workspaceReadme } from "./templates.ts";
 
 const BIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "open-crm.js");
 
@@ -195,6 +195,7 @@ function scaffold(dir: string, workspace: Workspace, refresh: boolean) {
       writeIfMissing(path.join(dir, ".open-crm", "kit-updates", name), content, true);
     }
   }
+  writeIfMissing(path.join(dir, "README.md"), workspaceReadme, false);
   writeIfMissing(path.join(dir, "inbox", "README.md"), inboxReadme, false);
   writeIfMissing(path.join(dir, "drafts", ".gitkeep"), "", false);
   writeIfMissing(path.join(dir, ".gitignore"), gitignore, false);

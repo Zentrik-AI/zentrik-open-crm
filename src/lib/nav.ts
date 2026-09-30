@@ -51,3 +51,10 @@ export const secondaryNav: NavEntry[] = [
 ];
 
 export const allNav: NavEntry[] = [...primaryNav, ...secondaryNav];
+
+/** Sidebar sections: the day, the accounts, and what comes in to be checked. */
+export const navGroups: { label?: string; items: View[] }[] = [
+  { items: ["home"] },
+  { label: "Accounts", items: ["accounts", "pipeline", "book", "contacts", "tasks"] },
+  { label: "Capture", items: ["updates", "calls", "notes", "review"] },
+];

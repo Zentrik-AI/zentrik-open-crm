@@ -25,7 +25,7 @@ function crm(dir: string, ...args: string[]) {
 
 test("init scaffolds a workspace an agent can pick up cold", () => {
   const dir = makeWorkspace();
-  for (const file of ["workspace.json", "AGENTS.md", "CLAUDE.md", "INDEX.md", "crm", ".mcp.json", ".cursor/mcp.json", "playbooks/daily-review.md", "inbox/README.md", "accounts/northstar-robotics.md"]) {
+  for (const file of ["workspace.json", "README.md", "AGENTS.md", "CLAUDE.md", "INDEX.md", "crm", ".mcp.json", ".cursor/mcp.json", "playbooks/daily-review.md", "inbox/README.md", "accounts/northstar-robotics.md"]) {
     assert.ok(fs.existsSync(path.join(dir, file)), `missing ${file}`);
   }
   assert.ok(fs.statSync(path.join(dir, "crm")).mode & 0o100, "./crm is executable");

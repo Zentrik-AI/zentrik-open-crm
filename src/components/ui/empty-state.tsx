@@ -46,7 +46,7 @@ export function EmptyState({
     >
       <LoopMotif />
       <div className="max-w-sm">
-        <div className="font-serif text-h2 text-foreground">{title}</div>
+        <div className="text-h2 text-foreground">{title}</div>
         {hint && <p className="mt-1.5 text-body-sm text-muted-foreground">{hint}</p>}
       </div>
       {action && <div className="mt-1">{action}</div>}

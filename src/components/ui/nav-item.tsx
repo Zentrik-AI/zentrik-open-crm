@@ -23,27 +23,19 @@ export function NavItem({
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group relative flex h-10 w-full items-center gap-2.5 rounded-md px-2.5 text-body-sm font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:focus-ring",
+        "group relative flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-body-sm font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:focus-ring",
         active
-          ? "bg-accent-bg text-foreground"
-          : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+          ? "bg-secondary text-foreground shadow-[inset_0_0_0_1px_hsl(var(--border))]"
+          : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
       )}
     >
-      {/* grounding-tick active indicator */}
-      <span
-        aria-hidden
-        className={cn(
-          "absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-accent transition-opacity duration-fast",
-          active ? "opacity-100" : "opacity-0",
-        )}
-      />
-      <Icon className={cn("h-[17px] w-[17px] shrink-0", active ? "text-accent" : "")} />
+      <Icon className={cn("h-4 w-4 shrink-0", active ? "text-foreground" : "text-faint-foreground group-hover:text-muted-foreground")} strokeWidth={active ? 2.1 : 1.9} />
       <span className="truncate">{label}</span>
       {count != null && count > 0 && (
         <span
           className={cn(
-            "ml-auto font-mono text-[11px] tabular-nums",
-            attention ? "rounded-full bg-agent-bg px-1.5 py-px text-agent-fg" : active ? "text-accent-fg" : "text-faint-foreground",
+            "ml-auto tnum text-label",
+            attention ? "rounded-full bg-agent px-1.5 text-[11px] font-semibold leading-[18px] text-white" : "text-faint-foreground",
           )}
         >
           {count}

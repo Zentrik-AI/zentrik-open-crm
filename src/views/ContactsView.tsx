@@ -1,12 +1,16 @@
 import { useMemo, useState } from "react";
-import { ArrowUpRight, Mail, Search } from "lucide-react";
+import { ArrowUpRight, Quote, Search } from "lucide-react";
 import type { Account } from "../types";
 import { influenceMeta } from "../lib/meta";
-import { formatRelative } from "../lib/utils";
+import { cn, formatDateFull, formatRelative } from "../lib/utils";
+import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Monogram } from "../components/ui/monogram";
 import { Private, useShareSafe } from "../components/ui/privacy";
 import { EmptyState } from "../components/ui/empty-state";
+
+/** Name · account · role · last contact · trace, as one 44px row from md up. */
+const gridCols = "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1.1fr)_120px_110px_120px] md:gap-x-4";
 
 export function ContactsView({
   accounts,
@@ -37,68 +41,97 @@ export function ContactsView({
   }, [q, people]);
 
   return (
-    <div className="grid gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-serif text-h1 text-foreground">Contacts</h1>
-          <p className="mt-0.5 text-body-sm text-muted-foreground">Everyone across your accounts, most recent first.</p>
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-7">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0">
+          <h1 className="text-h1 text-foreground">Contacts</h1>
+          <p className="mt-1 text-body-sm text-muted-foreground">
+            <span className="tnum">{people.length}</span> {people.length === 1 ? "person" : "people"}, most recent first
+          </p>
         </div>
-        <label className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <label className="relative w-full sm:w-[240px]">
+          <span className="sr-only">Search people</span>
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-faint-foreground" aria-hidden />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search people"
-            className="h-9 w-[240px] rounded-md border border-border bg-surface-sunken pl-9 pr-3 text-body text-foreground outline-none transition-[border-color,box-shadow] duration-fast focus:border-ring focus:focus-ring placeholder:text-faint-foreground"
+            className="h-8 w-full rounded-lg border border-border bg-surface-raised pl-8 pr-3 text-body-sm text-foreground shadow-e1 outline-none transition-[border-color,box-shadow] duration-fast placeholder:text-faint-foreground hover:border-border-strong focus:border-ring focus:focus-ring"
           />
         </label>
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState title="No contacts match." hint="Try a different search, or add contacts on an account." />
+        <EmptyState
+          title={q.trim() ? "No one matches that search" : "No contacts yet"}
+          action={q.trim() ? <Button variant="secondary" size="sm" onClick={() => setQ("")}>Clear search</Button> : undefined}
+        />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map(({ contact, account }) => {
-            const meta = influenceMeta[contact.influence];
-            return (
-              <div key={contact.id} className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-start gap-3">
-                  <Monogram name={contact.name} tone={meta.tone} redacted={shareSafe} size="md" />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-h3 text-foreground">
-                      <Private redactedLabel="name hidden">{contact.name}</Private>
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-e1">
+          <div className={cn(gridCols, "hidden h-9 items-center border-b border-border bg-surface-sunken/60 px-4 text-label font-normal text-faint-foreground md:grid")} aria-hidden>
+            <span>Name</span>
+            <span>Account</span>
+            <span>Role in deal</span>
+            <span className="text-right">Last contact</span>
+            <span />
+          </div>
+          <ul className="divide-y divide-border">
+            {filtered.map(({ contact, account }, index) => {
+              const meta = influenceMeta[contact.influence];
+              const lastSeen = contact.lastSeen ? formatRelative(contact.lastSeen) : null;
+              return (
+                <li
+                  key={contact.id}
+                  className={cn(gridCols, "group grid animate-settle items-center gap-y-1 px-4 py-2.5 transition-colors duration-fast hover:bg-secondary/60 md:min-h-[44px] md:py-1.5")}
+                  style={{ animationDelay: `${Math.min(index, 7) * 40}ms` }}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Monogram name={contact.name} tone="neutral" redacted={shareSafe} size="sm" />
+                    <div className="min-w-0">
+                      <div className="truncate text-body-sm font-medium text-foreground">
+                        <Private redactedLabel="name hidden">{contact.name}</Private>
+                      </div>
+                      <div className="truncate text-label font-normal text-faint-foreground">
+                        {contact.role}
+                        {contact.email && (
+                          <span className="hidden lg:inline">
+                            {" · "}
+                            <Private redactedLabel="email hidden">{contact.email}</Private>
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="truncate text-[12px] text-muted-foreground">{contact.role}</div>
                   </div>
-                  <Badge tone={meta.tone} dot>
-                    {meta.label}
-                  </Badge>
-                </div>
-                {contact.email && (
-                  <div className="mt-3 flex items-center gap-1.5 text-[12px] text-muted-foreground">
-                    <Mail className="h-3.5 w-3.5" />
-                    <Private redactedLabel="email hidden">{contact.email}</Private>
+                  <div className="min-w-0 pl-10 md:pl-0">
+                    <button
+                      onClick={() => onSelectAccount(account.id)}
+                      className="inline-flex max-w-full items-center gap-1 rounded-sm text-body-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:focus-ring"
+                    >
+                      <span className="truncate">{account.name}</span>
+                      <ArrowUpRight className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
+                    </button>
                   </div>
-                )}
-                <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-2.5">
-                  <button
-                    onClick={() => onTrace(contact.id)}
-                    className="rounded-sm border-b border-accent pb-px text-[12px] text-accent-fg hover:border-b-2 focus-visible:outline-none focus-visible:focus-ring"
-                  >
-                    What they said
-                  </button>
-                  <button
-                    onClick={() => onSelectAccount(account.id)}
-                    className="inline-flex items-center gap-1 rounded-sm text-[12px] font-medium text-accent-fg hover:underline focus-visible:outline-none focus-visible:focus-ring"
-                  >
-                    {account.name}
-                    <ArrowUpRight className="h-3 w-3" />
-                  </button>
-                  <span className="font-mono text-[11px] tabular-nums text-faint-foreground">{contact.lastSeen ? formatRelative(contact.lastSeen) : "Contact date unknown"}</span>
-                </div>
-              </div>
-            );
-          })}
+                  <div className="hidden md:block">
+                    <Badge tone="neutral">
+                      {meta.label}
+                    </Badge>
+                  </div>
+                  <span className="tnum hidden text-right text-body-sm text-faint-foreground md:block" title={contact.lastSeen ? formatDateFull(contact.lastSeen) : undefined}>
+                    {lastSeen ? (lastSeen.startsWith("in ") || lastSeen === "now" ? lastSeen : `${lastSeen} ago`) : "Unknown"}
+                  </span>
+                  <div className="pl-10 md:pl-0 md:text-right">
+                    <button
+                      onClick={() => onTrace(contact.id)}
+                      className="inline-flex items-center gap-1.5 rounded-sm text-body-sm text-muted-foreground transition-colors duration-fast hover:text-accent-fg focus-visible:outline-none focus-visible:focus-ring"
+                    >
+                      <Quote className="h-3.5 w-3.5 text-accent" aria-hidden />
+                      What they said
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
     </div>

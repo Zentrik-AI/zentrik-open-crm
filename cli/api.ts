@@ -117,7 +117,7 @@ export function createApi(dir: string) {
           if (body.consent !== true) throw new OpError("consent_required", "Confirm sending notes and account context to TypeSafe.");
           let records;
           const notes = typeof body.text === "string" && body.text.trim();
-          if (notes) records = [calls.ingest({title:"Account investigation notes",transcript:body.text as string,source:"file"}).call];
+          if (notes) records = [calls.ingest({title:"Pasted notes",transcript:body.text as string,source:"file"}).call];
           else {
             if(!Array.isArray(body.ids)||body.ids.length>50||body.ids.some(id=>typeof id!=="string")) throw new OpError("invalid_value","Select up to 50 imported calls.");
             records = [...new Set(body.ids as string[])].map(id=>calls.get(id));

@@ -42,7 +42,7 @@ test("one screen investigates multiple accounts and applies only reviewed change
   expect(JSON.stringify(state)).not.toContain("fixture-key");
   // Imported sources use the same path and retain no-op decisions on a rerun.
   await view.getByRole("button",{name:"Imported calls",exact:true}).click();
-  await view.getByLabel("Account investigation notes",{exact:true}).check();
+  await view.getByLabel("Pasted notes",{exact:true}).check();
   await view.getByRole("button",{name:"Investigate 1 calls",exact:true}).click();
   await expect(view.getByText("1 changes · 3 unchanged · 1 to clarify",{exact:true})).toBeVisible();
 });

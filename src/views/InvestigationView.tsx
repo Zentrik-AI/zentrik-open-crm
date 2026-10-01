@@ -121,6 +121,8 @@ export function InvestigationView({
   const [overview, setOverview] = useState(false);
   const [applying, setApplying] = useState("");
   const [filter, setFilter] = useState<"all" | "changes" | "questions">("all");
+  const [ranText, setRanText] = useState("");
+  const [editing, setEditing] = useState(true);
   const noteRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (!active || shareSafe || !folderBacked) return;
@@ -228,6 +230,14 @@ export function InvestigationView({
   const checkState: StepState = !run || run.status === "matching" ? "idle" : run.status === "checking" ? "active" : "done";
   const reviewState: StepState = run?.status === "ready" ? (changes.length === applied ? "done" : "active") : "idle";
   const connected = !!calls?.connections.jev;
+  const routed = mode === "notes" && !!run && !editing && ranText === text;
+  const noteLines = routed
+    ? ranText
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => ({ line, found: run!.decisions.filter((d) => line.includes(d.quote.trim())) }))
+    : [];
   const openAccountGroup = (id: string) => {
     setAccountId(id);
     setOverview(false);
@@ -352,10 +362,10 @@ export function InvestigationView({
           <div className="flex min-w-0 items-center gap-2" aria-label="Live investigation activity">
             {run && (
               <>
-                {running ? (
+                {running || applying ? (
                   <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-agent motion-reduce:animate-none" />
                 ) : (
-                  <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                  (run.status === "error" || changes.length === applied) && <Sparkles className="h-3.5 w-3.5 shrink-0" />
                 )}
                 <span className="truncate">
                   {applying
@@ -370,7 +380,7 @@ export function InvestigationView({
                           ? changes.length
                             ? "All proposed changes saved"
                             : "No new changes needed"
-                          : "Your update plan is ready"}
+                          : ""}
                 </span>
                 {running &&
                   run.events?.slice(-1).map((event) => (
@@ -388,7 +398,7 @@ export function InvestigationView({
             )}
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            {run && <span className="tnum">{run.checked}/{run.total} passages checked</span>}
+            {run && <span className="tnum">{run.checked}/{run.total} checked</span>}
             {applied > 0 && <span className="font-medium text-success-fg">{applied} applied to CRM</span>}
           </div>
         </div>
@@ -428,9 +438,84 @@ export function InvestigationView({
           </div>
           {mode === "notes" ? (
             <>
-              <label htmlFor="investigation-notes" className="text-body-sm font-medium">
-                What happened across your accounts?
-              </label>
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="investigation-notes" className="text-body-sm font-medium">
+                  What happened across your accounts?
+                </label>
+                {routed && !running && (
+                  <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+                    Edit
+                  </Button>
+                )}
+              </div>
+              {routed ? (
+                <ol className="min-h-40 flex-1 space-y-1 overflow-y-auto rounded-lg bg-surface-sunken p-1.5" aria-label="How each line was read">
+                  {noteLines.map(({ line, found }, i) => {
+                    const d = found[0];
+                    const tone = !d
+                      ? "pending"
+                      : d.appliedAt
+                        ? "saved"
+                        : actionable(d)
+                          ? d.review === "check"
+                            ? "check"
+                            : "change"
+                          : needsInput(d)
+                            ? "question"
+                            : "known";
+                    const label = {
+                      pending: "Reading…",
+                      saved: "Saved",
+                      check: "Check closely",
+                      change: d?.title ?? "",
+                      question: "Needs a person",
+                      known: "Already known",
+                    }[tone];
+                    const account = d?.accountName;
+                    const body = account && line.startsWith(account) ? line.slice(account.length).replace(/^\s*[:\-–]\s*/, "") : line;
+                    return (
+                      <li key={`${run!.id}_${i}`} className="investigation-arrive" style={stagger(i)}>
+                        <button
+                          type="button"
+                          disabled={!d}
+                          onClick={() => d && openAccountGroup(d.accountId ?? "unmatched")}
+                          className="flex w-full gap-2.5 rounded-md px-2 py-1 text-left transition-colors duration-fast hover:bg-surface-raised disabled:cursor-default disabled:hover:bg-transparent"
+                        >
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "mt-1 w-1 shrink-0 self-stretch rounded-full",
+                              tone === "pending" && "animate-pulse bg-border motion-reduce:animate-none",
+                              tone === "saved" && "bg-success",
+                              (tone === "change" || tone === "check") && "bg-agent",
+                              tone === "question" && "bg-warning",
+                              tone === "known" && "bg-border",
+                            )}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center gap-x-2 text-label">
+                              <span className="font-semibold text-foreground">{account ?? (d ? "No account named" : "")}</span>
+                              <span
+                                className={cn(
+                                  "font-medium",
+                                  tone === "saved" && "text-success-fg",
+                                  (tone === "change" || tone === "check") && "text-agent-fg",
+                                  tone === "check" && "text-warning-fg",
+                                  tone === "question" && "text-warning-fg",
+                                  (tone === "known" || tone === "pending") && "text-faint-foreground",
+                                )}
+                              >
+                                {label}
+                              </span>
+                            </span>
+                            <span className="line-clamp-1 text-body-sm text-muted-foreground">{body}</span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
               <Textarea
                 id="investigation-notes"
                 ref={noteRef}
@@ -441,7 +526,7 @@ export function InvestigationView({
                 maxLength={200000}
                 disabled={!!running}
               />
-              <p className="text-label text-faint-foreground">Type, paste or dictate. No audio is recorded.</p>
+              )}
             </>
           ) : (
             <div className="min-h-40 flex-1 overflow-y-auto">
@@ -500,6 +585,8 @@ export function InvestigationView({
                   consent,
                 });
                 setRun(next);
+                setRanText(text);
+                setEditing(false);
                 noteRef.current?.scrollTo({ top: 0 });
                 setAccountId("");
                 setOverview(false);
@@ -701,8 +788,7 @@ export function InvestigationView({
                 {questions > 0 && (
                   <p className="mt-3 flex items-center gap-2 text-label text-warning-fg">
                     <HelpCircle className="h-3.5 w-3.5" />
-                    {questions} unclear {questions === 1 ? "note stays" : "notes stay"} unresolved; approval will not change
-                    those records.
+                    {questions} {questions === 1 ? "line needs" : "lines need"} a person.
                   </p>
                 )}
                 <div className="mt-4 divide-y divide-border">
@@ -929,7 +1015,7 @@ export function InvestigationView({
           {overview && bulk.length > 0 && (
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border bg-surface-raised px-5 py-3">
               <p className="text-label text-muted-foreground">
-                {toCheck ? `${toCheck} to check on its own account first. ` : ""}Saving stops if a write fails.
+                {toCheck ? `${toCheck} to check on its own first.` : ""}
               </p>
               <Button
                 variant="primary"

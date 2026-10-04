@@ -4,7 +4,7 @@ import {
   GITHUB_ISSUES_URL, createGitHubIssueDraft, createPublicFeedbackBundle,
   feedbackKinds, readFeedbackDraft, saveFeedbackDraft, deleteFeedbackDraft, type FeedbackDraft,
 } from "../lib/feedback";
-import { Card, CardContent, CardHeader, CardTitle, Well } from "../components/ui/card";
+import { Card, Well } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Field, Input, Select, Textarea } from "../components/ui/field";
 import { brand } from "../lib/brand";
@@ -89,52 +89,48 @@ export function ImproveView() {
   }
 
   return (
-    <div className="grid gap-6">
-      <section>
-        <h1 className="font-serif text-h1 text-foreground">Help shape {brand.name}</h1>
-        <p className="mt-2 max-w-2xl text-body text-muted-foreground">Describe a workflow problem or suggest a change. Save it locally, then review what you share.</p>
-      </section>
+    <div className="mx-auto max-w-2xl space-y-7">
+      <header>
+        <h1 className="text-h1 text-foreground">Help shape {brand.name}</h1>
+        <p className="mt-1 text-body-sm text-muted-foreground">Suggest a change. Drafts stay in this browser until you share them.</p>
+      </header>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="min-w-0 self-start">
-          <CardHeader><CardTitle>Write feedback</CardTitle><p className="text-body-sm text-muted-foreground">Your draft stays in this browser until you share it.</p></CardHeader>
-          <CardContent>
-            <form className="space-y-4" onSubmit={save}>
-              <Field label="Type"><Select value={draft.kind} onChange={(event) => set({ kind: event.target.value as FeedbackDraft["kind"] })}>{feedbackKinds.map((kind) => <option key={kind.id} value={kind.id}>{kind.label}</option>)}</Select></Field>
-              <Field label="Title"><Input required value={draft.title} onChange={(event) => set({ title: event.target.value })} placeholder="Short, specific summary" /></Field>
-              <Field label="What's the friction or idea?"><Textarea required className="min-h-32" value={draft.body} onChange={(event) => set({ body: event.target.value })} placeholder="Describe the workflow and expected result using a fictional example." /></Field>
-              <div className="flex flex-wrap gap-2">
-                <Button type="submit" variant="primary" disabled={!valid}>Save local draft</Button>
-                <Button type="button" variant="ghost" onClick={removeDraft}>Delete local draft</Button>
+      <Card>
+        <form className="space-y-4 p-5" onSubmit={save}>
+          <div className="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
+            <Field label="Type"><Select value={draft.kind} onChange={(event) => set({ kind: event.target.value as FeedbackDraft["kind"] })}>{feedbackKinds.map((kind) => <option key={kind.id} value={kind.id}>{kind.label}</option>)}</Select></Field>
+            <Field label="Title"><Input required value={draft.title} onChange={(event) => set({ title: event.target.value })} placeholder="Short, specific summary" /></Field>
+          </div>
+          <Field label="What's the friction or idea?"><Textarea required className="min-h-32" value={draft.body} onChange={(event) => set({ body: event.target.value })} placeholder="Describe the workflow and the result you expect, with a fictional example." /></Field>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="submit" variant="primary" disabled={!valid}>Save local draft</Button>
+            <Button type="button" variant="ghost" onClick={removeDraft}>Delete local draft</Button>
+          </div>
+        </form>
+
+        <div className="space-y-4 border-t border-border p-5">
+          <div className="grid items-end gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
+            <Field label="Sharing"><Select value={mode} onChange={(event) => { setMode(event.target.value as "private" | "public"); setReviewed(false); setMessage(""); }}><option value="private">Keep private</option><option value="public">Prepare for GitHub</option></Select></Field>
+            <p className="pb-2 text-body-sm text-muted-foreground">
+              {mode === "private" ? "Stays in this browser, separate from your CRM records." : "Only what you wrote is included. Check it for private information."}
+            </p>
+          </div>
+          {mode === "public" && (
+            <>
+              {validationError && <p role="alert" className="rounded-lg bg-destructive-bg px-3 py-2 text-body-sm text-destructive-fg">{validationError}</p>}
+              <Well className="p-4"><h2 className="text-h3 [overflow-wrap:anywhere]">{issue.title}</h2><pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap font-sans text-body-sm text-muted-foreground [overflow-wrap:anywhere]">{issue.body}</pre></Well>
+              <label className="flex items-start gap-2.5 text-body-sm text-foreground"><input type="checkbox" className="mt-1 accent-primary" checked={reviewed} onChange={(event) => setReviewed(event.target.checked)} />I reviewed this text and removed private information. It is safe to share publicly.</label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="secondary" disabled={!canShare} onClick={copy}><Copy />Copy issue text</Button>
+                <Button variant="secondary" disabled={!canShare} onClick={download}><Download />Download feedback bundle</Button>
+                {canShare && <a href={GITHUB_ISSUES_URL} target="_blank" rel="noopener noreferrer" className="ml-1 inline-flex items-center gap-1.5 rounded-sm text-body-sm text-accent-fg underline-offset-2 hover:underline focus-visible:outline-none focus-visible:focus-ring"><Github className="h-4 w-4" />Open GitHub to submit manually<ExternalLink className="h-3.5 w-3.5" /></a>}
               </div>
-            </form>
-          </CardContent>
-        </Card>
+            </>
+          )}
+        </div>
+      </Card>
 
-        <Card className="min-w-0 self-start">
-          <CardHeader><CardTitle>Review the handoff</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <Field label="Sharing"><Select value={mode} onChange={(event) => { setMode(event.target.value as "private" | "public"); setReviewed(false); setMessage(""); }}><option value="private">Private — keep local</option><option value="public">Public — prepare for GitHub</option></Select></Field>
-            {mode === "private" ? (
-              <p className="text-body-sm text-muted-foreground">Saved locally, separate from your CRM records. Choose public sharing when you want to prepare a GitHub issue.</p>
-            ) : (
-              <>
-                <p className="text-body-sm text-muted-foreground">Only the feedback you write is included. Review it for private information before sharing publicly.</p>
-                {validationError && <p role="alert" className="text-body-sm text-destructive-fg">{validationError}</p>}
-                <Well><h2 className="text-h3 [overflow-wrap:anywhere]">{issue.title}</h2><pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap text-body-sm text-muted-foreground [overflow-wrap:anywhere]">{issue.body}</pre></Well>
-                <label className="flex items-start gap-2 text-body-sm"><input type="checkbox" className="mt-1 accent-primary" checked={reviewed} onChange={(event) => setReviewed(event.target.checked)} />I reviewed this text and removed private information. It is safe to share publicly.</label>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="secondary" disabled={!canShare} onClick={copy}><Copy />Copy issue text</Button>
-                  <Button variant="secondary" disabled={!canShare} onClick={download}><Download />Download feedback bundle</Button>
-                </div>
-                {canShare && <a href={GITHUB_ISSUES_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-body-sm text-primary underline"><Github className="h-4 w-4" />Open GitHub to submit manually<ExternalLink className="h-3.5 w-3.5" /></a>}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <p role="status" aria-live="polite" className="text-body-sm text-muted-foreground">{message || "Nothing is sent automatically. You choose what to share and when."}</p>
-
+      <p role="status" aria-live="polite" className="text-label text-faint-foreground">{message || "Nothing is sent automatically. You choose what to share and when."}</p>
     </div>
   );
 }

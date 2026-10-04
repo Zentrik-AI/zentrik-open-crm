@@ -143,3 +143,15 @@ under the workspace lock. No new parallel CRM data store is introduced.
   results record the returned model name.
 - [Granola API](https://docs.granola.ai/introduction): list, pagination, transcript
   reads, access scopes and rate limits. Requests are paced and retry transient errors.
+
+### Review account updates
+
+After processing, the result filters count calls with needs, risks, objections,
+commitments, goals and account facts. A call can belong to several groups.
+These counts include unapproved findings; they do not measure customers or
+revenue. The saved count reports calls already written to an account.
+
+Choose a destination account, then select the useful evidence. **Why this
+update?** explains the classification and qualification questions. The preview
+shows the existing claim count and selected additions. Save creates the source
+note and claims. **Open updated account** shows the result in the CRM.

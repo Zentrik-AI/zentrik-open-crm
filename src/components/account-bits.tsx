@@ -1,23 +1,25 @@
 import { Clock } from "lucide-react";
 import { cn, formatDateFull, formatRelative, splitCurrency } from "../lib/utils";
 import { influenceMeta, stageMeta, stageRail, type Tone } from "../lib/meta";
-import { toneSolidBg, toneText } from "../lib/tone";
+import { toneSolidBg } from "../lib/tone";
 import type { Account, Contact } from "../types";
 import { Badge } from "./ui/badge";
-import { Ring } from "./ui/ring";
-import { Meter } from "./ui/meter";
 import { Monogram } from "./ui/monogram";
-import { PriorityBadge } from "./ui/segment-bar";
 import { Private, useShareSafe } from "./ui/privacy";
+
+/** Stage colour carries meaning only: growth is green, risk is red, the rest stays neutral. */
+export function stageTone(stage: Account["stage"]): Tone {
+  return stage === "at_risk" ? "destructive" : stage === "expanding" ? "success" : "neutral";
+}
 
 /** Abbreviated currency with a demoted unit; redacted in share-safe mode. */
 export function ArrValue({ value, className }: { value: number; className?: string }) {
   const { lead, unit } = splitCurrency(value);
   return (
     <Private redactedLabel="hidden">
-      <span className={cn("font-mono font-medium tabular-nums text-foreground", className)}>
+      <span className={cn("tnum font-medium text-foreground", className)}>
         {lead}
-        {unit && <span className="text-[0.72em] text-muted-foreground">{unit}</span>}
+        {unit && <span className="text-muted-foreground">{unit}</span>}
       </span>
     </Private>
   );
@@ -27,9 +29,9 @@ export function ArrValue({ value, className }: { value: number; className?: stri
 export function Money({ value, className }: { value: number; className?: string }) {
   const { lead, unit } = splitCurrency(value);
   return (
-    <span className={cn("font-mono font-medium tabular-nums text-foreground", className)}>
+    <span className={cn("tnum font-medium text-foreground", className)}>
       {lead}
-      {unit && <span className="text-[0.72em] text-muted-foreground">{unit}</span>}
+      {unit && <span className="text-muted-foreground">{unit}</span>}
     </span>
   );
 }
@@ -44,58 +46,63 @@ export function AccountListCard({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const tone = stageTone(account.stage);
   return (
     <button
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       className={cn(
-        "w-full rounded-lg border bg-card p-3.5 text-left transition-[border-color,box-shadow,transform] duration-fast ease-out focus-visible:outline-none focus-visible:focus-ring",
+        "group w-full rounded-lg border px-3 py-2.5 text-left transition-[background-color,border-color,box-shadow] duration-fast ease-out focus-visible:outline-none focus-visible:focus-ring",
         selected
-          ? "border-border-strong [box-shadow:inset_2px_0_0_hsl(var(--accent)),var(--e-1)]"
-          : "border-border hover:-translate-y-px hover:border-border-strong hover:shadow-e1",
+          ? "border-accent/60 bg-card shadow-e2 ring-1 ring-accent/25"
+          : "border-transparent hover:bg-secondary",
       )}
     >
-      <div className="min-w-0">
-        <div className="break-words text-body font-medium text-foreground">{account.name}</div>
-        <div className="mt-1 text-body-sm text-muted-foreground">{account.segment}</div>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-body-sm text-faint-foreground">
-          <span>{stageMeta[account.stage].label} · {account.owner}</span>
-          <ArrValue value={account.arr} className="text-[12px]" />
-        </div>
+      <div className="flex min-w-0 items-baseline justify-between gap-3">
+        <span className="min-w-0 truncate text-h3 text-foreground">{account.name}</span>
+        <ArrValue value={account.arr} className="shrink-0 text-body-sm" />
+      </div>
+      <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-body-sm text-muted-foreground">
+        <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", tone === "neutral" ? "bg-border-strong" : toneSolidBg[tone])} aria-hidden />
+        <span className="truncate">
+          {stageMeta[account.stage].label} · {account.owner}
+        </span>
       </div>
     </button>
   );
 }
 
-/** A 4-step progression rail; at_risk reads as an off-track danger state. */
+/** A slim 4-step progression; at_risk reads as an off-track danger state. */
 export function StageRail({ stage }: { stage: Account["stage"] }) {
   const atRisk = stage === "at_risk";
   const currentIndex = atRisk ? null : stageMeta[stage].railIndex ?? 0;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <ol className="grid grid-cols-4 gap-1.5" aria-label={`Stage: ${stageMeta[stage].label}`}>
       {stageRail.map((s, i) => {
-        const done = currentIndex != null && i < currentIndex;
+        const reached = currentIndex != null && i <= currentIndex;
         const current = currentIndex === i;
-        const tone: Tone = current ? stageMeta[s].tone : "neutral";
         return (
-          <div key={s} className="flex flex-1 flex-col items-center gap-1">
-            <div className="flex w-full items-center">
-              <span
-                className={cn(
-                  "h-2 w-2 shrink-0 rounded-full",
-                  current ? toneSolidBg[tone] : done ? "bg-accent" : atRisk ? "bg-destructive/30" : "bg-border-strong",
-                )}
-              />
-              {i < stageRail.length - 1 && <span className={cn("h-px flex-1", done ? "bg-accent" : "bg-border")} />}
-            </div>
-            <span className={cn("w-full text-center text-[10px] leading-tight", current ? toneText[tone] : "text-faint-foreground")}>
+          <li key={s} className="min-w-0" aria-current={current ? "step" : undefined}>
+            <span
+              className={cn(
+                "block h-1 rounded-full transition-colors duration-base",
+                atRisk ? "bg-destructive/35" : current ? "bg-foreground" : reached ? "bg-foreground/35" : "bg-border",
+              )}
+              aria-hidden
+            />
+            <span
+              className={cn(
+                "mt-1.5 block truncate text-label",
+                current ? "text-foreground" : "text-faint-foreground",
+              )}
+            >
               {stageMeta[s].label}
             </span>
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }
 
@@ -113,26 +120,20 @@ export function InfoList({
 }) {
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-label uppercase text-muted-foreground">{title}</span>
-        <span className="font-mono text-[11px] tabular-nums text-faint-foreground">{items.length}</span>
+      <div className="mb-2 flex items-baseline gap-2">
+        <span className="text-label text-faint-foreground">{title}</span>
+        <span className="tnum text-label text-faint-foreground">{items.length}</span>
       </div>
-      <div className="space-y-2">
+      <ul className="divide-y divide-border">
         {items.map((item) => (
-          <div
-            key={item}
-            className={cn(
-              "flex gap-2.5 rounded-md p-3 text-body",
-              grounded
-                ? "border border-border bg-surface shadow-e1 dark:bg-surface-raised"
-                : "border border-dashed border-border bg-transparent",
-            )}
-          >
-            <span className={cn("mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full", toneSolidBg[tone])} />
-            <p className="text-muted-foreground">{item}</p>
-          </div>
+          <li key={item} className="flex gap-2.5 py-2 text-body">
+            <span className={cn("mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full", toneSolidBg[tone])} aria-hidden />
+            <p className="text-foreground">
+              <span className={grounded ? "ground" : "ground-dashed"}>{item}</span>
+            </p>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
@@ -141,20 +142,20 @@ export function ContactRow({ contact }: { contact: Contact }) {
   const meta = influenceMeta[contact.influence];
   const shareSafe = useShareSafe();
   return (
-    <div className="flex min-w-0 max-w-full items-center gap-3 rounded-md border border-border bg-surface p-3">
-      <Monogram name={contact.name} tone={meta.tone} redacted={shareSafe} />
+    <div className="flex min-w-0 max-w-full items-center gap-3 py-2">
+      <Monogram name={contact.name} tone="neutral" redacted={shareSafe} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-body font-medium text-foreground">
           <Private redactedLabel="name hidden">{contact.name}</Private>
         </div>
-        <div className="mt-0.5 truncate text-[12px] text-muted-foreground">
+        <div className="mt-0.5 truncate text-label text-muted-foreground">
           {contact.role} · {contact.lastSeen ? "last contact " : ""}
-          <time dateTime={contact.lastSeen ?? undefined} title={contact.lastSeen ? formatDateFull(contact.lastSeen) : "No verified contact date"} className="font-mono tabular-nums">
+          <time dateTime={contact.lastSeen ?? undefined} title={contact.lastSeen ? formatDateFull(contact.lastSeen) : "No verified contact date"} className="tnum">
             {contact.lastSeen ? formatRelative(contact.lastSeen) : "Contact date unknown"}
           </time>
         </div>
       </div>
-      <Badge tone={meta.tone} dot>
+      <Badge tone="neutral">
         {meta.label}
       </Badge>
     </div>
@@ -167,9 +168,9 @@ export function DueChip({ due, done }: { due: string; done?: boolean }) {
   const soon = !done && !overdue && new Date(due).getTime() - Date.now() < 2 * 24 * 60 * 60 * 1000;
   const tone = done ? "text-faint-foreground" : overdue ? "text-destructive-fg" : soon ? "text-warning-fg" : "text-muted-foreground";
   return (
-    <span className={cn("inline-flex items-center gap-1 text-[12px]", tone)}>
+    <span className={cn("inline-flex items-center gap-1 text-label font-normal", tone)}>
       <Clock className="h-3 w-3" aria-hidden />
-      <span className="font-mono tabular-nums" title={formatDateFull(due)}>
+      <span className="tnum" title={formatDateFull(due)}>
         {overdue ? `overdue ${formatRelative(due)}` : `due ${formatRelative(due)}`}
       </span>
     </span>

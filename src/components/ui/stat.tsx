@@ -22,15 +22,15 @@ export function Stat({
   const Arrow = delta?.dir === "up" ? ArrowUpRight : ArrowDownRight;
   return (
     <div className={cn("min-w-0", className)}>
-      <div className="text-label uppercase text-muted-foreground">{label}</div>
+      <div className="text-label text-muted-foreground">{label}</div>
       <div className="mt-1 flex items-baseline gap-2">
-        <span className={cn("font-mono font-medium tabular-nums text-foreground", size === "xl" ? "text-stat-xl" : "text-stat")}>
+        <span className={cn("tnum font-semibold text-foreground", size === "xl" ? "text-stat-xl" : "text-stat")}>
           {value}
         </span>
         {delta && (
           <span
             className={cn(
-              "inline-flex items-center gap-0.5 font-mono text-[11px] tabular-nums",
+              "inline-flex items-center gap-0.5 tnum text-label",
               good ? "text-success" : "text-destructive",
             )}
           >

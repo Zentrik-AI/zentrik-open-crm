@@ -6,8 +6,9 @@
 @tailwind utilities;
 
 /* ============================================================================
-   Zentrik Open CRM — "Editorial Signal" v1.0
-   Warm paper substrate · Fraunces / Inter / IBM Plex Mono · one ink-teal accent.
+   Zentrik Open CRM — "Clear" v2.0
+   Cool neutral substrate · Inter (text + display optical size) · one teal accent,
+   violet only for agent work. Numbers are tabular Inter; mono is for code.
    Every token is an HSL channel triple consumed as hsl(var(--token) / <alpha>).
    ========================================================================== */
 
@@ -26,8 +27,9 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
-    font-feature-settings: "cv05" 1, "cv08" 1, "ss01" 1;
-    letter-spacing: 0;
+    font-feature-settings: "cv11" 1, "ss01" 1, "ss03" 1;
+    font-optical-sizing: auto;
+    letter-spacing: -0.006em;
     text-rendering: optimizeLegibility;
   }
 
@@ -39,11 +41,16 @@
     color: inherit;
   }
 
-  /* All numerics ride the mono rail, tabular + slashed zero. */
+  /* Numbers are tabular so columns and counters never jitter. */
   .font-mono,
   .tnum {
-    font-variant-numeric: tabular-nums slashed-zero;
-    font-feature-settings: "tnum" 1, "zero" 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tnum { font-feature-settings: "tnum" 1, "cv11" 1; }
+
+  h1, h2, h3, .font-serif {
+    letter-spacing: -0.022em;
+    font-weight: 600;
   }
 
   ::selection {
@@ -120,10 +127,10 @@
      utility for non-animated cases. Solid = source-backed; dashed = a hunch. */
   .ground {
     text-decoration: none;
-    background-image: linear-gradient(hsl(var(--accent)), hsl(var(--accent)));
+    background-image: linear-gradient(hsl(var(--accent) / 0.45), hsl(var(--accent) / 0.45));
     background-repeat: no-repeat;
     background-position: 0 100%;
-    background-size: 100% 2px;
+    background-size: 100% 1.5px;
     padding-bottom: 1px;
   }
   .ground-dashed {
@@ -246,4 +253,15 @@
   .app-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Motion follows received records. It never delays provider work or CRM writes. */
+@keyframes investigation-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes investigation-saved { 0% { transform: scale(0.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.investigation-arrive { animation: investigation-arrive 260ms var(--ease-out) both; }
+.investigation-saved { animation: investigation-saved 320ms var(--ease-spring) both; }
+.investigation-progress { transition: width 420ms var(--ease-out); }
+@media (prefers-reduced-motion: reduce) {
+  .investigation-arrive, .investigation-saved { animation: none; }
+  .investigation-progress { transition: none; }
 }

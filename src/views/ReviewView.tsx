@@ -2,14 +2,13 @@ import { Bot, Check, Copy, FolderOpen, X } from "lucide-react";
 import type { Account, ActivityEntry, AgentMode, Note, Op, Proposal, Workspace } from "../types";
 import { claimKindLabel, dealStageLabel, noteSourceLabel } from "../core/model.ts";
 import { pendingProposals, projectPending, proposalApprovalIssue } from "../core/ops.ts";
-import { formatDateFull, formatRelative } from "../lib/utils";
+import { cn, formatDateFull, formatRelative } from "../lib/utils";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, Well } from "../components/ui/card";
+import { Card } from "../components/ui/card";
 import { RedactedChip, useShareSafe } from "../components/ui/privacy";
 import { Grounding } from "../components/grounding";
-
-const SETUP_COMMANDS = ["npm run crm -- init ~/crm", "cd ~/crm && ./crm ui"];
+import { localWorkspaceSetup } from "../lib/setup";
 
 const kindLabel: Record<Op["type"], string> = {
   "account.add": "New account",
@@ -28,9 +27,9 @@ const kindLabel: Record<Op["type"], string> = {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-2 text-body-sm">
-      <dt className="w-16 shrink-0 text-label uppercase text-faint-foreground">{label}</dt>
-      <dd className="min-w-0 text-foreground">{children}</dd>
+    <div className="flex gap-3 text-body-sm">
+      <dt className="w-20 shrink-0 text-label leading-5 text-faint-foreground">{label.charAt(0).toUpperCase() + label.slice(1)}</dt>
+      <dd className="min-w-0 text-foreground [overflow-wrap:anywhere]">{children}</dd>
     </div>
   );
 }
@@ -51,8 +50,8 @@ function ChangeDetail({ op, workspace, notesById }: { op: Op; workspace: Workspa
     case "claim.add":
       return (
         <div className="space-y-2">
-          <div className="text-body font-medium text-foreground">{op.text}</div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-faint-foreground">
+          <div className="text-body font-medium text-foreground [overflow-wrap:anywhere]">{op.text}</div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-faint-foreground">
             <span>{claimKindLabel[op.kind].singular}{op.kind === "commitment" && op.owner ? ` · ${op.owner === "them" ? "theirs" : "ours"}` : ""}{op.due ? ` · by ${op.due.slice(0, 10)}` : ""}</span>
             <Grounding evidence={op.evidence} notesById={notesById} />
           </div>
@@ -79,9 +78,11 @@ function ChangeDetail({ op, workspace, notesById }: { op: Op; workspace: Workspa
       return (
         <div className="space-y-2">
           <div className="text-body font-medium text-foreground">{op.title}</div>
-          <p className="whitespace-pre-wrap text-body-sm leading-6 text-muted-foreground">{op.body}</p>
-          <div className="font-mono text-[11px] text-faint-foreground">
-            {noteSourceLabel[op.source]} · {op.sourceRef || "no source reference"}
+          <p className="line-clamp-4 whitespace-pre-wrap text-body-sm leading-6 text-muted-foreground">{op.body}</p>
+          <div className="flex flex-wrap items-center gap-x-2 text-label text-faint-foreground">
+            <span>{noteSourceLabel[op.source]}</span>
+            <span aria-hidden>·</span>
+            {op.sourceRef ? <span className="break-all font-mono">{op.sourceRef}</span> : <span>no source reference</span>}
           </div>
         </div>
       );
@@ -90,9 +91,9 @@ function ChangeDetail({ op, workspace, notesById }: { op: Op; workspace: Workspa
         <div className="space-y-2">
           <div className="text-body font-medium text-foreground">{op.title}</div>
           {op.reason && <p className="text-body-sm text-muted-foreground">{op.reason}</p>}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-faint-foreground">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-faint-foreground">
             <Grounding evidence={op.evidence} notesById={notesById} />
-            {op.due && <span className="font-mono">due {op.due.slice(0, 10)}</span>}
+            {op.due && <span className="tnum">due {op.due.slice(0, 10)}</span>}
             {op.priority && <span>{op.priority}</span>}
             {op.owner && <span>{op.owner}</span>}
           </div>
@@ -175,32 +176,36 @@ function ProposalCard({
   const account = accountId ? accountsById.get(accountId) : undefined;
   const conflict = proposalApprovalIssue(workspace, proposal)?.message;
   return (
-    <article className="rounded-lg border border-border bg-surface p-4 transition-colors duration-fast hover:border-border-strong">
+    <article className="group relative px-5 py-4 transition-colors duration-fast hover:bg-secondary/30">
+      <span className="absolute inset-y-4 left-0 w-0.5 rounded-full bg-agent/70" aria-hidden />
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
         <Badge tone="agent" icon={Bot}>
           {proposal.actor.name}
         </Badge>
-        <span className="text-body-sm text-foreground">{kindLabel[proposal.change.op.type]}</span>
+        <span className="text-body-sm font-medium text-foreground">{kindLabel[proposal.change.op.type]}</span>
         {account && !shareSafe && (
-          <button
-            onClick={() => onSelectAccount(account.id)}
-            className="rounded-sm text-body-sm text-muted-foreground hover:text-accent-fg focus-visible:outline-none focus-visible:focus-ring"
-          >
-            {account.name}
-          </button>
+          <>
+            <span className="text-faint-foreground" aria-hidden>·</span>
+            <button
+              onClick={() => onSelectAccount(account.id)}
+              className="rounded-sm text-body-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:focus-ring"
+            >
+              {account.name}
+            </button>
+          </>
         )}
-        <time dateTime={proposal.createdAt} title={formatDateFull(proposal.createdAt)} className="ml-auto font-mono text-[12px] tabular-nums text-faint-foreground">
+        <time dateTime={proposal.createdAt} title={formatDateFull(proposal.createdAt)} className="ml-auto tnum text-label text-faint-foreground">
           {formatRelative(proposal.createdAt)}
         </time>
       </div>
 
-      <Well className="mt-3">
+      <div className="mt-2.5">
         {shareSafe ? <RedactedChip label="detail hidden in share-safe view" /> : <ChangeDetail op={proposal.change.op} workspace={workspace} notesById={notesById} />}
-      </Well>
+      </div>
 
-      {conflict && <p role="status" className="mt-3 text-body-sm text-destructive">{conflict}</p>}
+      {conflict && <p role="status" className="mt-3 rounded-lg bg-destructive-bg px-3 py-2 text-body-sm text-destructive-fg">{conflict}</p>}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button variant="primary" size="sm" disabled={shareSafe || Boolean(conflict)} onClick={() => onDecide([proposal.id], "approve")}>
+        <Button variant="secondary" size="sm" disabled={shareSafe || Boolean(conflict)} onClick={() => onDecide([proposal.id], "approve")}>
           <Check />
           Approve
         </Button>
@@ -208,7 +213,7 @@ function ProposalCard({
           <X />
           Reject
         </Button>
-        {shareSafe && <span className="text-[12px] text-faint-foreground">Switch to Private to decide.</span>}
+        {shareSafe && <span className="text-label text-faint-foreground">Switch to Private to decide.</span>}
       </div>
     </article>
   );
@@ -217,12 +222,12 @@ function ProposalCard({
 function ActivityRow({ entry }: { entry: ActivityEntry }) {
   const shareSafe = useShareSafe();
   return (
-    <li className="flex items-baseline gap-3 py-2 text-body-sm">
-      <time dateTime={entry.at} title={formatDateFull(entry.at)} className="w-10 shrink-0 font-mono text-[12px] tabular-nums text-faint-foreground">
+    <li className="flex items-baseline gap-3 px-5 py-2.5 text-body-sm">
+      <time dateTime={entry.at} title={formatDateFull(entry.at)} className="w-8 shrink-0 tnum text-label text-faint-foreground">
         {formatRelative(entry.at)}
       </time>
       <span className="shrink-0 text-agent-fg">{entry.actor.name}</span>
-      <span className="min-w-0 text-muted-foreground">{shareSafe ? "Changed a record" : entry.summary}</span>
+      <span className="min-w-0 text-muted-foreground [overflow-wrap:anywhere]">{shareSafe ? "Changed a record" : entry.summary}</span>
     </li>
   );
 }
@@ -256,100 +261,96 @@ export function ReviewView({
   const shareSafe = useShareSafe();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <div>
-        <h1 className="font-serif text-h1 text-foreground">Review</h1>
-        <p className="mt-0.5 text-body-sm text-muted-foreground">
-          {mode === "review" ? "Approve or reject proposed changes." : "Changes apply immediately and stay in the activity log."}
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-7">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-h1 text-foreground">Review</h1>
+          <p className="mt-1 text-body-sm text-muted-foreground">
+            {mode === "review" ? "Approve or reject what agents propose." : "Agent changes apply immediately and stay in the log."}
+          </p>
+        </div>
+        <div role="group" aria-label="Agent mode" className="inline-flex rounded-lg border border-border bg-surface-sunken p-0.5">
+          {(["review", "direct"] as const).map((value) => (
+            <button
+              key={value}
+              onClick={() => mode !== value && onSetMode(value)}
+              aria-pressed={mode === value}
+              title={value === "review" ? "Changes wait for your approval" : "Changes apply immediately"}
+              className={cn(
+                "h-7 rounded-md px-3 text-body-sm font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:focus-ring",
+                mode === value ? "bg-surface-raised text-foreground shadow-e1" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {value === "review" ? "Ask first" : "Direct"}
+            </button>
+          ))}
+        </div>
+      </header>
 
       {pending.length > 0 ? (
         <section aria-label="Waiting for your review" className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="text-label uppercase text-muted-foreground">
-              {pending.length} waiting
-            </div>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-h3 text-foreground">
+              Waiting <span className="ml-1 tnum font-medium text-faint-foreground">{pending.length}</span>
+            </h2>
             {pending.length > 1 && !shareSafe && (
-              <Button variant="secondary" size="sm" onClick={() => onDecide(pending.map((p) => p.id), "approve")}>
+              <Button variant="primary" size="sm" onClick={() => onDecide(pending.map((p) => p.id), "approve")}>
                 <Check />
                 Approve all
               </Button>
             )}
           </div>
-          {pending.map((proposal) => (
-            <ProposalCard key={proposal.id} proposal={proposal} workspace={workspace} accountsById={accountsById} notesById={notesById} onDecide={onDecide} onSelectAccount={onSelectAccount} />
-          ))}
+          <Card className="divide-y divide-border overflow-hidden">
+            {pending.map((proposal) => (
+              <ProposalCard key={proposal.id} proposal={proposal} workspace={workspace} accountsById={accountsById} notesById={notesById} onDecide={onDecide} onSelectAccount={onSelectAccount} />
+            ))}
+          </Card>
         </section>
       ) : (
-        <Card className="border-agent/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bot className="h-4 w-4 text-agent" />
-              {folder ? "No changes waiting" : "Connect an agent"}
-            </CardTitle>
-            <p className="text-body-sm text-muted-foreground">
-              {folder
-                ? "Agents can propose updates from this workspace folder."
-                : "Sync this workspace to a folder so Codex, Claude, or Cursor can propose updates here."}
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {folder ? (
-              <>
-                <Well className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="flex min-w-0 items-center gap-2 font-mono text-[12px] text-foreground">
-                    <FolderOpen className="h-3.5 w-3.5 shrink-0 text-agent" />
-                    <span className="truncate">{folder.dir}</span>
-                  </span>
-                  <Button variant="agent" size="sm" onClick={() => onCopy(`${open} && claude`, "Command copied")}>
-                    <Copy />
-                    Copy command
-                  </Button>
-                </Well>
-                <p className="text-[12px] leading-5 text-faint-foreground">
-                  Ask for a daily review, or place a transcript in <code className="font-mono text-muted-foreground">inbox/</code>.
-                </p>
-              </>
-            ) : (
-              <>
-                <pre className="overflow-x-auto rounded-md border border-border bg-surface-sunken p-3 font-mono text-[12px] leading-6 text-muted-foreground">{SETUP_COMMANDS.join("\n")}</pre>
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button variant="agent" size="sm" onClick={() => onCopy(SETUP_COMMANDS.join("\n"), "Commands copied")}>
-                    <Copy />
-                    Copy commands
-                  </Button>
-                  <span className="text-[12px] text-faint-foreground">Run these in the Open CRM checkout, then import the workspace from Settings.</span>
-                </div>
-              </>
-            )}
-          </CardContent>
+        <Card className="flex flex-col items-center px-6 py-12 text-center">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-agent-bg text-agent-fg">
+            <Bot className="h-5 w-5" aria-hidden />
+          </span>
+          <h2 className="mt-4 text-h2 text-foreground">{folder ? "No changes waiting" : "Connect an agent"}</h2>
+          <p className="mt-1 max-w-sm text-body-sm text-muted-foreground">
+            {folder
+              ? "Run an agent in this folder and its proposals land here."
+              : "Run Open CRM on a folder so agents can propose updates here."}
+          </p>
+          {folder ? (
+            <div className="mt-5 flex w-full max-w-md flex-col items-center gap-3">
+              <span className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-surface-sunken px-3 py-2 font-mono text-label text-muted-foreground">
+                <FolderOpen className="h-3.5 w-3.5 shrink-0 text-faint-foreground" aria-hidden />
+                <span className="truncate" title={folder.dir}>{folder.dir}</span>
+              </span>
+              <Button variant="agent" size="sm" onClick={() => onCopy(`${open} && claude`, "Command copied")}>
+                <Copy />
+                Copy command
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-5 flex w-full max-w-md flex-col items-center gap-3">
+              <pre className="w-full overflow-x-auto rounded-lg border border-border bg-surface-sunken px-4 py-3 text-left font-mono text-label leading-6 text-muted-foreground">{localWorkspaceSetup}</pre>
+              <Button variant="agent" size="sm" onClick={() => onCopy(localWorkspaceSetup, "Commands copied")}>
+                <Copy />
+                Copy commands
+              </Button>
+            </div>
+          )}
         </Card>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-[12px] text-faint-foreground">
-        <span>{mode === "review" ? "Review mode · changes wait for approval" : "Direct mode · changes apply immediately"}</span>
-        <button
-          onClick={() => onSetMode(mode === "review" ? "direct" : "review")}
-          className="rounded-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:focus-ring"
-        >
-          {mode === "review" ? "Switch to direct mode" : "Switch to review mode"}
-        </button>
-      </div>
-
       {activity.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>What agents did</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <section aria-label="Agent activity" className="space-y-3">
+          <h2 className="text-h3 text-foreground">What agents did</h2>
+          <Card className="overflow-hidden">
             <ul className="divide-y divide-border">
               {activity.slice(0, 30).map((entry) => (
                 <ActivityRow key={entry.id} entry={entry} />
               ))}
             </ul>
-          </CardContent>
-        </Card>
+          </Card>
+        </section>
       )}
     </div>
   );

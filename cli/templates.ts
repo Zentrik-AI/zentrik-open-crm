@@ -274,6 +274,29 @@ Goal: a short follow-up the person can send after editing, grounded in the lates
 `,
 };
 
+export const workspaceReadme = `# Your Open CRM folder
+
+This folder is your CRM. Open it with \`./crm ui\`, or hand it to Claude Code,
+Codex or Cursor and ask for the daily review.
+
+| Where | What it holds | Who changes it |
+| --- | --- | --- |
+| \`workspace.json\` | Every record: accounts, contacts, deals, tasks, notes | The app and \`./crm\`, through checked operations |
+| \`accounts/\` | One readable page per account | Generated from \`workspace.json\`; read, don't edit |
+| \`INDEX.md\` | The account list at a glance | Generated |
+| \`inbox/\` | Transcripts, emails and notes waiting to be processed | You drop files; an agent processes them |
+| \`drafts/\` | Messages an agent prepared for you to review | Agents write; you decide what to send |
+| \`playbooks/\` | Step-by-step routines agents follow | You can edit them |
+| \`automations/\` | Optional schedules for those routines | Off until you turn them on |
+| \`docs/\` | Setup and routine guides for agents | Reference |
+| \`AGENTS.md\`, \`CLAUDE.md\` | Instructions every agent reads first | Reference |
+| \`crm\`, \`crm.cmd\` | The command for this folder | Don't edit |
+| \`.mcp.json\`, \`.cursor/\`, \`.claude/\`, \`.agents/\` | Agent connection settings | Don't edit |
+
+Nothing here leaves your computer unless you use a connection that sends it,
+and you choose each one.
+`;
+
 export const inboxReadme = `# Inbox
 
 Drop call transcripts, email exports, meeting notes, and other raw sources here.

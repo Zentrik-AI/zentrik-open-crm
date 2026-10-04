@@ -24,7 +24,7 @@ npm run build
 ```
 
 Serve `dist/` with any static host. Each visitor's data stays in their own
-browser's local storage. Use Settings → Local data to export a JSON backup.
+browser's local storage. Use Settings → Data & backup to export a JSON backup.
 
 ## Environment
 

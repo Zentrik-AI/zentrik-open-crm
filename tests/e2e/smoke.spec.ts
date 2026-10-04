@@ -222,17 +222,17 @@ test("bundled typography loads with external requests blocked", async ({ page })
   await page.route(/^https:\/\//, route => route.abort());
   await page.reload();
   const fonts = await page.evaluate(async () => {
-    const names = ["Inter", "Fraunces", "IBM Plex Mono"];
+    const names = ["Inter", "IBM Plex Mono"];
     await Promise.all(names.map(name => document.fonts.load(`16px "${name}"`)));
     return names.map(name => document.fonts.check(`16px "${name}"`));
   });
-  expect(fonts).toEqual([true, true, true]);
+  expect(fonts).toEqual([true, true]);
   const metric = page.locator('[data-view="home"] .text-stat-xl').first();
-  await expect(metric).toHaveCSS("font-size", "26px");
+  await expect(metric).toHaveCSS("font-size", "28px");
   await expect(page.getByRole("button", { name: "Start with my data" })).toHaveCSS("font-size", "13px");
   await page.getByRole("button", { name: "Toggle theme" }).click();
   const dark = await page.locator("html").getAttribute("class");
-  await expect(metric).toHaveCSS("color", dark?.includes("dark") ? "rgb(238, 235, 226)" : "rgb(53, 46, 39)");
+  await expect(metric).toHaveCSS("color", dark?.includes("dark") ? "rgb(237, 239, 242)" : "rgb(20, 23, 31)");
   for (const route of ["Home", "Accounts", "Tasks", "Review", "Improve"]) {
     await page.getByRole("button", { name: new RegExp(`^${route}(?:\\s|$)`) }).first().click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

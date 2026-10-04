@@ -20,21 +20,21 @@ function Node({ node, focus, onNavigate }: { node: TraceNode; focus?: boolean; o
   const dot = node.tone === "done" ? "bg-success" : node.tone === "open" ? "bg-warning" : hunch ? "border-2 border-dashed border-border-strong bg-surface" : "bg-accent";
   const body = (
     <>
-      <div className="text-label uppercase text-faint-foreground">{kindLabel[node.kind]}{hunch ? " · hunch" : ""}</div>
-      <div className={cn("text-body text-foreground", focus && "font-serif text-h3")}>{shareSafe && node.kind !== "contact" ? <RedactedChip label="hidden in share-safe view" /> : node.title}</div>
-      {node.detail && <div className="text-[12px] text-muted-foreground">{shareSafe && node.kind === "source" ? <RedactedChip label="reference hidden" /> : node.detail}</div>}
-      {node.date && <div className="font-mono text-[11px] tabular-nums text-faint-foreground">{formatDate(node.date)}</div>}
+      <div className="text-label font-normal text-faint-foreground">{kindLabel[node.kind]}{hunch ? " · hunch" : ""}</div>
+      <div className={cn("mt-0.5 text-body text-foreground", focus && "text-h3")}>{shareSafe && node.kind !== "contact" ? <RedactedChip label="hidden in share-safe view" /> : node.title}</div>
+      {node.detail && <div className="mt-0.5 text-body-sm text-muted-foreground">{shareSafe && node.kind === "source" ? <RedactedChip label="reference hidden" /> : node.detail}</div>}
+      {node.date && <div className="tnum mt-0.5 text-label font-normal text-faint-foreground">{formatDate(node.date)}</div>}
     </>
   );
   return (
-    <li className="relative pl-7">
-      <span className={cn("absolute left-0 top-[9px] h-3 w-3 rounded-full ring-2 ring-surface", dot, focus && "scale-125")} aria-hidden />
+    <li className="relative pl-6">
+      <span className={cn("absolute -left-[5.5px] top-[12px] h-2.5 w-2.5 rounded-full ring-4 ring-background", dot)} aria-hidden />
       {navigable && !focus ? (
-        <button onClick={() => onNavigate(node.id)} className="w-full rounded-md border border-transparent p-2 text-left transition-colors duration-fast hover:border-border-strong hover:bg-surface focus-visible:outline-none focus-visible:focus-ring">
+        <button onClick={() => onNavigate(node.id)} className="w-full rounded-lg px-3 py-2 text-left transition-colors duration-fast hover:bg-secondary focus-visible:outline-none focus-visible:focus-ring">
           {body}
         </button>
       ) : (
-        <div className={cn("p-2", focus && "rounded-md border border-border bg-surface")}>{body}</div>
+        <div className={cn("px-3 py-2", focus && "rounded-lg border border-border bg-card shadow-e1")}>{body}</div>
       )}
     </li>
   );
@@ -53,28 +53,28 @@ export function TraceSheet({ trace, onClose, onNavigate }: { trace: Trace | null
   const spineHunch = trace.focus.tone === "hunch";
   return (
     <div className="fixed inset-0 z-[140]" role="dialog" aria-modal="true" aria-label="Why this exists">
-      <button className="absolute inset-0 bg-[hsl(28_14%_6%/0.35)] backdrop-blur-[1px]" aria-label="Close" onClick={onClose} />
-      <aside className="absolute inset-y-0 right-0 flex w-full max-w-[420px] flex-col border-l border-border bg-background shadow-e2 animate-fade">
-        <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+      <button className="absolute inset-0 bg-black/30 animate-fade" aria-label="Close" onClick={onClose} />
+      <aside className="absolute inset-y-0 right-0 flex w-full max-w-[420px] flex-col border-l border-border bg-background shadow-e3 animate-view-enter">
+        <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
           <div>
-            <div className="font-serif text-h3 text-foreground">Why this exists</div>
-            <div className="text-[12px] text-muted-foreground">{spineHunch ? "It rests on nothing recorded." : "Every step names its source."}</div>
+            <h2 className="text-h2 text-foreground">Why this exists</h2>
+            <div className="text-body-sm text-muted-foreground">{spineHunch ? "Rests on nothing recorded" : "Every step names its source"}</div>
           </div>
           <Button ref={closeRef} size="icon" variant="ghost" onClick={onClose} aria-label="Close">
             <X />
           </Button>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          <ol className={cn("relative ml-[5px] border-l", spineHunch ? "border-dashed border-border-strong" : "border-accent")}>
-            {trace.upstream.length > 0 && <li className="mb-1 pl-7 text-label uppercase text-faint-foreground">Rests on</li>}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+          <ol className={cn("relative ml-[5px] border-l", spineHunch ? "border-dashed border-border-strong" : "border-accent/50")}>
+            {trace.upstream.length > 0 && <li className="mb-1 pl-6 text-label text-muted-foreground">Rests on</li>}
             {trace.upstream.map((node) => (
               <Node key={node.id} node={node} onNavigate={onNavigate} />
             ))}
-            <li className="mb-1 mt-3 pl-7 text-label uppercase text-faint-foreground">{trace.upstream.length ? "So" : "Recorded"}</li>
+            <li className="mb-1 mt-4 pl-6 text-label text-muted-foreground">{trace.upstream.length ? "So" : "Recorded"}</li>
             <Node node={trace.focus} focus onNavigate={onNavigate} />
             {trace.downstream.length > 0 && (
               <>
-                <li className="mb-1 mt-3 pl-7 text-label uppercase text-faint-foreground">Which supports</li>
+                <li className="mb-1 mt-4 pl-6 text-label text-muted-foreground">Which supports</li>
                 {trace.downstream.map((node) => (
                   <Node key={node.id} node={node} onNavigate={onNavigate} />
                 ))}

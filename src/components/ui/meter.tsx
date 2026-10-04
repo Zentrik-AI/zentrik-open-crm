@@ -76,7 +76,7 @@ export function Meter({
         )}
       </span>
       {display != null && (
-        <span className="shrink-0 font-mono text-[12px] font-medium tabular-nums text-foreground">
+        <span className="shrink-0 tnum text-label font-semibold text-foreground">
           {value === null ? "Unknown" : display}
         </span>
       )}

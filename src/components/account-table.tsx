@@ -4,7 +4,7 @@ import type { Workspace } from "../types";
 import { accountRows, sortAccountRows, type AccountRow, type AccountSortKey } from "../core/memory";
 import { stageMeta } from "../lib/meta";
 import { cn, formatRelative } from "../lib/utils";
-import { ArrValue } from "./account-bits";
+import { ArrValue, stageTone } from "./account-bits";
 import { Badge } from "./ui/badge";
 import { EmptyState } from "./ui/empty-state";
 import { Private, useShareSafe } from "./ui/privacy";
@@ -41,15 +41,15 @@ function SortHeader({
     <th
       scope="col"
       aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
-      className={cn("border-b border-border px-3 py-2 text-left", column.align === "right" && "text-right")}
+      className={cn("h-10 border-b border-border px-4 text-left align-middle font-normal", column.align === "right" && "text-right")}
     >
       <button
         type="button"
         onClick={() => onSort(column.key)}
         title={column.hint}
         className={cn(
-          "inline-flex items-center gap-1 rounded-sm text-label uppercase focus-visible:outline-none focus-visible:focus-ring",
-          active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+          "inline-flex items-center gap-1 rounded-sm align-middle text-label focus-visible:outline-none focus-visible:focus-ring",
+          active ? "text-foreground" : "text-faint-foreground hover:text-foreground",
           column.align === "right" && "flex-row-reverse",
         )}
       >
@@ -67,40 +67,40 @@ function Row({ row, selected, onOpen }: { row: AccountRow; selected: boolean; on
   return (
     <tr
       className={cn(
-        "cursor-pointer border-b border-border transition-colors duration-fast last:border-b-0 hover:bg-muted/60",
-        selected && "bg-accent-bg/50",
+        "cursor-pointer border-b border-border transition-colors duration-fast last:border-b-0 hover:bg-secondary/60",
+        selected && "bg-accent-bg/40 [box-shadow:inset_2px_0_0_hsl(var(--accent))]",
       )}
       onClick={onOpen}
     >
-      <th scope="row" className="max-w-[22ch] px-3 py-2 text-left font-normal">
+      <th scope="row" className="max-w-[26ch] px-4 py-2.5 text-left font-normal">
         <button
           type="button"
           onClick={(event) => {
             event.stopPropagation();
             onOpen();
           }}
-          className="truncate rounded-sm text-body text-foreground hover:text-accent-fg focus-visible:outline-none focus-visible:focus-ring"
+          className="max-w-full truncate rounded-sm text-body-sm font-medium text-foreground hover:text-accent-fg focus-visible:outline-none focus-visible:focus-ring"
         >
           {account.name}
         </button>
-        <div className="truncate text-[11px] text-muted-foreground">{account.segment}</div>
+        <div className="truncate text-label font-normal text-faint-foreground">{account.segment}</div>
       </th>
-      <td className="px-3 py-2">
-        <Badge tone={stageMeta[account.stage].tone} dot>
+      <td className="px-4 py-2.5">
+        <Badge tone={stageTone(account.stage)} dot>
           {stageMeta[account.stage].label}
         </Badge>
       </td>
-      <td className="px-3 py-2 text-body-sm text-muted-foreground">{account.owner}</td>
-      <td className="px-3 py-2 text-right">
-        <ArrValue value={row.value} className="text-[13px]" />
+      <td className="px-4 py-2.5 text-body-sm text-muted-foreground">{account.owner}</td>
+      <td className="px-4 py-2.5 text-right">
+        <ArrValue value={row.value} className="text-body-sm" />
       </td>
       <td
-        className={cn("px-3 py-2 text-right font-mono text-[12px] tabular-nums", stale ? "text-warning-fg" : "text-muted-foreground")}
+        className={cn("tnum px-4 py-2.5 text-right text-body-sm", stale ? "text-warning-fg" : "text-muted-foreground")}
         title={stale ? "Nobody has recorded a verified interaction" : "Last verified interaction"}
       >
         {row.lastTouch ? formatRelative(row.lastTouch) : "unknown"}
       </td>
-      <td className="px-3 py-2 text-right font-mono text-[12px] tabular-nums">
+      <td className="tnum px-4 py-2.5 text-right text-body-sm">
         {row.claims === 0 ? (
           <span className="text-faint-foreground">none</span>
         ) : (
@@ -110,7 +110,7 @@ function Row({ row, selected, onOpen }: { row: AccountRow; selected: boolean; on
         )}
       </td>
       <td
-        className="px-3 py-2 text-right font-mono text-[12px] tabular-nums"
+        className="tnum px-4 py-2.5 text-right text-body-sm text-muted-foreground"
         title={row.nextDue ? (row.overdue > 0 ? `${row.overdue} overdue` : "Next open task or commitment") : undefined}
       >
         {shareSafe ? (
@@ -155,7 +155,7 @@ export function AccountTable({
   if (rows.length === 0) return <EmptyState title="No accounts to compare." hint="Add an account, or include archived ones." />;
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-card">
+    <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-e1 animate-view-enter">
       <table className="w-full min-w-[720px] border-collapse">
         <caption className="sr-only">
           Accounts, sorted by {columns.find((c) => c.key === sort.key)?.label.toLowerCase()},{" "}

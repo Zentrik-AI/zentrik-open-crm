@@ -15,6 +15,7 @@ npm test              # core operations, the crm command, MCP, the local API
 npm run build
 npm run test:package  # pack, install without dev dependencies, check CLI/MCP/UI
 npm run test:e2e      # browser edition and the agent-to-Review loop on a folder
+npm run test:calls    # call import, evidence review and account investigation
 ```
 
 Pushing to `main` redeploys the hosted demo at
@@ -72,18 +73,28 @@ recovery. CI keeps synthetic screenshots and traces as the
 
 ## Publishing
 
+The source install in the README and the hosted browser edition are available.
+Neither `zentrik-open-crm` nor `open-crm` is published to npm yet; use the source
+install until publication is complete.
+
+Set the intended release version in the package, lockfile, brand and changelog,
+then run the checks above from a clean checkout. Tag that checked version:
+
 ```bash
-git tag -a v1.0.0 -m "Open CRM 1.0" && git push origin v1.0.0
-npm publish            # zentrik-open-crm, public
+release_version=$(node -p "require('./package.json').version")
+git tag -a "v${release_version}" -m "Open CRM ${release_version}"
+git push origin "v${release_version}"
+npm publish --access public  # add --tag next for a prerelease
 ```
 
 `prepack` runs the full build, so publish from a clean checkout of the tagged
 commit. `npm publish --dry-run` lists the tarball first.
 
-`open-crm` is reserved as a thin alias package so `npx open-crm init ~/crm`
-works: it carries one dependency on the same version of `zentrik-open-crm` and
-a bin that execs the real one. Publish it after the canonical package, pinned
-to the same version.
+`open-crm` is a planned thin alias package for `npx open-crm init ~/crm`: it
+should carry one dependency on the same version of `zentrik-open-crm` and a bin
+that execs the real one. Publish it after the canonical package, pinned to the
+same version. Verify both registry entries before documenting npm installation
+as available.
 
 Do not rewrite published history to hide a mistake: stop the release, rotate
 anything exposed, and fix forward.

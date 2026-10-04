@@ -1,54 +1,54 @@
   :root {
     /* substrate, ink, chrome */
-    --background: 42 30% 97%;
-    --foreground: 30 16% 18%;
-    --faint-foreground: 32 9% 42%;
-    --surface: 42 40% 99%;
+    --background: 220 20% 98.8%;
+    --foreground: 224 20% 10%;
+    --faint-foreground: 220 8% 46%;
+    --surface: 0 0% 100%;
     --surface-raised: 0 0% 100%;
-    --surface-sunken: 42 26% 92%;
-    --card: 42 40% 99%;
-    --card-foreground: 30 16% 18%;
-    --border: 36 16% 82%;
-    --border-strong: 34 12% 56%;
-    --input: 42 26% 92%;
-    --ring: 176 60% 32%;
-    --muted: 40 22% 90%;
-    --muted-foreground: 32 9% 38%;
+    --surface-sunken: 220 18% 96.5%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 20% 10%;
+    --border: 220 14% 90.5%;
+    --border-strong: 220 10% 80%;
+    --input: 0 0% 100%;
+    --ring: 172 72% 34%;
+    --muted: 220 16% 96%;
+    --muted-foreground: 220 9% 38%;
 
     /* primary / secondary / accent (ink-teal = the one signature hue) */
-    --primary: 176 58% 28%;
-    --primary-foreground: 42 40% 99%;
-    --secondary: 40 22% 90%;
-    --secondary-foreground: 30 16% 22%;
-    --accent: 176 58% 28%;
-    --accent-bg: 176 38% 90%;
-    --accent-fg: 176 64% 20%;
+    --primary: 224 20% 10%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 16% 95.5%;
+    --secondary-foreground: 224 16% 18%;
+    --accent: 172 76% 29%;
+    --accent-bg: 170 52% 95%;
+    --accent-fg: 172 82% 21%;
 
     /* semantic ramps — color encodes KIND, never decoration */
-    --signal: 202 80% 36%;
-    --signal-bg: 202 64% 91%;
-    --signal-fg: 202 84% 24%;
-    --account: 30 16% 30%;
-    --account-bg: 36 22% 89%;
-    --account-fg: 30 18% 22%;
-    --agent: 262 44% 46%;
-    --agent-bg: 262 44% 93%;
-    --agent-fg: 262 52% 34%;
-    --highlight: 24 68% 44%;
-    --highlight-bg: 28 62% 91%;
-    --highlight-fg: 24 72% 30%;
-    --success: 158 50% 32%;
-    --success-bg: 158 42% 89%;
-    --success-fg: 158 58% 22%;
-    --success-foreground: 42 40% 99%;
-    --warning: 36 78% 40%;
-    --warning-bg: 38 76% 88%;
-    --warning-fg: 30 80% 28%;
-    --warning-foreground: 42 40% 99%;
-    --destructive: 6 62% 44%;
-    --destructive-bg: 6 60% 92%;
-    --destructive-fg: 6 66% 34%;
-    --destructive-foreground: 42 40% 99%;
+    --signal: 214 86% 50%;
+    --signal-bg: 214 92% 96.5%;
+    --signal-fg: 216 80% 38%;
+    --account: 220 10% 40%;
+    --account-bg: 220 16% 95%;
+    --account-fg: 222 16% 24%;
+    --agent: 258 72% 58%;
+    --agent-bg: 258 92% 97%;
+    --agent-fg: 258 58% 44%;
+    --highlight: 24 92% 50%;
+    --highlight-bg: 28 100% 96%;
+    --highlight-fg: 22 80% 36%;
+    --success: 154 64% 34%;
+    --success-bg: 150 64% 95%;
+    --success-fg: 156 72% 24%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 94% 44%;
+    --warning-bg: 44 100% 94.5%;
+    --warning-fg: 30 90% 30%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-bg: 0 86% 97%;
+    --destructive-fg: 0 70% 40%;
+    --destructive-foreground: 0 0% 100%;
 
     /* radius */
     --r-sm: 6px;
@@ -57,27 +57,27 @@
     --r-xl: 16px;
 
     /* elevation — warm-tinted, low-spread */
-    --e-1: 0 1px 2px hsl(30 30% 18% / 0.05), 0 1px 1px hsl(30 30% 18% / 0.04);
-    --e-2: 0 4px 12px hsl(30 30% 16% / 0.08), 0 1px 2px hsl(30 30% 16% / 0.05);
-    --e-3: 0 12px 32px hsl(30 30% 14% / 0.14);
+    --e-1: 0 1px 2px hsl(224 30% 10% / 0.04), 0 0 0 1px hsl(224 30% 10% / 0.03);
+    --e-2: 0 6px 20px -4px hsl(224 30% 10% / 0.08), 0 1px 3px hsl(224 30% 10% / 0.05);
+    --e-3: 0 20px 48px -12px hsl(224 30% 10% / 0.22), 0 2px 6px hsl(224 30% 10% / 0.06);
 
     /* fonts */
-    --font-serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+    --font-serif: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
     --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
     --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
     /* Shared product + launch hierarchy. Body text never borrows display metrics. */
-    --text-display: 2rem;
-    --text-h1: 1.625rem;
-    --text-h2: 1.125rem;
+    --text-display: 1.875rem;
+    --text-h1: 1.5rem;
+    --text-h2: 1.0625rem;
     --text-body: 0.875rem;
     --text-body-sm: 0.8125rem;
     --text-label: 0.75rem;
-    --sidebar-width: 224px;
-    --content-gutter: 24px;
-    --space-section: 24px;
+    --sidebar-width: 232px;
+    --content-gutter: 28px;
+    --space-section: 28px;
     --space-panel: 20px;
-    --control-height: 36px;
+    --control-height: 34px;
     --film-title: 5rem;
     --film-heading: 2.875rem;
     --film-body: 1.375rem;
@@ -87,64 +87,64 @@
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
     --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
     --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
-    --d-fast: 120ms;
-    --d-base: 200ms;
-    --d-slow: 320ms;
+    --d-fast: 140ms;
+    --d-base: 220ms;
+    --d-slow: 360ms;
     --d-trace: 500ms;
 
     --focus-ring: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring) / 0.55);
   }
 
   .dark {
-    --background: 30 12% 9%;
-    --foreground: 42 28% 91%;
-    --faint-foreground: 36 10% 56%;
-    --surface: 32 11% 13%;
-    --surface-raised: 34 10% 17%;
-    --surface-sunken: 28 12% 7%;
-    --card: 32 11% 13%;
-    --card-foreground: 42 28% 91%;
-    --border: 34 8% 32%;
-    --border-strong: 36 8% 42%;
-    --input: 28 12% 7%;
-    --ring: 176 52% 56%;
-    --muted: 34 9% 20%;
-    --muted-foreground: 38 12% 66%;
+    --background: 228 10% 6.5%;
+    --foreground: 220 16% 94%;
+    --faint-foreground: 220 8% 58%;
+    --surface: 228 9% 9.5%;
+    --surface-raised: 228 8% 12.5%;
+    --surface-sunken: 228 12% 4.5%;
+    --card: 228 9% 9.5%;
+    --card-foreground: 220 16% 94%;
+    --border: 228 7% 17%;
+    --border-strong: 228 6% 27%;
+    --input: 228 9% 9.5%;
+    --ring: 170 62% 50%;
+    --muted: 228 8% 13%;
+    --muted-foreground: 220 8% 66%;
 
-    --primary: 176 48% 54%;
-    --primary-foreground: 30 14% 9%;
-    --secondary: 34 9% 20%;
-    --secondary-foreground: 42 24% 86%;
-    --accent: 176 48% 54%;
-    --accent-bg: 176 38% 18%;
-    --accent-fg: 176 46% 80%;
+    --primary: 220 16% 94%;
+    --primary-foreground: 228 10% 7%;
+    --secondary: 228 8% 14%;
+    --secondary-foreground: 220 14% 88%;
+    --accent: 170 64% 48%;
+    --accent-bg: 172 46% 12%;
+    --accent-fg: 168 62% 74%;
 
-    --signal: 202 76% 62%;
-    --signal-bg: 202 56% 17%;
-    --signal-fg: 202 70% 82%;
-    --account: 38 16% 76%;
-    --account-bg: 32 10% 21%;
-    --account-fg: 38 20% 84%;
-    --agent: 258 58% 72%;
-    --agent-bg: 262 36% 22%;
-    --agent-fg: 258 52% 84%;
-    --highlight: 26 76% 64%;
-    --highlight-bg: 26 50% 20%;
-    --highlight-fg: 28 70% 80%;
-    --success: 158 50% 54%;
-    --success-bg: 158 42% 17%;
-    --success-fg: 158 46% 78%;
-    --success-foreground: 30 14% 9%;
-    --warning: 38 84% 60%;
-    --warning-bg: 36 58% 19%;
-    --warning-fg: 38 82% 78%;
-    --warning-foreground: 30 14% 9%;
-    --destructive: 6 70% 63%;
-    --destructive-bg: 6 50% 21%;
-    --destructive-fg: 6 68% 82%;
-    --destructive-foreground: 30 14% 9%;
+    --signal: 214 92% 64%;
+    --signal-bg: 216 54% 14%;
+    --signal-fg: 212 92% 80%;
+    --account: 220 10% 70%;
+    --account-bg: 228 8% 15%;
+    --account-fg: 220 14% 86%;
+    --agent: 258 92% 74%;
+    --agent-bg: 258 42% 16%;
+    --agent-fg: 258 92% 84%;
+    --highlight: 26 94% 62%;
+    --highlight-bg: 24 62% 14%;
+    --highlight-fg: 28 94% 78%;
+    --success: 152 58% 48%;
+    --success-bg: 154 44% 11%;
+    --success-fg: 150 58% 72%;
+    --success-foreground: 228 10% 7%;
+    --warning: 40 94% 56%;
+    --warning-bg: 36 62% 12%;
+    --warning-fg: 42 94% 74%;
+    --warning-foreground: 228 10% 7%;
+    --destructive: 0 82% 64%;
+    --destructive-bg: 0 52% 14%;
+    --destructive-fg: 0 88% 80%;
+    --destructive-foreground: 228 10% 7%;
 
-    --e-1: 0 1px 2px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(40 20% 60% / 0.05);
-    --e-2: 0 4px 14px hsl(0 0% 0% / 0.55), inset 0 1px 0 hsl(40 20% 60% / 0.05);
-    --e-3: 0 14px 36px hsl(0 0% 0% / 0.6), inset 0 1px 0 hsl(40 20% 60% / 0.06);
+    --e-1: 0 1px 2px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(220 20% 90% / 0.04);
+    --e-2: 0 8px 24px -6px hsl(0 0% 0% / 0.6), inset 0 1px 0 hsl(220 20% 90% / 0.05);
+    --e-3: 0 24px 56px -12px hsl(0 0% 0% / 0.7), inset 0 1px 0 hsl(220 20% 90% / 0.06);
   }

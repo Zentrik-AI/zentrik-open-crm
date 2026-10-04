@@ -85,18 +85,41 @@ export function TasksView({
   ];
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-serif text-h1 text-foreground">Tasks</h1>
-          <p className="mt-0.5 text-body-sm text-muted-foreground">
-            {open.length} open · {overdue.length} overdue{selectedOwner && ` · ${scoped.length} of ${tasks.length} tasks in this owner view`}
+    <div className="mx-auto grid w-full max-w-3xl grid-cols-[minmax(0,1fr)] gap-7">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0">
+          <h1 className="text-h1 text-foreground">Tasks</h1>
+          <p className="mt-1 text-body-sm text-muted-foreground">
+            <span className="tnum">{open.length}</span> open
+            {overdue.length > 0 && (
+              <>
+                {" · "}
+                <span className="tnum font-medium text-destructive-fg">{overdue.length}</span> overdue
+              </>
+            )}
+            {selectedOwner && (
+              <>
+                {" · "}
+                <span className="tnum">{scoped.length}</span> of <span className="tnum">{tasks.length}</span> for {selectedOwner}
+              </>
+            )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => onExportICS(open.map((task) => task.id))} disabled={open.length === 0}>
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <div className="min-w-0 flex-1 sm:w-[148px] sm:flex-none">
+            <Select
+              aria-label="Filter by owner"
+              className="h-8 text-body-sm"
+              value={selectedOwner}
+              onChange={(event) => { setOwner(event.target.value); try { sessionStorage.setItem("open-crm.task-owner", event.target.value); } catch { /* preference only */ } setShowAllDone(false); }}
+            >
+              <option value="">All owners</option>
+              {owners.map((name) => <option key={name} value={name}>{name}</option>)}
+            </Select>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => onExportICS(open.map((task) => task.id))} disabled={open.length === 0} title="Download open tasks as a calendar file" aria-label={`Export ${open.length} to calendar`} className="px-2.5 sm:px-3">
             <CalendarPlus />
-            Export {open.length} to calendar
+            <span className="hidden sm:inline">Export {open.length} to calendar</span>
           </Button>
           <Button variant="primary" size="sm" onClick={() => setAdding((v) => !v)}>
             <Plus />
@@ -105,21 +128,14 @@ export function TasksView({
         </div>
       </div>
 
-      <Field label="Filter by owner" className="max-w-xs">
-        <Select value={selectedOwner} onChange={(event) => { setOwner(event.target.value); try { sessionStorage.setItem("open-crm.task-owner", event.target.value); } catch { /* preference only */ } setShowAllDone(false); }}>
-          <option value="">All owners</option>
-          {owners.map((name) => <option key={name} value={name}>{name}</option>)}
-        </Select>
-      </Field>
-
       {adding && !shareSafe && (
         <Card className="animate-settle">
-          <CardContent className="pt-4">
+          <CardContent className="pt-5">
             <form className="grid items-start gap-3 sm:grid-cols-2" onSubmit={submit}>
               <Field label="Task" className="sm:col-span-2">
                 <Input value={draft.title} onChange={(e) => setDraft((c) => ({ ...c, title: e.target.value }))} placeholder="Send recap email" />
               </Field>
-              <Field label="Owner" hint="Leave blank to use the selected account's owner.">
+              <Field label="Owner" hint="Blank uses the account owner.">
                 <Input aria-label="Owner" value={draft.owner} onChange={(event) => setDraft((current) => ({ ...current, owner: event.target.value }))} placeholder={accountsById.get(draft.accountId)?.owner || "Unassigned"} />
               </Field>
               <Field label="Account">
@@ -152,19 +168,23 @@ export function TasksView({
       )}
 
       {scoped.length === 0 ? (
-        <EmptyState title="No tasks in this view." hint="Choose another owner or add a task." />
+        <EmptyState
+          title={selectedOwner ? `No tasks for ${selectedOwner}` : "No tasks yet"}
+          action={!shareSafe && <Button variant="secondary" size="sm" onClick={() => setAdding(true)}><Plus />Add a task</Button>}
+        />
       ) : (
         groups
           .filter((g) => g.items.length > 0)
-          .map((g) => (
-            <div key={g.key}>
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-label uppercase text-muted-foreground">{g.label}</span>
-                <span className="font-mono text-[11px] tabular-nums text-faint-foreground">{g.key === "done" && done.length > g.items.length ? `${g.items.length} of ${done.length}` : g.items.length}</span>
+          .map((g, groupIndex) => (
+            <section key={g.key} className="-mx-2 animate-settle" style={{ animationDelay: `${Math.min(groupIndex, 7) * 40}ms` }}>
+              <div className="mb-1 flex items-center gap-2 px-2">
+                {g.key === "overdue" && <span className="h-1.5 w-1.5 rounded-full bg-destructive" aria-hidden />}
+                <span className="text-body-sm font-medium text-foreground">{g.label}</span>
+                <span className="tnum text-body-sm text-faint-foreground">{g.key === "done" && done.length > g.items.length ? `${g.items.length} of ${done.length}` : g.items.length}</span>
               </div>
-              <div className="space-y-2.5">
+              <div className="divide-y divide-border/70">
                 {g.items.map((task) => (
-                  <div key={task.id}>
+                  <div key={task.id} className="py-0.5">
                   <TaskRow
                     task={task}
                     accountName={task.accountId ? accountsById.get(task.accountId)?.name : undefined}
@@ -178,8 +198,8 @@ export function TasksView({
                   </div>
                 ))}
               </div>
-              {g.key === "done" && done.length > 8 && <Button variant="ghost" size="sm" onClick={() => setShowAllDone((current) => !current)}>{showAllDone ? "Show recent completed tasks" : `Show all ${done.length} completed tasks`}</Button>}
-            </div>
+              {g.key === "done" && done.length > 8 && <Button variant="ghost" size="sm" className="mt-1" onClick={() => setShowAllDone((current) => !current)}>{showAllDone ? "Show recent completed tasks" : `Show all ${done.length} completed tasks`}</Button>}
+            </section>
           ))
       )}
     </div>
@@ -188,7 +208,7 @@ export function TasksView({
 
 function TaskEditor({ task, onSave, onCancel }: { task: Task; onSave: (patch: TaskPatch) => void; onCancel: () => void }) {
   const [patch, setPatch] = useState<TaskPatch>({ title: task.title, owner: task.owner, priority: task.priority, status: task.status, reason: task.reason ?? "", due: dateInputValue(task.due) });
-  return <form aria-label="Edit task" className="mt-2 grid gap-3 rounded-lg border border-border p-4 sm:grid-cols-2" onSubmit={event => {
+  return <form aria-label="Edit task" className="animate-settle mx-2 mb-3 mt-1 grid gap-3 rounded-xl bg-surface-sunken p-4 sm:grid-cols-2" onSubmit={event => {
     event.preventDefault();
     const changed = Object.fromEntries(Object.entries(patch).filter(([key, value]) => key === "due" ? value !== dateInputValue(task.due) : value !== (task[key as keyof Task] ?? "")));
     onSave(changed);

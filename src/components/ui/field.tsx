@@ -3,7 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 const controlBase =
-  "min-w-0 w-full rounded-md border border-border-strong bg-surface px-3 text-body text-foreground outline-none transition-[border-color,box-shadow] duration-fast placeholder:text-faint-foreground focus:border-ring focus:focus-ring disabled:opacity-50";
+  "min-w-0 w-full rounded-lg border border-border bg-surface-raised px-3 text-body text-foreground shadow-e1 outline-none transition-[border-color,box-shadow] duration-fast placeholder:text-faint-foreground hover:border-border-strong focus:border-ring focus:focus-ring disabled:opacity-50";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   numeric?: boolean;
@@ -16,7 +16,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
   return (
     <input
       ref={ref}
-      className={cn(controlBase, "h-9", numeric && "font-mono tabular-nums", className)}
+      className={cn(controlBase, "h-9", numeric && "tnum", className)}
       {...props}
     />
   );
@@ -82,14 +82,14 @@ export function Field({
 
   return (
     <label className={cn("block space-y-1.5", className)}>
-      <span id={labelId} className="block text-label uppercase text-muted-foreground">{label}</span>
+      <span id={labelId} className="block text-label text-muted-foreground">{label}</span>
       {control}
       {error ? (
-        <span id={`${id}-err`} className="block text-[12px] text-destructive-fg">
+        <span id={`${id}-err`} className="block text-label text-destructive-fg">
           {error}
         </span>
       ) : hint ? (
-        <span id={`${id}-hint`} className="block text-[12px] text-faint-foreground">
+        <span id={`${id}-hint`} className="block text-label text-faint-foreground">
           {hint}
         </span>
       ) : null}

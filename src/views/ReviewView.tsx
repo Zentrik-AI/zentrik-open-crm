@@ -8,8 +8,7 @@ import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { RedactedChip, useShareSafe } from "../components/ui/privacy";
 import { Grounding } from "../components/grounding";
-
-const SETUP_COMMANDS = ["npm run crm -- init ~/crm", "cd ~/crm && ./crm ui"];
+import { localWorkspaceSetup } from "../lib/setup";
 
 const kindLabel: Record<Op["type"], string> = {
   "account.add": "New account",
@@ -331,8 +330,8 @@ export function ReviewView({
             </div>
           ) : (
             <div className="mt-5 flex w-full max-w-md flex-col items-center gap-3">
-              <pre className="w-full overflow-x-auto rounded-lg border border-border bg-surface-sunken px-4 py-3 text-left font-mono text-label leading-6 text-muted-foreground">{SETUP_COMMANDS.join("\n")}</pre>
-              <Button variant="agent" size="sm" onClick={() => onCopy(SETUP_COMMANDS.join("\n"), "Commands copied")}>
+              <pre className="w-full overflow-x-auto rounded-lg border border-border bg-surface-sunken px-4 py-3 text-left font-mono text-label leading-6 text-muted-foreground">{localWorkspaceSetup}</pre>
+              <Button variant="agent" size="sm" onClick={() => onCopy(localWorkspaceSetup, "Commands copied")}>
                 <Copy />
                 Copy commands
               </Button>

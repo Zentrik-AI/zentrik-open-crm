@@ -23,6 +23,7 @@ import { Monogram } from "../components/ui/monogram";
 import { useShareSafe } from "../components/ui/privacy";
 import { folderBacked } from "../lib/backend";
 import { cn } from "../lib/utils";
+import { localWorkspaceSetup, setupGuideUrl } from "../lib/setup";
 
 async function request<T>(endpoint: string, body?: unknown): Promise<T> {
   const r = await fetch(
@@ -197,9 +198,12 @@ export function InvestigationView({
         <p className="my-4 text-body text-muted-foreground">
           Run Open CRM on a workspace folder to check notes and calls against your account records.
         </p>
-        <pre className="rounded-lg border border-border bg-surface-sunken p-4 font-mono text-body-sm">
-          npm run crm -- init ~/my-crm{"\n"}cd ~/my-crm{"\n"}./crm ui
+        <pre className="max-w-full overflow-x-auto rounded-lg border border-border bg-surface-sunken p-4 font-mono text-body-sm">
+          {localWorkspaceSetup}
         </pre>
+        <a href={setupGuideUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1 rounded-sm text-body-sm text-accent-fg hover:underline focus-visible:outline-none focus-visible:focus-ring">
+          Setup guide <ArrowRight className="h-4 w-4" />
+        </a>
       </div>
     );
   const running = run?.status === "matching" || run?.status === "checking";

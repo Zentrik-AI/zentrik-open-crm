@@ -11,6 +11,7 @@ import { cn } from "../lib/utils";
 import { Badge } from "../components/ui/badge";
 import { Card } from "../components/ui/card";
 import type { Tone } from "../lib/meta";
+import { localWorkspaceSetup, setupGuideUrl } from "../lib/setup";
 
 async function request<T>(endpoint = "", body?: unknown): Promise<T> {
   const response = await fetch(`/api/calls${endpoint}`, body === undefined ? undefined : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -98,7 +99,10 @@ export function CallsView({ workspace, active, onOpenAccount }: { workspace: Wor
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground"><Mic className="h-5 w-5" aria-hidden /></span>
         <h2 className="mt-4 text-h2 text-foreground">Calls need a workspace folder</h2>
         <p className="mt-1 max-w-sm text-body-sm text-muted-foreground">Import from Granola or files, classify with Jev and keep the quotes that matter.</p>
-        <pre className="mt-5 w-full max-w-sm overflow-x-auto rounded-lg border border-border bg-surface-sunken px-4 py-3 text-left font-mono text-label leading-6 text-muted-foreground">npm run crm -- init ~/my-crm{`\n`}cd ~/my-crm{`\n`}./crm ui</pre>
+        <pre className="mt-5 w-full max-w-sm overflow-x-auto rounded-lg border border-border bg-surface-sunken px-4 py-3 text-left font-mono text-label leading-6 text-muted-foreground">{localWorkspaceSetup}</pre>
+        <a href={setupGuideUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-sm text-body-sm text-accent-fg hover:underline focus-visible:outline-none focus-visible:focus-ring">
+          Setup guide <ArrowRight className="h-4 w-4" />
+        </a>
         <p className="mt-4 max-w-sm text-label text-faint-foreground">Keys stay in local server memory. TypeSafe receives only the transcripts you process.</p>
       </Card>
     </section>

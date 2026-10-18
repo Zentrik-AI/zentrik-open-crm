@@ -34,10 +34,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Build the browser edition for the project page
+      - name: Read the Pages address
+        id: pages
+        uses: actions/configure-pages@v6
+      - name: Build the browser edition for its Pages address
         run: npm run build
         env:
-          OPEN_CRM_BASE: /${{ github.event.repository.name }}/
+          OPEN_CRM_BASE: ${{ steps.pages.outputs.base_path }}/
       - name: Keep the single page addressable on a deep link
         run: cp dist/index.html dist/404.html
       - uses: actions/upload-pages-artifact@v4

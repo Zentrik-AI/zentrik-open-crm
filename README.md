@@ -11,7 +11,7 @@ approve, and your records stay in a folder you own.
 
 Open CRM is the first open **ARM**: Agent Relationship Management.
 
-### [▶ Try it in your browser](https://zentrik-ai.github.io/zentrik-open-crm/)
+### [▶ Try it in your browser](https://demo.zentrik.ai/)
 
 The real browser edition with demo data. No sign-up, no install, and whatever
 you type stays in your own browser storage.
@@ -207,7 +207,7 @@ delete. Back it up by copying the folder, or keep it in git and get a history of
 every change for free.
 
 The browser-only edition (`npm run dev`, or the
-[hosted demo](https://zentrik-ai.github.io/zentrik-open-crm/)) keeps records in
+[hosted demo](https://demo.zentrik.ai/)) keeps records in
 that browser's local storage instead. A CLI agent cannot see them; use
 **Settings → Agent workspace** to export a one-way Markdown snapshot, or move to
 a folder workspace when you want the agent loop.

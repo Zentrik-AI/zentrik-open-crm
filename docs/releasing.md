@@ -20,7 +20,8 @@ npm run test:calls    # call import, evidence review and account investigation
 
 Pushing to `main` redeploys the hosted demo at
 `https://zentrik-ai.github.io/zentrik-open-crm/` from `.github/workflows/demo.yml`,
-built with `OPEN_CRM_BASE` set to the project path. It is the browser edition:
+built with `OPEN_CRM_BASE` taken from the Pages configuration. This supports
+both a project path and a custom domain at the root. It is the browser edition:
 no server, no records anywhere but the visitor's own browser.
 
 One known wrinkle. Chrome shows a lookalike-domain interstitial for that URL
@@ -30,19 +31,37 @@ engagement with `zentrik.ai`, because the label `zentrik-ai` reads as
 without a warning, so this hits our own team, customers and investors rather
 than the public, which is still the audience we share with first.
 
-The fix is a custom domain, and it is two steps:
+The fix is a custom domain. Complete these steps together in a maintenance
+window; do not change the live Pages address until DNS access is ready:
 
-1. At the registrar, add `CNAME  demo  ->  zentrik-ai.github.io.` The apex is on
-   Fly and `demo` is unused, so nothing existing is touched.
-2. Once it resolves, point Pages at it and keep HTTPS enforced:
+1. Confirm `demo` has no existing records. Add the domain to Pages before
+   pointing DNS at it, to prevent another repository claiming the subdomain:
 
 ```bash
 gh api -X PUT repos/Zentrik-AI/zentrik-open-crm/pages -f cname=demo.zentrik.ai
-gh api -X PUT repos/Zentrik-AI/zentrik-open-crm/pages -F https_enforced=true
 ```
 
-Then update the demo URL in `README.md`, `.github/ISSUE_TEMPLATE/config.yml`,
-`docs/first-use.md`, this file, and the repository homepage.
+2. At the registrar, add only `CNAME  demo  ->  zentrik-ai.github.io.` Do not
+   change the apex, mail records, or add a wildcard.
+3. Run `gh workflow run demo.yml --ref main` to build at the new root path.
+   Confirm the Demo workflow succeeds and DNS resolves. Wait for Pages to
+   provision its certificate, then keep HTTPS enforced:
+
+```bash
+dig +short CNAME demo.zentrik.ai
+gh api repos/Zentrik-AI/zentrik-open-crm/pages
+gh api -X PUT repos/Zentrik-AI/zentrik-open-crm/pages -F https_enforced=true
+curl --fail --head https://demo.zentrik.ai/
+```
+
+4. Verify first use and account navigation in a normal Chrome profile, without
+   bypassing a security warning. Then update the demo URL in `README.md`,
+   `.github/ISSUE_TEMPLATE/config.yml`, `docs/first-use.md`, this file, and the
+   repository homepage. See [GitHub's domain setup guide](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site).
+
+Browser storage belongs to an origin. A custom domain cannot read records saved
+on the old Pages origin. Export a JSON backup before changing origins and import
+it on the new site; keep the old browser data until the import is verified.
 
 The browser suite covers first use, account work, claims and the brief, review,
 task ownership, responsive layout, theme contrast, feedback export, and storage

@@ -71,6 +71,8 @@ Connection keys stay in the local server's memory. Jev processing sends selected
 transcript content to TypeSafe after you confirm it. Try the included synthetic
 calls before importing your own. [Setup, data flow and batch guide](docs/calls.md).
 
+![The Calls workspace: provider connections, imported sample transcripts, and the review pane that asks what a call should change](https://raw.githubusercontent.com/Zentrik-AI/zentrik-open-crm/main/assets/demo/calls.png)
+
 ## Every fact shows its source
 
 What you know about an account is recorded as **claims**: needs, risks, goals,

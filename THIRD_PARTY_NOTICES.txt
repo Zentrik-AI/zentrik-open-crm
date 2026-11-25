@@ -517,7 +517,7 @@ SOFTWARE.
 
 ========================================================================
 
-tailwind-merge@2.6.1
+tailwind-merge@2.6.2
 License: MIT
 Package: node_modules/tailwind-merge
 
